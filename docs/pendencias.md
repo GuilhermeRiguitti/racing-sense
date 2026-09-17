@@ -28,6 +28,10 @@ de um canal, confirme que ele aparece na tabela de variáveis do `.ibt`.
 Guardar tudo cru e agregar na leitura, ou reduzir na ingestão? Decide o modelo de
 dados inteiro. Ver ADR 0007 (proposto, não aceito).
 
+Enquanto não fecha, o sistema roda com o adapter em memória: nada sobrevive a um
+restart. O adapter de disco entra passando a mesma suíte de contrato que o de
+memória já passa.
+
 ## 5. Modelo e custo do agente
 
 Default atual é `gemini-2.5-flash`, escolhido por ser barato e estável — não por

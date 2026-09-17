@@ -1,0 +1,22 @@
+{
+  "name": "@telemetry/adapter-memory",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Adapter: implementações em memória das portas, para teste e desenvolvimento.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telemetry/application": "workspace:*",
+    "@telemetry/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@telemetry/domain": "workspace:*"
+  }
+}

@@ -2,6 +2,10 @@
 
 Decoder puro do formato binário `.ibt` (iRacing telemetry).
 
+É uma **biblioteca técnica**, não uma camada: não conhece o domínio nem a
+aplicação. Quem a liga ao sistema é `@telemetry/adapter-ibt`, que implementa
+`TelemetryDecoderPort` e traduz `VarHeader` em `ChannelDescriptor`.
+
 ## Contrato deste pacote
 
 Três regras que não se quebram (ver `CLAUDE.md` na raiz):
@@ -19,8 +23,10 @@ Consequência: quando a telemetria ao vivo entrar (fase 2), só se implementa um
 
 ## Estado
 
-Esqueleto. Os tipos, os offsets e as constantes do formato estão escritos e testados
-quanto à consistência de tamanho; as funções de decodificação ainda são stubs.
+Header, disk sub header e tabela de variáveis: decodificados e testados
+(consistência do layout aqui, e leitura de um `.ibt` sintético em
+`@telemetry/adapter-ibt`). Session info (YAML em CP1252) e leitura de amostras
+ainda são stubs.
 
 ⚠️ Os offsets vêm da spec pública do SDK C++ e da engenharia reversa da comunidade
 (ver `docs/formato-ibt.md`). **Ainda não foram validados contra um `.ibt` real** —

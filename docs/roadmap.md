@@ -5,7 +5,8 @@ escrito — não é "achei que estava funcionando".
 
 ## Etapa 0 — Fundação ✅
 
-Monorepo, tipagem, lint, teste, documentação, regras do agente de código.
+Monorepo, camadas (hexagonal + CQS), tipagem, lint, teste, verificação de
+fronteiras, documentação e regras do agente de código.
 **Pronto quando:** `pnpm check` verde. ✅
 
 ## Etapa 1 — Decoder validado
@@ -24,7 +25,7 @@ batem com o que o sim mostrou na sessão.
 
 ## Etapa 2 — Voltas
 
-- [ ] `detectLaps` com histerese na linha de chegada
+- [ ] `detectLaps` com histerese na linha de chegada (`packages/domain`)
 - [ ] Descartar out lap, in lap e voltas cortadas pelo início/fim da gravação
 - [ ] Séries por `lapDistPct`
 - [ ] Downsampling que preserva picos
@@ -44,8 +45,8 @@ extensão. É o teste que pega erro de alinhamento.
 
 ## Etapa 4 — API e interface
 
-- [ ] Watcher ligado à API (file-lock resolvido)
-- [ ] Rotas de sessão, voltas e comparação saindo do 501
+- [ ] Watcher ligado à API (file-lock resolvido, em `adapter-fs`)
+- [ ] Persistência em disco passando a suíte de contrato das portas
 - [ ] Gráficos de canal e de delta no front
 
 **Pronto quando:** rodar uma sessão no sim e, sem tocar em nada, ver a volta aparecer
@@ -53,8 +54,8 @@ na tela.
 
 ## Etapa 5 — Agente
 
-- [ ] Ferramentas ligadas à análise
-- [ ] Relatório validado contra `agentReportSchema`
+- [ ] `NarratorPort` implementada de verdade em `adapter-llm`
+- [ ] Relatório validado contra `analysisReportDto`
 - [ ] Custo por análise medido e registrado
 
 **Pronto quando:** o relatório aponta um trecho real de perda de tempo que se confirma

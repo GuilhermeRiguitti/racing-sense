@@ -3,79 +3,135 @@
 ## O que este sistema faz
 
 Lê os arquivos `.ibt` que o iRacing grava em disco, recorta as voltas, compara a
-volta do piloto com uma volta de referência importada e usa um agente de LLM para
-explicar onde e por que o tempo foi perdido.
+volta do piloto com uma volta de referência e usa um agente de LLM para explicar
+onde e por que o tempo foi perdido.
 
-## Fluxo
+## A forma
+
+Ports & adapters (hexagonal), com a dependência apontando **para dentro**.
+Decisão e justificativa em [ADR 0009](adr/0009-arquitetura-hexagonal.md).
 
 ```
-iRacing (Alt-L arma a telemetria)
-  └─> %USERPROFILE%\Documents\iRacing\telemetry\*.ibt
-        └─> @telemetry/ingest  — watcher: espera o arquivo destravar e estabilizar
-              └─> @telemetry/ibt-core — decoder puro: header, tabela de variáveis, amostras
-                    └─> @telemetry/analysis — voltas, séries por distância, delta vs. referência
-                          ├─> @telemetry/api — HTTP local
-                          │     ├─> @telemetry/web — gráficos
-                          │     └─> @telemetry/agent — relatório em linguagem natural
-                          └─> volta de referência importada (outro .ibt) entra aqui
+        ┌─────────────────────────────────────────────┐
+        │                  domain                     │  regras, zero deps
+        │   voltas · séries · delta · compatibilidade  │
+        └────────────────────▲────────────────────────┘
+                             │
+        ┌────────────────────┴────────────────────────┐
+        │               application                   │  casos de uso + PORTAS
+        │   commands/ (escrevem)  queries/ (leem)      │
+        └────▲───────────▲───────────▲───────────▲────┘
+             │           │           │           │        (as setas apontam
+     adapter-ibt   adapter-fs  adapter-llm  adapter-memory  para dentro: quem
+     decoder .ibt   node:fs      AI SDK       teste/dev      implementa depende
+                                                             de quem declara)
+                             ▲
+                    apps/api (composition root)  ── apps/web
 ```
+
+**A porta é declarada por quem a usa.** `application` diz "preciso de algo que
+leia bytes"; `adapter-fs` obedece. É isso que inverte a dependência e faz trocar
+biblioteca ser troca de arquivo, não refatoração.
 
 ## Onde cada coisa mora
 
-| Pacote | Responsabilidade | Pode tocar em |
+| Pacote | Responsabilidade | Pode depender de |
 |---|---|---|
-| `@telemetry/ibt-core` | Decodificar bytes do formato `.ibt` | nada além de `DataView`/`Uint8Array` |
-| `@telemetry/ingest` | I/O de arquivo, watcher, file-lock, cache | `node:fs`, `chokidar` |
-| `@telemetry/analysis` | Voltas, normalização, downsampling, delta | funções puras sobre dados decodificados |
-| `@telemetry/contracts` | Schemas zod que cruzam processo | `zod` |
-| `@telemetry/agent` | Ferramentas + LLM | `ai`, providers, `analysis` |
-| `@telemetry/api` | HTTP local | tudo acima |
-| `@telemetry/web` | Interface | só `contracts` e a API |
+| `packages/domain` | modelo e regras de corrida | **nada** |
+| `packages/application` | casos de uso e portas | `domain` |
+| `packages/contracts` | DTOs da borda HTTP | `domain`, `zod` |
+| `packages/ibt-core` | decoder binário puro | **nada** |
+| `packages/adapter-ibt` | porta de decodificação via `ibt-core` | `application`, `domain`, `ibt-core` |
+| `packages/adapter-fs` | arquivo, watcher, persistência | + `node:fs`, `chokidar` |
+| `packages/adapter-llm` | porta do narrador | + `ai`, `@ai-sdk/*` |
+| `packages/adapter-memory` | portas em memória (teste e dev) | `application`, `domain` |
+| `apps/api` | composition root + HTTP | tudo acima, `hono` |
+| `apps/web` | interface | `contracts`, `next` |
 
-A dependência **nunca** aponta para trás: `ibt-core` não conhece `ingest`, `analysis`
-não conhece `api`, `contracts` não conhece ninguém.
+Cada adapter é **dono de uma dependência externa**. O AI SDK só existe dentro de
+`adapter-llm`; `node:fs` só dentro de `adapter-fs`; `zod` só em `contracts`.
 
-## As três decisões estruturais
+## O custo de trocar uma lib
+
+É o teste real da arquitetura:
+
+| Trocar | Muda | Não muda |
+|---|---|---|
+| decoder de `.ibt` | `adapter-ibt` | domínio, casos de uso, API, front |
+| Gemini → outro provedor | variável de ambiente | nada |
+| AI SDK → Mastra | `adapter-llm` | tudo o mais |
+| memória → SQLite | `adapter-fs` | tudo o mais |
+| Hono → outro framework | `apps/api/src/http/` | domínio, casos de uso, adapters |
+| zod → outra validação | `contracts` | domínio, casos de uso, adapters |
+| arquivo → memória compartilhada (fase 2) | novo adapter de `TelemetryFilePort` | tudo o mais |
+
+## CQS
+
+Todo caso de uso é comando **ou** query. Ver [ADR 0010](adr/0010-cqs-na-aplicacao.md).
+
+```
+packages/application/src/
+  commands/   mudam estado, devolvem no máximo um id     → POST
+  queries/    não mudam nada, devolvem dados             → GET
+  ports/      o que a aplicação exige do mundo externo
+```
+
+A separação é verificada pelo compilador, não por revisão: `SessionReaderPort` e
+`SessionWriterPort` são interfaces diferentes, e uma query que só recebe o leitor
+não tem como escrever.
+
+## Testes como consequência da forma
+
+| Camada | Como se testa | Precisa de |
+|---|---|---|
+| `domain` | chamada direta | nada |
+| `application` | fake de porta escrito à mão | nada |
+| adapters | **a suíte de contrato da porta** | nada (ou a lib do adapter) |
+| `apps/api` | `app.request()` em memória | nada |
+
+A suíte de contrato (`@telemetry/application/testing`) é o que dá sentido a
+"substituível": toda implementação de uma porta roda os mesmos testes. O adapter
+em memória passa hoje; o de disco terá que passar amanhã, sem que nenhum caso de
+uso mude.
+
+## Fronteiras verificadas por máquina
+
+`pnpm arch` roda dentro do `pnpm check` e reprova:
+
+1. dependência declarada fora do mapa de camadas;
+2. `node:*` em pacote que deve ser puro;
+3. import de adapter fora do composition root;
+4. import profundo (`@telemetry/x/src/...`) ou relativo saindo do pacote.
+
+O mapa está em `scripts/architecture.config.mjs`. Mudar aquele arquivo é mudar a
+arquitetura e pede ADR.
+
+## Três decisões que sustentam o resto
 
 ### 1. O decoder é puro e a origem dos bytes é injetada
 
-`@telemetry/ibt-core` não abre arquivo. Ele recebe uma `ByteSource` e pede
-"me dê `n` bytes a partir de `x`". Hoje existe uma implementação sobre `node:fs`;
-na fase 2 haverá uma sobre a memória compartilhada do sim.
-
-Isso não é purismo. O `.ibt` e o stream ao vivo usam **o mesmo header e a mesma
-tabela de variáveis** — a única diferença real é de onde vêm os bytes e o fato de o
-arquivo ter 32 bytes extras de `DiskSubHeader`. Manter o decoder puro é o que
-transforma a fase 2 em "escrever uma classe" em vez de "reescrever o parser".
+`ibt-core` não abre arquivo: recebe uma `ByteSource`. O `.ibt` e o stream ao vivo
+usam o mesmo header e a mesma tabela de variáveis — muda só de onde vêm os bytes.
+Na fase 2, isso é um adapter novo (ADR 0002).
 
 ### 2. A análise é determinística; o modelo só redige
 
-O agente não calcula delta nem tempo de volta. Ele chama ferramentas que devolvem
-números já calculados por `@telemetry/analysis` e escreve a explicação em cima.
-
-Três razões: a conta fica certa e testável; o custo despenca (não se manda 100 mil
-pontos por canal para o modelo); e o resultado é auditável — cada afirmação aponta
-para um trecho e para os canais que a sustentam.
+Delta e tempo de volta saem do domínio, testável. O narrador recebe números
+prontos. A conta fica certa, o custo cai e cada afirmação é rastreável até um
+trecho e uns canais (ADR 0005, `docs/agente.md`).
 
 ### 3. Tudo roda local
 
-A escolha do watcher (ADR 0004) implica que a API roda na mesma máquina Windows
-que o sim, porque é ela que enxerga a pasta de telemetria. O front consome uma API
-em `localhost`. Nenhum dado de telemetria sai da máquina do piloto, exceto o resumo
-numérico que vai no prompt do agente — e isso está documentado em `docs/agente.md`.
+O watcher (ADR 0004) implica API na mesma máquina do sim. Nenhum dado de
+telemetria sai da máquina, exceto o resumo numérico que vai no prompt.
 
 ## Catálogo de canais em runtime
 
-Nunca existe lista fixa de canais no código. O conjunto muda entre carros e entre
-builds do sim. O catálogo é montado percorrendo a tabela de variáveis do arquivo,
-e cada canal já vem com nome, tipo, unidade e `count` — o suficiente para gerar a
-seleção de canais na UI dinamicamente.
+Nunca existe lista fixa de canais: o catálogo é montado percorrendo a tabela de
+variáveis do arquivo, porque o conjunto muda entre carros e builds do sim.
 
-Código que escreve `sample.get('Speed')` sem checar se o canal existe naquele
-arquivo é bug esperando acontecer.
-
-## O que a fase 2 vai mexer
-
-Só `@telemetry/ingest` ganha uma `ByteSource` nova e o processo passa a rodar em
-loop com congelamento de buffer (ver `docs/formato-ibt.md`, seção de memória
-compartilhada). `ibt-core`, `analysis`, `contracts` e `agent` não mudam.
+A exceção é explícita e verificada: os poucos canais **obrigatórios** para
+recortar voltas (`Lap`, `LapDistPct`) estão declarados em
+`packages/application/src/commands/ingest-telemetry-file.command.ts` e são
+conferidos contra o catálogo real do arquivo — ausência falha nomeando o canal,
+em vez de produzir volta errada em silêncio.

@@ -29,3 +29,5 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0006](0006-provider-llm-barato.md) | Gemini Flash como default, NVIDIA NIM como alternativa | Aceito |
 | [0007](0007-persistencia-e-downsampling.md) | Persistência e downsampling | Proposto |
 | [0008](0008-volta-de-referencia.md) | Volta de referência importada | Aceito |
+| [0009](0009-arquitetura-hexagonal.md) | Arquitetura hexagonal com dependências invertidas | Aceito |
+| [0010](0010-cqs-na-aplicacao.md) | CQS na camada de aplicação | Aceito |

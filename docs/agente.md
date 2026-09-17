@@ -5,7 +5,7 @@
 Um engenheiro de pista que lê números já calculados e explica o que eles significam.
 
 O que ele **não** é: um calculador de delta, um parser, nem um sistema que "olha a
-telemetria bruta". Todo número que ele cita saiu de `@telemetry/analysis`.
+telemetria bruta". Todo número que ele cita saiu de `@telemetry/domain`.
 
 ## Por que assim
 
@@ -21,7 +21,8 @@ qualidade: a parte difícil não é raciocínio numérico, é redação técnica
 
 ## Stack
 
-**AI SDK da Vercel (`ai` v7)** como camada de modelo. Ver
+**AI SDK da Vercel (`ai` v7)**, dentro de `packages/adapter-llm` — único pacote
+do sistema que importa `ai` ou `@ai-sdk/*`. Ver
 `docs/adr/0005-camada-agentica-ai-sdk.md` para a comparação com Mastra e o critério
 de quando migrar.
 
@@ -34,25 +35,29 @@ Providers no MVP:
 
 Troca de provider é variável de ambiente (`TELEMETRY_LLM_PROVIDER`), não mudança de
 código. O único arquivo que sabe qual provider está em uso é
-`packages/agent/src/provider.ts`.
+`packages/adapter-llm/src/provider.ts`.
 
-## Ferramentas
+## A porta
 
-O agente não recebe a telemetria no prompt. Ele pede o que precisa:
+A aplicação conhece uma interface só, `NarratorPort`:
 
-| Ferramenta | Devolve |
-|---|---|
-| `listLaps` | voltas da sessão com tempo e validade |
-| `getLapSummary` | tempo, setores, mín/máx dos canais principais |
-| `getDeltaSegments` | trechos onde o delta contra a referência se move |
-| `getChannelWindow` | canais num trecho de distância, já reduzidos (teto de pontos) |
+```ts
+narrate(request: { comparison: LapComparison; evidence: ReadonlyMap<string, readonly number[]> }): Promise<Narration>
+```
 
-Regras das ferramentas:
+Entra delta já calculado mais trechos de canal já reduzidos; sai resumo e
+achados. Nenhum tipo do AI SDK aparece na assinatura — é isso que permite trocar
+a biblioteca sem tocar em caso de uso (ADR 0009).
 
-1. Toda ferramenta tem teto de pontos. Nenhuma devolve série crua.
-2. Toda ferramenta é determinística: mesma entrada, mesma saída.
-3. Nenhuma ferramenta escreve. O agente não ingere arquivo, não apaga sessão, não
-   altera referência.
+Se um dia o narrador precisar buscar dados por conta própria (tool calling), ele
+recebe **portas de leitura** — nunca escrita, e nunca acesso a arquivo. O teto de
+pontos por trecho continua valendo: nenhuma série crua vai para o modelo.
+
+## O que o agente não pode fazer
+
+1. Ingerir arquivo, apagar sessão ou alterar referência. O narrador só lê.
+2. Receber série crua. Tudo que chega já passou por redução.
+3. Calcular. Se um número não veio do domínio, ele não entra no relatório.
 
 ## Saída
 

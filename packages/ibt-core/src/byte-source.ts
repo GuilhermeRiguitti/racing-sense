@@ -4,7 +4,7 @@
  * É o ponto de troca entre MVP e fase 2: hoje a implementação lê de um arquivo
  * `.ibt`; ao vivo ela lerá da memória compartilhada do sim. Nada mais muda.
  *
- * Implementações concretas ficam em `@telemetry/ingest` — nunca aqui.
+ * Implementações concretas ficam nos adapters (`@telemetry/adapter-fs`) — nunca aqui.
  */
 export interface ByteSource {
   /**

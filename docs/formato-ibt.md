@@ -19,7 +19,7 @@ Tudo é little-endian.
 
 Enquanto a sessão roda, o arquivo está sendo escrito e fica **travado pelo Windows**.
 Ler cedo demais dá `EBUSY` ou arquivo truncado — por isso o watcher espera estabilizar
-(ver `packages/ingest/src/watcher.ts`).
+(ver `packages/adapter-fs/src/telemetry-watcher.fs.ts`).
 
 ## Layout
 
@@ -125,7 +125,7 @@ bufOffset + (N * bufLen) + varHeader.offset
 - **Streaming, não `readFile`.** Uma stint de 30 min a 60 Hz passa de 100 mil
   amostras por canal.
 - **Amostra não sabe de volta.** O agrupamento por volta é trabalho da
-  `@telemetry/analysis`, usando `Lap`/`LapDistPct`.
+  `@telemetry/domain`, usando `Lap`/`LapDistPct`.
 
 ## Memória compartilhada (fase 2, não implementar agora)
 

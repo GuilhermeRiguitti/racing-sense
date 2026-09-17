@@ -3,18 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Schemas zod e tipos compartilhados entre api, web e agent.",
+  "description": "DTOs e schemas zod da borda HTTP. Único lugar onde zod aparece.",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@telemetry/domain": "workspace:*",
+    "zod": "catalog:"
+  },
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "dependencies": {
-    "zod": "catalog:"
   }
 }

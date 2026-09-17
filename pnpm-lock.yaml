@@ -62,21 +62,27 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.1(hono@4.13.8)
-      '@telemetry/agent':
+      '@telemetry/adapter-fs':
         specifier: workspace:*
-        version: link:../../packages/agent
-      '@telemetry/analysis':
+        version: link:../../packages/adapter-fs
+      '@telemetry/adapter-ibt':
         specifier: workspace:*
-        version: link:../../packages/analysis
+        version: link:../../packages/adapter-ibt
+      '@telemetry/adapter-llm':
+        specifier: workspace:*
+        version: link:../../packages/adapter-llm
+      '@telemetry/adapter-memory':
+        specifier: workspace:*
+        version: link:../../packages/adapter-memory
+      '@telemetry/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@telemetry/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@telemetry/ibt-core':
+      '@telemetry/domain':
         specifier: workspace:*
-        version: link:../../packages/ibt-core
-      '@telemetry/ingest':
-        specifier: workspace:*
-        version: link:../../packages/ingest
+        version: link:../../packages/domain
       hono:
         specifier: 'catalog:'
         version: 4.13.8
@@ -122,74 +128,14 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  packages/agent:
+  packages/adapter-fs:
     dependencies:
-      '@ai-sdk/google':
-        specifier: 'catalog:'
-        version: 4.0.74(zod@4.6.5)
-      '@ai-sdk/openai-compatible':
-        specifier: 'catalog:'
-        version: 3.0.51(zod@4.6.5)
-      '@telemetry/analysis':
+      '@telemetry/application':
         specifier: workspace:*
-        version: link:../analysis
-      '@telemetry/contracts':
+        version: link:../application
+      '@telemetry/domain':
         specifier: workspace:*
-        version: link:../contracts
-      ai:
-        specifier: 'catalog:'
-        version: 7.0.105(zod@4.6.5)
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
-    devDependencies:
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
-
-  packages/analysis:
-    dependencies:
-      '@telemetry/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@telemetry/ibt-core':
-        specifier: workspace:*
-        version: link:../ibt-core
-    devDependencies:
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
-
-  packages/contracts:
-    dependencies:
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
-    devDependencies:
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
-
-  packages/ibt-core:
-    devDependencies:
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
-
-  packages/ingest:
-    dependencies:
+        version: link:../domain
       '@telemetry/ibt-core':
         specifier: workspace:*
         version: link:../ibt-core
@@ -200,6 +146,113 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.3
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/adapter-ibt:
+    dependencies:
+      '@telemetry/application':
+        specifier: workspace:*
+        version: link:../application
+      '@telemetry/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@telemetry/ibt-core':
+        specifier: workspace:*
+        version: link:../ibt-core
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/adapter-llm:
+    dependencies:
+      '@ai-sdk/google':
+        specifier: 'catalog:'
+        version: 4.0.74(zod@4.6.5)
+      '@ai-sdk/openai-compatible':
+        specifier: 'catalog:'
+        version: 3.0.51(zod@4.6.5)
+      '@telemetry/application':
+        specifier: workspace:*
+        version: link:../application
+      '@telemetry/domain':
+        specifier: workspace:*
+        version: link:../domain
+      ai:
+        specifier: 'catalog:'
+        version: 7.0.105(zod@4.6.5)
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/adapter-memory:
+    dependencies:
+      '@telemetry/application':
+        specifier: workspace:*
+        version: link:../application
+      '@telemetry/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/application:
+    dependencies:
+      '@telemetry/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/contracts:
+    dependencies:
+      '@telemetry/domain':
+        specifier: workspace:*
+        version: link:../domain
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/domain:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.1(@types/node@22.20.3)(vite@8.3.0(@types/node@22.20.3)(esbuild@0.28.2)(tsx@4.23.13))
+
+  packages/ibt-core:
+    devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

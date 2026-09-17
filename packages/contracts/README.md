@@ -1,7 +1,12 @@
 # @telemetry/contracts
 
-Schemas zod e tipos que atravessam fronteira entre `api`, `web` e `agent`.
+DTOs e schemas da borda HTTP. **Único pacote onde `zod` aparece.**
 
-Regra: um formato que cruza processo (HTTP, arquivo salvo, saída estruturada de
-LLM) tem schema aqui, e a validação usa este schema — nos dois lados.
-Tipo de domínio duplicado em outro pacote é bug, não atalho.
+Duas funções:
+
+1. **Validar entrada na borda**, para id inventado não chegar ao caso de uso.
+2. **Isolar o formato público** do modelo interno. Mudar um campo do domínio não
+   quebra a API sem alguém passar por um mapper aqui e perceber.
+
+O domínio não conhece schema de validação e a aplicação não conhece JSON. Trocar
+zod por outra lib, ou JSON por outro formato, para neste pacote.

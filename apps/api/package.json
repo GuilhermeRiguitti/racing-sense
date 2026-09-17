@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@telemetry/agent": "workspace:*",
-    "@telemetry/analysis": "workspace:*",
+    "@telemetry/adapter-fs": "workspace:*",
+    "@telemetry/adapter-ibt": "workspace:*",
+    "@telemetry/adapter-llm": "workspace:*",
+    "@telemetry/adapter-memory": "workspace:*",
+    "@telemetry/application": "workspace:*",
     "@telemetry/contracts": "workspace:*",
-    "@telemetry/ibt-core": "workspace:*",
-    "@telemetry/ingest": "workspace:*",
+    "@telemetry/domain": "workspace:*",
     "hono": "catalog:"
   },
   "devDependencies": {

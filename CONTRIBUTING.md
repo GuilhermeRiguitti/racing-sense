@@ -7,7 +7,7 @@
 
 ```bash
 pnpm install
-pnpm check      # lint + typecheck + testes. É o portão antes de qualquer commit.
+pnpm check      # lint + arch + typecheck + testes. É o portão antes de qualquer commit.
 ```
 
 Comandos úteis:
@@ -16,6 +16,7 @@ Comandos úteis:
 |---|---|
 | `pnpm test` | testes uma vez |
 | `pnpm test:watch` | testes em watch |
+| `pnpm arch` | verifica as fronteiras entre camadas |
 | `pnpm typecheck` | `tsc --noEmit` em todos os workspaces |
 | `pnpm lint` / `pnpm lint:fix` | Biome |
 | `pnpm dev:api` | API local em `http://localhost:3333` |
@@ -30,19 +31,31 @@ Misturar os dois dentro de um identificador (`calcularLapTime`) é o pior dos mu
 
 ## Regras de fronteira
 
-Valem para pessoas e para agentes de código. A versão curta está no `CLAUDE.md`.
+Valem para pessoas e para agentes de código. Lista completa no `CLAUDE.md`,
+justificativa nos ADRs 0009 e 0010.
 
-1. `@telemetry/ibt-core` não importa `node:*` e não tem dependência de runtime.
-2. Nada de lista fixa de canais de telemetria. O catálogo vem da tabela de variáveis
-   do arquivo, em runtime.
-3. Session info é CP1252, não UTF-8.
-4. Tipo de domínio que cruza processo mora em `@telemetry/contracts`, uma vez só.
-5. Chave de API só por variável de ambiente.
-6. Nenhum `.ibt` no repositório.
+1. **`domain` e `ibt-core` são puros** — sem `node:*`, sem lib, sem I/O.
+2. **Caso de uso importa porta, nunca adapter.** Quem escolhe implementação é o
+   composition root em `apps/api/src/composition-root.ts`.
+3. **Cada adapter é dono de uma dependência externa** — `zod` em `contracts`,
+   `ai` em `adapter-llm`, `node:fs` em `adapter-fs`, `hono` em `apps/api`.
+4. **CQS**: comando muda estado e devolve no máximo um id; query lê e recebe só
+   portas de leitura.
+5. **Toda implementação de porta roda a suíte de contrato** de
+   `@telemetry/application/testing`.
+6. Nada de catálogo fixo de canais; session info é CP1252; comparação por
+   distância; chave de API só por ambiente; nenhum `.ibt` versionado.
+
+As quatro primeiras são verificadas por `pnpm arch` — violação quebra o build, não
+depende de alguém lembrar na revisão. O mapa está em
+`scripts/architecture.config.mjs`, e mudá-lo pede ADR.
 
 ## Testes
 
-- Teste unitário constrói os bytes na mão e roda em qualquer máquina.
+- Domínio: chamada direta, sem mock.
+- Caso de uso: fake de porta escrito à mão. Nada de mock de framework.
+- Adapter: roda a suíte de contrato da porta.
+- Teste unitário de formato binário constrói os bytes na mão e roda em qualquer máquina.
 - Teste que precisa de `.ibt` real lê de `fixtures/real/` e **pula** quando o arquivo
   não existe. Nunca falha por ausência de fixture.
 - Stub declarado lança `NotImplementedError` com mensagem dizendo o que falta. Stub que
@@ -53,13 +66,13 @@ Valem para pessoas e para agentes de código. A versão curta está no `CLAUDE.m
 Conventional Commits, em português:
 
 ```
-feat(analysis): detecta voltas com histerese na linha de chegada
-fix(ingest): trata EBUSY ao abrir arquivo ainda travado pelo sim
+feat(domain): detecta voltas com histerese na linha de chegada
+fix(adapter-fs): trata EBUSY ao abrir arquivo ainda travado pelo sim
 docs(adr): registra escolha do provider de LLM
 ```
 
-Escopos: `ibt-core`, `ingest`, `analysis`, `agent`, `contracts`, `api`, `web`, `docs`,
-`adr`, `infra`.
+Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
+`adapter-fs`, `adapter-llm`, `adapter-memory`, `api`, `web`, `docs`, `adr`, `infra`.
 
 ## Decisões
 
@@ -68,7 +81,7 @@ edita o ADR antigo — escreve um novo que o supera. Ver `docs/adr/README.md`.
 
 ## Antes de abrir PR
 
-- [ ] `pnpm check` verde
+- [ ] `pnpm check` verde (inclui `pnpm arch`)
 - [ ] Documentação atualizada se o comportamento mudou
 - [ ] ADR novo se a decisão for estrutural
 - [ ] Item resolvido saiu de `docs/pendencias.md`

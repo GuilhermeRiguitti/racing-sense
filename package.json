@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "check": "pnpm run lint && pnpm run arch && pnpm run typecheck && pnpm run test",
     "typecheck": "pnpm -r --no-bail run typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:api": "pnpm --filter @telemetry/api dev",
-    "dev:web": "pnpm --filter @telemetry/web dev"
+    "dev:web": "pnpm --filter @telemetry/web dev",
+    "arch": "node scripts/check-architecture.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

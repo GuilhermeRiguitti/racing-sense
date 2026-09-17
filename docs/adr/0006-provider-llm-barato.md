@@ -16,7 +16,8 @@ Dois providers suportados, selecionados por variável de ambiente:
 | `google` (default) | `@ai-sdk/google` | `GOOGLE_GENERATIVE_AI_API_KEY` |
 | `nvidia` | `@ai-sdk/openai-compatible` | `NVIDIA_API_KEY` |
 
-O código só conhece o provider em `packages/agent/src/provider.ts`.
+O código só conhece o provider em `packages/adapter-llm/src/provider.ts`, e a
+aplicação nem isso: ela só vê `NarratorPort` (ADR 0009).
 
 ## Por quê
 

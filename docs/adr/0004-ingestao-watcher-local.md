@@ -26,7 +26,7 @@ outra coisa: nenhum dado de telemetria sai da máquina.
 
 - **File-lock do Windows.** Enquanto a sessão roda, o sim mantém o arquivo aberto e
   travado. A estratégia (espera de estabilização + backoff + quarentena por timeout)
-  está em `packages/ingest/src/watcher.ts`. O `watcher.js` do
+  está em `packages/adapter-fs/src/telemetry-watcher.fs.ts`. O `watcher.js` do
   `iracing-telemetry-analyzer` resolve exatamente esse problema e é a referência.
 - **Arquivo incompleto.** Ler cedo demais dá header válido e amostras truncadas — pior
   que erro, porque passa. Por isso a validação de `recordCount` contra o tamanho real

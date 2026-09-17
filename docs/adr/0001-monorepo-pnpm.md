@@ -1,6 +1,7 @@
 # ADR 0001 — Monorepo pnpm com pacotes em TypeScript
 
 **Status:** Aceito · 2026-09-17
+**Refinado por:** ADR 0009 (o mapa de pacotes abaixo foi substituído pelas camadas)
 
 ## Contexto
 

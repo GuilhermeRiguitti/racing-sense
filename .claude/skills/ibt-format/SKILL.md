@@ -54,7 +54,10 @@ bufOffset + (índiceDaAmostra * bufLen) + varHeader.offset
    não funcionar.
 3. **Leitura curta falha alto.** Nunca devolva buffer parcial: vira amostra corrompida
    longe da causa.
-4. **`ibt-core` não faz I/O.** Bytes entram por `ByteSource`. Nada de `node:fs` ali.
+4. **`ibt-core` não faz I/O.** Bytes entram por `ByteSource`, e quem a implementa é
+   `@telemetry/adapter-fs`. O adapter que liga o decoder ao sistema é
+   `@telemetry/adapter-ibt` — ele traduz `VarHeader` em `ChannelDescriptor`, para o
+   vocabulário do formato não subir para os casos de uso.
 
 ## Diagnóstico quando o valor vem errado
 
@@ -64,7 +67,7 @@ bufOffset + (índiceDaAmostra * bufLen) + varHeader.offset
 | Session info vem binário/ilegível | `sessionInfoOffset` e `sessionInfoLength` trocados (são int32 adjacentes) |
 | Nome de piloto com caractere estranho | decodificado como UTF-8 em vez de CP1252 |
 | Canal certo, valor sem sentido | tipo lido errado (float × int) ou `offset` do canal aplicado no arquivo em vez de na amostra |
-| Últimas amostras com lixo | arquivo truncado: sessão ainda estava gravando. Ver o watcher em `@telemetry/ingest` |
+| Últimas amostras com lixo | arquivo truncado: sessão ainda estava gravando. Ver o watcher em `@telemetry/adapter-fs` |
 | Canais misturados no tempo (fase 2) | buffer não congelado antes da leitura do tick |
 
 Detalhes e fontes: `docs/formato-ibt.md`. Estado de validação: `docs/pendencias.md`.
