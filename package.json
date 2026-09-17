@@ -1,0 +1,29 @@
+{
+  "name": "telemetry-analysis",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Análise agêntica de telemetria do iRacing a partir de arquivos .ibt",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "typecheck": "pnpm -r --no-bail run typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:api": "pnpm --filter @telemetry/api dev",
+    "dev:web": "pnpm --filter @telemetry/web dev"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

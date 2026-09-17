@@ -1,0 +1,23 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+onlyBuiltDependencies:
+  - "@biomejs/biome"
+  - "esbuild"
+  - "sharp"
+
+# Catálogo de versões compartilhadas.
+# Regra: toda dependência usada por mais de um workspace vive aqui e é
+# referenciada como "catalog:". Bump acontece em um lugar só.
+catalog:
+  "@types/node": "^22.19.0"
+  typescript: "^7.0.2"
+  tsx: "^4.23.13"
+  vitest: "^5.0.1"
+  zod: "^4.6.5"
+  ai: "^7.0.105"
+  "@ai-sdk/google": "^4.0.74"
+  "@ai-sdk/openai-compatible": "^3.0.51"
+  chokidar: "^5.0.0"
+  hono: "^4.13.8"

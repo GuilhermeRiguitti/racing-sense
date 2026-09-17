@@ -1,0 +1,22 @@
+{
+  "name": "@telemetry/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Leitura de arquivos .ibt do disco: watcher, file-lock, cache de parse.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "dependencies": {
+    "@telemetry/ibt-core": "workspace:*",
+    "chokidar": "catalog:"
+  }
+}

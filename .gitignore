@@ -1,0 +1,35 @@
+# dependências
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+*.tsbuildinfo
+.next/
+out/
+
+# ambiente
+.env
+.env.*
+!.env.example
+
+# telemetria: arquivos .ibt são binários grandes e podem conter dados de pilotos.
+# Nunca versionar. Ver docs/fixtures.md para como obter/gerar fixtures.
+*.ibt
+fixtures/real/
+.cache/
+data/
+
+# sistema / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# typescript / next
+next-env.d.ts
+
+# testes
+coverage/
