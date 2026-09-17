@@ -1,4 +1,5 @@
 import { detectLaps, type Lap, type SessionId, type TelemetrySession } from '@telemetry/domain';
+import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { IdGeneratorPort } from '../ports/system.port.js';
 import type { TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -26,6 +27,8 @@ export interface IngestTelemetryFileDeps {
   readonly decoder: TelemetryDecoderPort;
   readonly sessions: SessionWriterPort;
   readonly ids: IdGeneratorPort;
+  /** Fila de publicação. Enfileirar é local e instantâneo; enviar é outro caso de uso. */
+  readonly publicationQueue: PublicationQueuePort;
 }
 
 export type IngestTelemetryFileHandler = (
@@ -73,6 +76,11 @@ export function createIngestTelemetryFileHandler(
       };
 
       await deps.sessions.save({ session, laps, seriesByLap: new Map() });
+
+      // Publica tudo automaticamente, mas só enfileirando: a ingestão não espera
+      // rede, e a sessão nasce privada no servidor (ADR 0013).
+      await deps.publicationQueue.enqueue(session.id);
+
       return session.id;
     } finally {
       await deps.files.close(ref);

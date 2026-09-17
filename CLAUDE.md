@@ -5,9 +5,16 @@ qualquer linha.
 
 ## O projeto
 
-Análise agêntica de telemetria do iRacing. Lê arquivos `.ibt` gravados em disco
-pelo sim, recorta as voltas, compara com uma volta de referência e usa um agente
-de LLM para explicar onde o tempo foi perdido.
+Análise agêntica de telemetria do iRacing, em três aplicações:
+
+| App | Framework | Onde roda | Papel |
+|---|---|---|---|
+| `apps/desktop` | Electron | Windows do piloto | ingestão, análise, LLM. **Offline-first** |
+| `apps/cloud-api` | NestJS + Postgres | servidor | a ponte entre desktop e web |
+| `apps/web` | Next.js | navegador | rede social: perfil, feed, voltas de outros |
+
+Ver ADR 0011. O desktop nunca espera a nuvem; a web nunca fala com a máquina do
+piloto; a LLM é só do desktop.
 
 **Estado: fundação.** Arquitetura, regras e casos de uso estão de pé. O decoder
 tem tipos, constantes e catálogo de canais funcionando — mas **nenhum `.ibt` real
@@ -23,8 +30,9 @@ pnpm arch               # só as fronteiras de arquitetura
 pnpm test               # testes
 pnpm typecheck          # tsc --noEmit em todos os workspaces
 pnpm lint / lint:fix    # Biome
-pnpm dev:api            # API local, porta 3333
-pnpm dev:web            # interface, porta 3000
+pnpm dev:desktop        # aplicativo do piloto (Electron)
+pnpm dev:cloud          # cloud-api (NestJS), porta 4000
+pnpm dev:web            # rede social (Next.js), porta 3000
 ```
 
 Node 22+, pnpm 10+.
@@ -34,18 +42,22 @@ Node 22+, pnpm 10+.
 Ports & adapters, dependência apontando para dentro. ADR 0009 e ADR 0010.
 
 ```
-domain  ◀── application (portas) ◀── adapters ◀── apps/api (composition root)
+domain ◀── application (portas) ◀── adapters ◀── composition root (desktop | cloud-api)
 ```
 
 | Camada | Pacote | Pode depender de |
 |---|---|---|
 | Domínio | `packages/domain` | **nada** |
 | Aplicação | `packages/application` | `domain` |
-| Borda (DTO) | `packages/contracts` | `domain`, `zod` |
+| Borda (DTO + validação) | `packages/contracts` | `domain`, `zod` |
 | Lib técnica | `packages/ibt-core` | **nada** |
-| Adapters | `packages/adapter-{ibt,fs,llm,memory}` | `application`, `domain` + a lib que aquele adapter possui |
-| Composition root | `apps/api` | tudo acima |
-| Interface | `apps/web` | `contracts` |
+| Adapters | `packages/adapter-{ibt,fs,sqlite,http,postgres,llm,memory}` | `application`, `domain` + a lib que aquele adapter possui |
+| Composition roots | `apps/desktop`, `apps/cloud-api` | os adapters que cada um usa |
+| Interface web | `apps/web` | `contracts` |
+
+Cada adapter é dono de **uma** dependência: `better-sqlite3` em `adapter-sqlite`,
+`pg` em `adapter-postgres`, `ai` em `adapter-llm`, `node:fs` em `adapter-fs`,
+`zod` em `contracts`.
 
 **`pnpm arch` reprova quem furar isso.** O mapa vive em
 `scripts/architecture.config.mjs`; mudá-lo é mudar a arquitetura e pede ADR novo.
@@ -59,7 +71,9 @@ domain  ◀── application (portas) ◀── adapters ◀── apps/api (co
 | "Preciso de algo que faça X" | uma porta em `application/ports` |
 | Uso de lib externa ou API de plataforma | um adapter |
 | Formato que sai na API | `contracts` |
-| Escolha de qual implementação usar | `apps/api/src/composition-root.ts`, e só ali |
+| Escolha de qual implementação usar | `apps/desktop/src/main/composition-root.ts` ou `apps/cloud-api/src/composition-root.ts`, e só ali |
+| Rota da cloud-api | `apps/cloud-api/src/modules/` — controller fino, módulo liga e não pensa |
+| Canal novo entre front do desktop e o sistema | `apps/desktop/src/main/ipc-contract.ts` + handler |
 
 Na dúvida, use a skill **`novo-caso-de-uso`**.
 
@@ -70,8 +84,10 @@ Arquiteturais (as quatro primeiras são verificadas por `pnpm arch`):
 1. **`domain` e `ibt-core` são puros.** Nada de `node:*`, nada de lib, nada de I/O.
 2. **A aplicação não conhece implementação.** Caso de uso importa porta, nunca
    adapter. Quem escolhe é o composition root.
-3. **Cada adapter é dono de uma dependência.** `zod` só em `contracts`, `ai` só em
-   `adapter-llm`, `node:fs` só em `adapter-fs`, `hono` só em `apps/api`.
+3. **Cada adapter é dono de uma dependência.** `zod` só em `contracts` (e a
+   validação passa por `validate()` de lá), `ai` só em `adapter-llm`, `node:fs`
+   só em `adapter-fs`, `better-sqlite3` só em `adapter-sqlite`, `pg` só em
+   `adapter-postgres`.
 4. **Sem import profundo.** `@telemetry/x` sim, `@telemetry/x/src/...` não.
 5. **CQS.** Comando muda estado e devolve no máximo um id; query lê e não escreve.
    Query recebe só `...ReaderPort`. Gerar análise é comando (`RequestLapAnalysis`),
@@ -82,22 +98,34 @@ Arquiteturais (as quatro primeiras são verificadas por `pnpm arch`):
 8. **Toda implementação de porta roda a suíte de contrato**
    (`@telemetry/application/testing`). Adapter novo sem contrato verde não entra.
 
+Da topologia (ADR 0011 e 0013):
+
+9. **O desktop nunca espera a nuvem.** Publicar é enfileirar; enviar é outro caso
+   de uso, em segundo plano. Falha de rede não vira erro na cara do piloto.
+10. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
+11. **A web só fala com a cloud-api**, nunca com a máquina do piloto.
+12. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
+    o único seguro. Acesso negado responde "não encontrada", nunca "sem
+    permissão" — distinguir os dois entrega que a sessão existe.
+
 De domínio:
 
-9. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
-   runtime. Canal obrigatório é declarado no caso de uso e conferido contra o
-   catálogo real, falhando com o nome do canal.
-10. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
+13. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
+    runtime. Canal obrigatório é declarado no caso de uso e conferido contra o
+    catálogo real, falhando com o nome do canal.
+14. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
     despercebido até o primeiro acento aparecer.
-11. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
+15. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
-12. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
-13. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
+16. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
+17. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
+    pista produz número honesto e conclusão errada.
+18. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
     commit.
-14. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
-15. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
+19. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
+20. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
-16. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
+21. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
 
 ## Forma de um caso de uso
@@ -163,6 +191,10 @@ Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
 | `docs/arquitetura.md` | as camadas, o custo de trocar cada lib, como testar |
 | `docs/adr/0009-arquitetura-hexagonal.md` | por que ports & adapters, e o que se aceitou perder |
 | `docs/adr/0010-cqs-na-aplicacao.md` | a regra de comando vs. query |
+| `docs/adr/0011-topologia-tres-aplicacoes.md` | as três aplicações e a fronteira de autonomia |
+| `docs/adr/0012-electron-no-desktop.md` | por que Electron, e o que custa |
+| `docs/adr/0013-sincronizacao-e-visibilidade.md` | publicação automática, visibilidade e links |
+| `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -179,3 +211,6 @@ e relatório do agente.
 **Fora do MVP:** telemetria ao vivo via memória compartilhada, overlay em tempo
 real, broadcast de comandos para o sim. Não implemente — quando entrar, é um
 adapter novo de `TelemetryFilePort` e nada mais muda.
+
+**Escopo da nuvem hoje:** esqueleto. Postgres, migrations e autenticação de
+verdade estão em `docs/pendencias.md`. O desktop funciona inteiro sem nada disso.

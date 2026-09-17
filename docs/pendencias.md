@@ -47,3 +47,29 @@ a lib e a estratégia de tolerância.
 
 Comparação por setor é mais legível que delta contínuo, mas exige saber onde estão os
 setores da pista. Verificar se a session info traz isso ou se precisa ser derivado.
+
+## 8. Nuvem: Postgres, migrations e autenticação de verdade
+
+`adapter-postgres` é esqueleto e a cloud-api não persiste nada ainda. Falta:
+migrations, o middleware que lê o cookie selado e põe o `pilotId` na requisição,
+cadastro de piloto e a rota que recebe a sessão publicada pelo desktop.
+
+Quando existir Postgres no CI, o adapter roda a mesma suíte de contrato que o de
+memória e o de SQLite já passam.
+
+## 9. Reconciliação entre o local e a nuvem
+
+Apagar sessão no desktop não apaga da nuvem, e editar local depois de publicar
+não volta atrás. São dois donos diferentes (ADR 0015), mas a falta de um caminho
+de exclusão é problema de privacidade, não de arquitetura — precisa existir.
+
+## 10. Empacotamento do desktop
+
+`electron-builder` configurado, instalador Windows assinado e auto-update. Inclui
+o rebuild nativo do `better-sqlite3` para a versão do Electron.
+
+## 11. Quais canais trazem as condições da sessão
+
+`SessionConditions` está modelado (temperatura do ar e da pista, horário, céu,
+umidade, vento), mas quais canais e campos do YAML preenchem cada um só se
+confirma com um `.ibt` real — mesma dependência da pendência #1.

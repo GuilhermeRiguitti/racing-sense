@@ -33,4 +33,4 @@ export function createImportReferenceLapHandler(deps: ImportReferenceLapDeps): I
 
 Fábrica que recebe as portas e devolve o handler. Sem classe, sem container de DI,
 sem decorator: a injeção é o argumento da função, e quem monta tudo é o
-composition root em `apps/api`.
+composition root de cada aplicação (`apps/desktop`, `apps/cloud-api`).

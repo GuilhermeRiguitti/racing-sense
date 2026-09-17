@@ -52,12 +52,20 @@ não escreve.
    com mais de uma implementação possível tem suíte de contrato, e todo adapter
    roda a mesma. É o que torna "substituível" um fato verificado.
 
-6. **Ligação → `apps/api/src/composition-root.ts`.** Único arquivo que escolhe
-   implementação.
+6. **Ligação → o composition root da aplicação que vai usar:**
+   `apps/desktop/src/main/composition-root.ts` (app do piloto) ou
+   `apps/cloud-api/src/composition-root.ts` (nuvem). São os únicos arquivos que
+   escolhem implementação. Repare no que **não** pode: `adapter-llm` na nuvem,
+   qualquer adapter na web.
 
-7. **Rota → `apps/api/src/http/routes.ts`.** Valida com o schema de
-   `@telemetry/contracts`, chama **um** caso de uso, devolve DTO. Regra de negócio
-   em rota é erro de camada.
+7. **Borda:**
+   - desktop → declare o canal em `apps/desktop/src/main/ipc-contract.ts`,
+     registre o handler em `ipc-handlers.ts` e exponha no `preload`;
+   - nuvem → controller em `apps/cloud-api/src/modules/`.
+
+   Nos dois casos a regra é a mesma: valida com o schema de
+   `@telemetry/contracts`, chama **um** caso de uso, devolve DTO. Regra de
+   negócio na borda é erro de camada.
 
 8. **DTO → `packages/contracts`,** se o formato sai na API. Único lugar com `zod`.
 
@@ -72,6 +80,7 @@ não escreve.
 | "declara a lib Y" | lib nova na camada errada | adapter que seja dono dela |
 | "import profundo" | `@telemetry/x/src/...` | importe o ponto de entrada |
 | Teste precisa de disco ou rede | dependência concreta vazou | injete porta e use o adapter em memória |
+| "declara a lib zod" fora de `contracts` | validação no lugar errado | use `validate()` de `@telemetry/contracts` |
 
 ## Checklist
 
@@ -81,4 +90,5 @@ não escreve.
 - [ ] Erro lançado é do domínio (`DomainError`), com código traduzido na borda
 - [ ] Stub lança `NotImplementedError` dizendo o que falta
 - [ ] Adapter novo roda a suíte de contrato
+- [ ] Se o caso de uso fala com a nuvem, ele **não** bloqueia o piloto (enfileira)
 - [ ] `pnpm check` verde

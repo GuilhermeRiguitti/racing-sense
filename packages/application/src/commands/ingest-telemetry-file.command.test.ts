@@ -6,6 +6,7 @@ import {
 } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
+import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { IdGeneratorPort } from '../ports/system.port.js';
 import type { DecodedMetadata, TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -39,6 +40,13 @@ const ids: IdGeneratorPort = {
   nextAnalysisReportId: () => toAnalysisReportId('report-1'),
 };
 
+const publicationQueue = (): PublicationQueuePort => ({
+  enqueue: vi.fn(async () => undefined),
+  pending: async () => [],
+  markPublished: async () => undefined,
+  markFailed: async () => undefined,
+});
+
 async function* numbers(values: readonly number[]): AsyncIterable<number> {
   for (const value of values) {
     yield value;
@@ -63,7 +71,13 @@ describe('IngestTelemetryFile', () => {
     };
     const sessions: SessionWriterPort = { save: vi.fn(), delete: vi.fn() };
 
-    const handle = createIngestTelemetryFileHandler({ files, decoder, sessions, ids });
+    const handle = createIngestTelemetryFileHandler({
+      files,
+      decoder,
+      sessions,
+      ids,
+      publicationQueue: publicationQueue(),
+    });
 
     await expect(handle({ locator: ref.locator })).rejects.toThrow(MissingChannelError);
     await expect(handle({ locator: ref.locator })).rejects.toThrow(/LapDistPct/);
@@ -82,6 +96,7 @@ describe('IngestTelemetryFile', () => {
       decoder,
       sessions: { save: vi.fn(), delete: vi.fn() },
       ids,
+      publicationQueue: publicationQueue(),
     });
 
     // O recorte de voltas ainda é stub — a falha vem do domínio.

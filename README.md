@@ -12,7 +12,11 @@ para explicar onde o tempo foi perdido.
 
 ```bash
 pnpm install
-pnpm check        # lint + arch + typecheck + testes
+pnpm check          # lint + arch + typecheck + testes
+
+pnpm dev:desktop    # aplicativo do piloto (Electron)
+pnpm dev:cloud      # cloud-api (NestJS), porta 4000
+pnpm dev:web        # rede social (Next.js), porta 3000
 ```
 
 Node 22+, pnpm 10+.
@@ -21,13 +25,14 @@ Node 22+, pnpm 10+.
 
 ```
 iRacing (Alt-L) → .ibt em Documentos\iRacing\telemetry\
-  → watcher local espera o arquivo destravar
-  → decoder puro lê header, catálogo de canais e amostras
-  → análise recorta voltas e compara com a volta de referência
-  → API local → gráficos na web + relatório do agente
+  → apps/desktop: watcher espera o arquivo destravar, decodifica,
+    recorta voltas, compara com a referência e roda a análise por LLM
+  → publica na fila (nasce privado) → apps/cloud-api → Postgres
+  → apps/web: perfil, feed e voltas de outros pilotos
 ```
 
-Detalhes em [docs/arquitetura.md](docs/arquitetura.md).
+O desktop funciona inteiro **sem internet**. A web nunca fala com a máquina do
+piloto. A LLM roda só no desktop. Ver [ADR 0011](docs/adr/0011-topologia-tres-aplicacoes.md).
 
 ## Estrutura
 
@@ -35,25 +40,32 @@ Ports & adapters: a dependência aponta para dentro, e `pnpm arch` reprova quem
 furar. Ver [docs/arquitetura.md](docs/arquitetura.md).
 
 ```
-domain  ◀── application (portas) ◀── adapters ◀── apps/api (composition root)
+domain ◀── application (portas) ◀── adapters ◀── composition root (desktop | cloud-api)
 ```
+
+| Aplicação | O quê |
+|---|---|
+| [`apps/desktop`](apps/desktop) | Electron, roda no Windows do piloto. Offline-first, com LLM |
+| [`apps/cloud-api`](apps/cloud-api) | NestJS + Postgres. A ponte entre desktop e web |
+| [`apps/web`](apps/web) | Next.js. Rede social: perfil, feed, voltas de outros |
 
 | Pacote | O quê |
 |---|---|
 | [`packages/domain`](packages/domain) | Modelo e regras de corrida. Zero dependências |
 | [`packages/application`](packages/application) | Casos de uso (CQS) e as portas que eles exigem |
-| [`packages/contracts`](packages/contracts) | DTOs da borda HTTP. Único lugar com zod |
+| [`packages/contracts`](packages/contracts) | DTOs e validação da borda. Único lugar com zod |
 | [`packages/ibt-core`](packages/ibt-core) | Decoder binário puro do `.ibt` |
 | [`packages/adapter-ibt`](packages/adapter-ibt) | Porta de decodificação sobre o `ibt-core` |
-| [`packages/adapter-fs`](packages/adapter-fs) | Arquivo, watcher e persistência. Único dono de `node:fs` |
+| [`packages/adapter-fs`](packages/adapter-fs) | Arquivo e watcher. Único dono de `node:fs` |
+| [`packages/adapter-sqlite`](packages/adapter-sqlite) | Banco local do piloto |
+| [`packages/adapter-http`](packages/adapter-http) | Cliente da cloud-api |
+| [`packages/adapter-postgres`](packages/adapter-postgres) | Sessões publicadas no servidor |
 | [`packages/adapter-llm`](packages/adapter-llm) | Porta do narrador. Único dono do AI SDK |
-| [`packages/adapter-memory`](packages/adapter-memory) | Portas em memória, para teste e desenvolvimento |
-| [`apps/api`](apps/api) | Composition root + HTTP local |
-| [`apps/web`](apps/web) | Interface (Next.js) |
+| [`packages/adapter-memory`](packages/adapter-memory) | Portas em memória, para teste |
 
-O custo de trocar uma biblioteca é conhecido e local: decoder muda `adapter-ibt`,
-provedor de LLM muda `adapter-llm`, persistência muda `adapter-fs`. Nenhum caso de
-uso é tocado.
+Trocar uma biblioteca custa um pacote: decoder muda `adapter-ibt`, provedor de
+LLM muda `adapter-llm`, banco local muda `adapter-sqlite`. Nenhum caso de uso é
+tocado.
 
 ## Documentação
 
@@ -76,8 +88,8 @@ Agentes de código começam pelo [`CLAUDE.md`](CLAUDE.md).
 
 ## Escopo
 
-**No MVP:** ler `.ibt` em disco, recortar voltas, comparar com referência importada,
-gráficos e relatório do agente.
+**No MVP:** ler `.ibt` em disco, recortar voltas, comparar com referência,
+gráficos e relatório do agente no desktop; publicar e compartilhar na web.
 
 **Fase 2:** telemetria ao vivo via memória compartilhada. Não implementar agora — a
 arquitetura já deixa o caminho pronto (ver [ADR 0002](docs/adr/0002-mvp-le-arquivo-em-disco.md)).

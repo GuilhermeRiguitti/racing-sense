@@ -16,9 +16,10 @@
     "format": "biome format --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:api": "pnpm --filter @telemetry/api dev",
     "dev:web": "pnpm --filter @telemetry/web dev",
-    "arch": "node scripts/check-architecture.mjs"
+    "arch": "node scripts/check-architecture.mjs",
+    "dev:desktop": "pnpm --filter @telemetry/desktop dev",
+    "dev:cloud": "pnpm --filter @telemetry/cloud-api dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

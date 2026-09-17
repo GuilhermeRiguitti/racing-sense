@@ -1,5 +1,6 @@
 import type { SessionId } from '../shared/id.js';
 import type { ChannelDescriptor } from './channel.js';
+import type { SessionConditions } from './conditions.js';
 
 /** Pista mais layout. Layouts diferentes da mesma pista são pistas diferentes. */
 export interface TrackRef {
@@ -29,6 +30,8 @@ export interface TelemetrySession {
   readonly tickRate: number;
   readonly sampleCount: number;
   readonly channels: readonly ChannelDescriptor[];
+  /** Temperatura, horário, céu. Sem isso a comparação entre pilotos mente. */
+  readonly conditions: SessionConditions;
 }
 
 /** Duração da gravação em segundos. */

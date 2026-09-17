@@ -1,0 +1,25 @@
+{
+  "name": "@telemetry/adapter-sqlite",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Adapter: armazenamento local do desktop em SQLite. Único dono de better-sqlite3.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telemetry/application": "workspace:*",
+    "@telemetry/domain": "workspace:*",
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@telemetry/domain": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/better-sqlite3": "^9.6.0"
+  }
+}

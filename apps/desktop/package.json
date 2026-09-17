@@ -1,0 +1,39 @@
+{
+  "name": "@telemetry/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Aplicativo do piloto, roda no Windows junto com o iRacing. Offline-first, com análise por LLM.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder --win",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telemetry/adapter-fs": "workspace:*",
+    "@telemetry/adapter-http": "workspace:*",
+    "@telemetry/adapter-ibt": "workspace:*",
+    "@telemetry/adapter-llm": "workspace:*",
+    "@telemetry/adapter-memory": "workspace:*",
+    "@telemetry/adapter-sqlite": "workspace:*",
+    "@telemetry/application": "workspace:*",
+    "@telemetry/contracts": "workspace:*",
+    "@telemetry/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "catalog:",
+    "vite": "^8.3.0",
+    "vitest": "catalog:"
+  }
+}

@@ -3,8 +3,35 @@
 ## O que este sistema faz
 
 Lê os arquivos `.ibt` que o iRacing grava em disco, recorta as voltas, compara a
-volta do piloto com uma volta de referência e usa um agente de LLM para explicar
-onde e por que o tempo foi perdido.
+volta do piloto com uma referência e usa um agente de LLM para explicar onde e
+por que o tempo foi perdido. E deixa o piloto compartilhar o que quiser com
+outros pilotos.
+
+## As três aplicações
+
+```
+  ┌─ apps/desktop (Electron, Windows) ───────────────┐
+  │  watcher → .ibt → análise → LLM → interface      │  offline-first
+  └──────────────┬───────────────────────────────────┘
+                 │ publica (fila + retry) · baixa voltas · autentica
+  ┌──────────────▼──────────────┐
+  │  apps/cloud-api (NestJS)    │ ── Postgres
+  └──────────────▲──────────────┘
+                 │
+  ┌──────────────┴──────────────┐
+  │  apps/web (Next.js)         │  rede social, sem LLM
+  └─────────────────────────────┘
+```
+
+Três fronteiras, verificadas por `pnpm arch` (ADR 0011):
+
+1. **O desktop nunca espera a nuvem.** Toda ida à cloud-api passa por porta e por
+   fila com retry. Sem internet, o aplicativo funciona inteiro.
+2. **A web nunca fala com a máquina do piloto.** Ela depende só de `contracts`.
+3. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
+
+Dentro do desktop, o front conversa com o processo principal por **IPC** — não
+existe servidor HTTP em `localhost`.
 
 ## A forma
 
@@ -12,21 +39,22 @@ Ports & adapters (hexagonal), com a dependência apontando **para dentro**.
 Decisão e justificativa em [ADR 0009](adr/0009-arquitetura-hexagonal.md).
 
 ```
-        ┌─────────────────────────────────────────────┐
-        │                  domain                     │  regras, zero deps
-        │   voltas · séries · delta · compatibilidade  │
-        └────────────────────▲────────────────────────┘
-                             │
-        ┌────────────────────┴────────────────────────┐
-        │               application                   │  casos de uso + PORTAS
-        │   commands/ (escrevem)  queries/ (leem)      │
-        └────▲───────────▲───────────▲───────────▲────┘
-             │           │           │           │        (as setas apontam
-     adapter-ibt   adapter-fs  adapter-llm  adapter-memory  para dentro: quem
-     decoder .ibt   node:fs      AI SDK       teste/dev      implementa depende
-                                                             de quem declara)
-                             ▲
-                    apps/api (composition root)  ── apps/web
+      ┌──────────────────────────────────────────────────────┐
+      │                       domain                         │  regras, zero deps
+      │  voltas · séries · delta · condições · visibilidade   │
+      └───────────────────────▲──────────────────────────────┘
+                              │
+      ┌───────────────────────┴──────────────────────────────┐
+      │                    application                       │  casos de uso + PORTAS
+      │       commands/ (escrevem)     queries/ (leem)        │
+      └──▲─────▲──────▲──────▲──────▲──────▲──────▲──────────┘
+         │     │      │      │      │      │      │      (as setas apontam para
+       ibt    fs   sqlite  http  postgres llm  memory      dentro: quem implementa
+                                                            depende de quem declara)
+         └─────┴──────┴──────┴───┐  └───┬──┘
+                                 │      │
+                      apps/desktop      apps/cloud-api ── apps/web
+                   (composition root)  (composition root)
 ```
 
 **A porta é declarada por quem a usa.** `application` diz "preciso de algo que
@@ -35,18 +63,22 @@ biblioteca ser troca de arquivo, não refatoração.
 
 ## Onde cada coisa mora
 
-| Pacote | Responsabilidade | Pode depender de |
+| Pacote | Responsabilidade | Dependência externa que possui |
 |---|---|---|
-| `packages/domain` | modelo e regras de corrida | **nada** |
-| `packages/application` | casos de uso e portas | `domain` |
-| `packages/contracts` | DTOs da borda HTTP | `domain`, `zod` |
-| `packages/ibt-core` | decoder binário puro | **nada** |
-| `packages/adapter-ibt` | porta de decodificação via `ibt-core` | `application`, `domain`, `ibt-core` |
-| `packages/adapter-fs` | arquivo, watcher, persistência | + `node:fs`, `chokidar` |
-| `packages/adapter-llm` | porta do narrador | + `ai`, `@ai-sdk/*` |
-| `packages/adapter-memory` | portas em memória (teste e dev) | `application`, `domain` |
-| `apps/api` | composition root + HTTP | tudo acima, `hono` |
-| `apps/web` | interface | `contracts`, `next` |
+| `packages/domain` | modelo e regras de corrida | **nenhuma** |
+| `packages/application` | casos de uso e portas | **nenhuma** |
+| `packages/contracts` | DTOs e validação da borda | `zod` |
+| `packages/ibt-core` | decoder binário puro | **nenhuma** |
+| `packages/adapter-ibt` | porta de decodificação | — (usa `ibt-core`) |
+| `packages/adapter-fs` | arquivo e watcher | `node:fs`, `chokidar` |
+| `packages/adapter-sqlite` | banco local do piloto | `better-sqlite3` |
+| `packages/adapter-http` | cliente da cloud-api | — |
+| `packages/adapter-postgres` | sessões publicadas | `pg` |
+| `packages/adapter-llm` | porta do narrador | `ai`, `@ai-sdk/*` |
+| `packages/adapter-memory` | portas em memória | **nenhuma** |
+| `apps/desktop` | composition root + IPC + interface | `electron` |
+| `apps/cloud-api` | composition root + HTTP | `@nestjs/*`, `iron-session` |
+| `apps/web` | interface pública | `next`, `react` |
 
 Cada adapter é **dono de uma dependência externa**. O AI SDK só existe dentro de
 `adapter-llm`; `node:fs` só dentro de `adapter-fs`; `zod` só em `contracts`.
@@ -57,12 +89,15 @@ Cada adapter é **dono de uma dependência externa**. O AI SDK só existe dentro
 
 | Trocar | Muda | Não muda |
 |---|---|---|
-| decoder de `.ibt` | `adapter-ibt` | domínio, casos de uso, API, front |
+| decoder de `.ibt` | `adapter-ibt` | domínio, casos de uso, apps |
 | Gemini → outro provedor | variável de ambiente | nada |
 | AI SDK → Mastra | `adapter-llm` | tudo o mais |
-| memória → SQLite | `adapter-fs` | tudo o mais |
-| Hono → outro framework | `apps/api/src/http/` | domínio, casos de uso, adapters |
-| zod → outra validação | `contracts` | domínio, casos de uso, adapters |
+| SQLite → outro banco local | `adapter-sqlite` | tudo o mais |
+| Postgres → outro banco | `adapter-postgres` | tudo o mais |
+| NestJS → outro framework | `apps/cloud-api/src/modules/` | domínio, casos de uso, adapters |
+| Electron → Tauri | processo principal do desktop | domínio, casos de uso, adapters, renderer |
+| zod → outra validação | `contracts` | todo o resto |
+| iron-session → outro esquema | `adapter-http` + cloud-api | as portas e os casos de uso |
 | arquivo → memória compartilhada (fase 2) | novo adapter de `TelemetryFilePort` | tudo o mais |
 
 ## CQS
@@ -87,7 +122,7 @@ não tem como escrever.
 | `domain` | chamada direta | nada |
 | `application` | fake de porta escrito à mão | nada |
 | adapters | **a suíte de contrato da porta** | nada (ou a lib do adapter) |
-| `apps/api` | `app.request()` em memória | nada |
+| `apps/desktop` | handlers de IPC com barramento falso | nada |
 
 A suíte de contrato (`@telemetry/application/testing`) é o que dá sentido a
 "substituível": toda implementação de uma porta roda os mesmos testes. O adapter
@@ -120,10 +155,15 @@ Delta e tempo de volta saem do domínio, testável. O narrador recebe números
 prontos. A conta fica certa, o custo cai e cada afirmação é rastreável até um
 trecho e uns canais (ADR 0005, `docs/agente.md`).
 
-### 3. Tudo roda local
+### 3. O que roda local fica local por padrão
 
-O watcher (ADR 0004) implica API na mesma máquina do sim. Nenhum dado de
-telemetria sai da máquina, exceto o resumo numérico que vai no prompt.
+O watcher (ADR 0004) implica que a ingestão e a análise rodam na mesma máquina do
+sim. O arquivo `.ibt` **nunca** sai dela.
+
+O que sobe é o derivado — metadados, condições, voltas e séries — e sobe
+automaticamente, mas **nasce privado**: aparecer para outra pessoa exige ação do
+piloto no painel da web (ADR 0013). Além disso, o resumo numérico que vai no
+prompt do narrador sai para o provedor de LLM escolhido, e só ele.
 
 ## Catálogo de canais em runtime
 

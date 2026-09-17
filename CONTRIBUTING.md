@@ -19,8 +19,9 @@ Comandos úteis:
 | `pnpm arch` | verifica as fronteiras entre camadas |
 | `pnpm typecheck` | `tsc --noEmit` em todos os workspaces |
 | `pnpm lint` / `pnpm lint:fix` | Biome |
-| `pnpm dev:api` | API local em `http://localhost:3333` |
-| `pnpm dev:web` | interface em `http://localhost:3000` |
+| `pnpm dev:desktop` | aplicativo do piloto (Electron) |
+| `pnpm dev:cloud` | cloud-api em `http://localhost:4000` |
+| `pnpm dev:web` | rede social em `http://localhost:3000` |
 
 ## Idioma
 
@@ -36,9 +37,11 @@ justificativa nos ADRs 0009 e 0010.
 
 1. **`domain` e `ibt-core` são puros** — sem `node:*`, sem lib, sem I/O.
 2. **Caso de uso importa porta, nunca adapter.** Quem escolhe implementação é o
-   composition root em `apps/api/src/composition-root.ts`.
+   composition root da aplicação (`apps/desktop/src/main/composition-root.ts` ou
+   `apps/cloud-api/src/composition-root.ts`).
 3. **Cada adapter é dono de uma dependência externa** — `zod` em `contracts`,
-   `ai` em `adapter-llm`, `node:fs` em `adapter-fs`, `hono` em `apps/api`.
+   `ai` em `adapter-llm`, `node:fs` em `adapter-fs`, `better-sqlite3` em
+   `adapter-sqlite`, `pg` em `adapter-postgres`.
 4. **CQS**: comando muda estado e devolve no máximo um id; query lê e recebe só
    portas de leitura.
 5. **Toda implementação de porta roda a suíte de contrato** de
@@ -72,7 +75,8 @@ docs(adr): registra escolha do provider de LLM
 ```
 
 Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
-`adapter-fs`, `adapter-llm`, `adapter-memory`, `api`, `web`, `docs`, `adr`, `infra`.
+`adapter-fs`, `adapter-sqlite`, `adapter-http`, `adapter-postgres`, `adapter-llm`,
+`adapter-memory`, `desktop`, `cloud-api`, `web`, `docs`, `adr`, `infra`.
 
 ## Decisões
 

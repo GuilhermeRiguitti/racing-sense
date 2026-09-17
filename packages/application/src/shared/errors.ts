@@ -4,7 +4,7 @@ import { DomainError } from '@telemetry/domain';
  * Erros que nascem na orquestração, não no modelo.
  *
  * Herdam de `DomainError` para que a borda HTTP tenha um único lugar onde
- * traduzir erro em status — ver `apps/api`.
+ * traduzir erro em status — ver `apps/cloud-api` e os handlers de IPC do desktop.
  */
 export class MissingChannelError extends DomainError {
   override readonly name = 'MissingChannelError';

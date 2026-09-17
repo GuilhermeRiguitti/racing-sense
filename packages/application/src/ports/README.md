@@ -1,7 +1,7 @@
 # Portas
 
 Interfaces que a aplicação **exige** do mundo externo. Quem implementa é um
-adapter, e é o composition root (`apps/api`) que escolhe qual.
+adapter, e é o composition root de cada aplicação que escolhe qual.
 
 Duas regras:
 

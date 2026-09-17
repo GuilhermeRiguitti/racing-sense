@@ -2,6 +2,9 @@
 
 **Status:** Aceito · 2026-09-17
 **Refina:** ADR 0001 (monorepo pnpm), que continua valendo
+**Refinado por:** ADR 0011 — as camadas seguem valendo; o que mudou é que hoje
+existem dois composition roots (`apps/desktop` e `apps/cloud-api`) no lugar do
+`apps/api` citado abaixo
 
 ## Contexto
 

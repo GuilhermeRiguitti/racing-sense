@@ -6,6 +6,7 @@ onlyBuiltDependencies:
   - "@biomejs/biome"
   - "esbuild"
   - "sharp"
+  - "better-sqlite3"
 
 # Catálogo de versões compartilhadas.
 # Regra: toda dependência usada por mais de um workspace vive aqui e é

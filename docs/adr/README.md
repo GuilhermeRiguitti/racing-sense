@@ -31,3 +31,8 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0008](0008-volta-de-referencia.md) | Volta de referência importada | Aceito |
 | [0009](0009-arquitetura-hexagonal.md) | Arquitetura hexagonal com dependências invertidas | Aceito |
 | [0010](0010-cqs-na-aplicacao.md) | CQS na camada de aplicação | Aceito |
+| [0011](0011-topologia-tres-aplicacoes.md) | Três aplicações e a fronteira de autonomia | Aceito |
+| [0012](0012-electron-no-desktop.md) | Electron no aplicativo do Windows | Aceito |
+| [0013](0013-sincronizacao-e-visibilidade.md) | Publicação automática com visibilidade controlada | Aceito |
+| [0014](0014-autenticacao-iron-session.md) | Um login para as duas aplicações, com iron-session | Aceito |
+| [0015](0015-dois-bancos.md) | SQLite local e Postgres na nuvem | Aceito |

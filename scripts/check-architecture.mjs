@@ -13,7 +13,7 @@
  *     nem com caminho relativo saindo do próprio pacote.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADAPTER_IMPORT_ALLOWLIST, LAYERS } from './architecture.config.mjs';
 
@@ -68,17 +68,11 @@ function packageOf(specifier) {
 
 function checkManifest(name, layer, manifest) {
   const declared = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
-  const toolingAllowlist = new Set([
-    'typescript',
-    'vitest',
-    'tsx',
-    '@types/node',
-    '@types/react',
-    '@types/react-dom',
-  ]);
+  const toolingAllowlist = new Set(['typescript', 'vitest', 'tsx']);
 
   for (const dependency of declared) {
-    if (toolingAllowlist.has(dependency)) continue;
+    // Pacote de tipos não é dependência de runtime: não move fronteira nenhuma.
+    if (toolingAllowlist.has(dependency) || dependency.startsWith('@types/')) continue;
 
     if (dependency.startsWith('@telemetry/')) {
       if (!layer.packages.includes(dependency)) {
@@ -105,7 +99,9 @@ function checkManifest(name, layer, manifest) {
 }
 
 function checkImports(name, layer, dir) {
-  for (const file of listSourceFiles(join(dir, 'src'))) {
+  const packageSrc = join(dir, 'src');
+
+  for (const file of listSourceFiles(packageSrc)) {
     const relativeFile = relative(ROOT, file);
     const source = readFileSync(file, 'utf8');
 
@@ -113,7 +109,12 @@ function checkImports(name, layer, dir) {
       const specifier = match[1];
 
       if (specifier.startsWith('.')) {
-        if (specifier.includes('../../')) {
+        // Subir de pasta dentro do próprio pacote é normal — o desktop tem
+        // main/, preload/ e renderer/, e o tipo da ponte é compartilhado entre
+        // eles. O que não pode é o caminho relativo escapar do pacote: isso é
+        // dependência escondida, que não aparece no package.json.
+        const target = resolve(dirname(file), specifier);
+        if (!target.startsWith(packageSrc)) {
           report(
             relativeFile,
             `import relativo "${specifier}" sai do pacote; use o nome do pacote`,

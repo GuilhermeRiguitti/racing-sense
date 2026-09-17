@@ -33,5 +33,9 @@ referências escritas:
 
 - [AI SDK (Vercel)](https://ai-sdk.dev)
 - [Mastra](https://mastra.ai) — alternativa avaliada no ADR 0005
-- [Hono](https://hono.dev)
+- [Electron](https://electronjs.org) · [electron-vite](https://electron-vite.org) · [electron-builder](https://electron.build)
+- [NestJS](https://nestjs.com)
+- [Next.js](https://nextjs.org)
+- [iron-session](https://github.com/vvo/iron-session)
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 - [Biome](https://biomejs.dev)
