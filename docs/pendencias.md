@@ -66,28 +66,19 @@ sincronização — divergência entre os dois lados é aceitável por design (A
 O resto da divergência (sessão reprocessada local que não voltou para a nuvem)
 fica como está: a web pode mostrar a versão antiga sem prejuízo.
 
-## 10. O renderer não sabe quando chega sessão nova
-
-O IPC hoje é só pergunta e resposta: a interface só vê uma sessão nova se alguém
-recarregar. Como o piloto deixa o aplicativo aberto enquanto treina (ADR 0017),
-a ingestão precisa **empurrar** evento para o renderer — sessão ingerida, volta
-recortada, análise pronta.
-
-É a pendência mais importante depois de validar o decoder.
-
-## 11. Gráficos e UX do desktop
+## 10. Gráficos e UX do desktop
 
 O que o piloto vê é o produto: gráfico de canal com zoom, delta contra a
 referência, navegação entre voltas, e o relatório do agente ancorado no trecho.
 Nada disso começou. Usar a skill `dataviz` antes de escrever a primeira linha de
 gráfico.
 
-## 12. Empacotamento do desktop
+## 11. Empacotamento do desktop
 
 `electron-builder` configurado, instalador Windows assinado e auto-update. Inclui
 o rebuild nativo do `better-sqlite3` para a versão do Electron.
 
-## 13. Quais canais trazem as condições da sessão
+## 12. Quais canais trazem as condições da sessão
 
 `SessionConditions` está modelado (temperatura do ar e da pista, horário, céu,
 umidade, vento), mas quais canais e campos do YAML preenchem cada um só se

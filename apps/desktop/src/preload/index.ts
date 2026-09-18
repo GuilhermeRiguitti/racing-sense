@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import type { DesktopEventDto } from '@telemetry/contracts';
+import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron';
 import { IPC } from '../main/ipc-contract.js';
 
 /**
@@ -24,6 +25,26 @@ const api = {
   signIn: (credentials: { email: string; password: string }) =>
     ipcRenderer.invoke(IPC.signIn, credentials),
   signOut: () => ipcRenderer.invoke(IPC.signOut),
+
+  /**
+   * Assina os avisos do processo principal e devolve como cancelar.
+   *
+   * Devolver o cancelamento não é detalhe: sem isso, cada remontagem de
+   * componente empilharia um ouvinte, e o aplicativo que fica aberto a noite
+   * inteira acumularia vazamento.
+   *
+   * O `IpcRendererEvent` fica deste lado da ponte — o renderer recebe só o
+   * evento, sem nada do Electron junto.
+   */
+  onEvent: (listener: (event: DesktopEventDto) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, payload: DesktopEventDto): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC.events, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC.events, handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('telemetry', api);

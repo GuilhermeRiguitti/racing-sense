@@ -7,6 +7,7 @@ import {
 import { aLap, aReferenceLap, aSeries, aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { AnalysisReportWriterPort } from '../ports/analysis-report-store.port.js';
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { NarratorPort } from '../ports/narrator.port.js';
 import type { ReferenceLapReaderPort } from '../ports/reference-lap-store.port.js';
 import type { SessionReaderPort } from '../ports/session-store.port.js';
@@ -31,6 +32,8 @@ const referencesReading = (
   ...overrides,
 });
 
+const eventos = (): EventPublisherPort => ({ publish: vi.fn() });
+
 const command = {
   sessionId: session.id,
   lapNumber: 3,
@@ -41,6 +44,7 @@ describe('RequestLapAnalysis', () => {
   it('não chama o narrador antes de o delta estar calculado', async () => {
     const narrator: NarratorPort = { narrate: vi.fn() };
     const reports: AnalysisReportWriterPort = { save: vi.fn() };
+    const events = eventos();
 
     const handle = createRequestLapAnalysisHandler({
       sessions: sessionsReading(),
@@ -48,6 +52,7 @@ describe('RequestLapAnalysis', () => {
       reports,
       narrator,
       clock: { now: () => new Date('2026-09-17T12:00:00Z') },
+      events,
     });
 
     // O cálculo do delta ainda é stub; o ponto do teste é que a falha acontece
@@ -55,6 +60,7 @@ describe('RequestLapAnalysis', () => {
     await expect(handle(command)).rejects.toThrow(NotImplementedError);
     expect(narrator.narrate).not.toHaveBeenCalled();
     expect(reports.save).not.toHaveBeenCalled();
+    expect(events.publish).not.toHaveBeenCalled();
   });
 
   it('falha cedo quando a sessão não existe', async () => {
@@ -66,6 +72,7 @@ describe('RequestLapAnalysis', () => {
       reports: { save: vi.fn() },
       narrator,
       clock: { now: () => new Date() },
+      events: eventos(),
     });
 
     await expect(handle({ ...command, sessionId: toSessionId('sumiu') })).rejects.toThrow(
@@ -81,6 +88,7 @@ describe('RequestLapAnalysis', () => {
       reports: { save: vi.fn() },
       narrator: { narrate: vi.fn() },
       clock: { now: () => new Date() },
+      events: eventos(),
     });
 
     await expect(handle({ ...command, referenceLapId: toReferenceLapId('sumiu') })).rejects.toThrow(
@@ -95,6 +103,7 @@ describe('RequestLapAnalysis', () => {
       reports: { save: vi.fn() },
       narrator: { narrate: vi.fn() },
       clock: { now: () => new Date() },
+      events: eventos(),
     });
 
     await expect(handle({ ...command, lapNumber: 42 })).rejects.toThrow(NotFoundError);

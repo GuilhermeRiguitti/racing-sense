@@ -1,5 +1,6 @@
 import type { IdGeneratorPort } from '@telemetry/application';
 import { detectLaps, type Lap, type SessionId, type TelemetrySession } from '@telemetry/domain';
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -29,6 +30,8 @@ export interface IngestTelemetryFileDeps {
   readonly ids: IdGeneratorPort;
   /** Fila de publicação. Enfileirar é local e instantâneo; enviar é outro caso de uso. */
   readonly publicationQueue: PublicationQueuePort;
+  /** Avisa a interface que chegou sessão nova, para ela não esperar recarregar. */
+  readonly events: EventPublisherPort;
 }
 
 export type IngestTelemetryFileHandler = (
@@ -80,6 +83,14 @@ export function createIngestTelemetryFileHandler(
       // Publica tudo automaticamente, mas só enfileirando: a ingestão não espera
       // rede, e a sessão nasce privada no servidor (ADR 0013).
       await deps.publicationQueue.enqueue(session.id);
+
+      // Só depois de tudo gravado: evento anunciando o que já é verdade, nunca
+      // o que está a caminho.
+      deps.events.publish({
+        type: 'session-ingested',
+        sessionId: session.id,
+        lapCount: laps.length,
+      });
 
       return session.id;
     } finally {

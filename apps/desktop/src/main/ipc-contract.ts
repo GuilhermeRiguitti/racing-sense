@@ -21,9 +21,19 @@ export const IPC = {
   currentPilot: 'auth:current',
   signIn: 'auth:sign-in',
   signOut: 'auth:sign-out',
+  /**
+   * Único canal de mão única: o processo principal empurrando fato novo para a
+   * interface. Todos os outros são pergunta e resposta.
+   */
+  events: 'events:desktop',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
+
+/** Canais que a interface chama e espera resposta. O de eventos não é um deles. */
+export const REQUEST_CHANNELS = Object.entries(IPC)
+  .filter(([name]) => name !== 'events')
+  .map(([, channel]) => channel);
 
 /** Erro atravessando o IPC. `Error` não sobrevive à serialização estruturada. */
 export interface IpcFailure {

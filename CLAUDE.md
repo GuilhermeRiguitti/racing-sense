@@ -196,6 +196,13 @@ escrever a primeira linha de gráfico, painel ou paleta, use a skill **`dataviz`
 O renderer é um navegador sem Node: tudo que precisa de disco, rede ou chave
 passa por IPC (`apps/desktop/src/main/ipc-contract.ts`).
 
+**Evento é aviso, não dado.** O processo principal empurra `{ type, ids }` pelo
+canal `events:desktop`; quem recebe responde **consultando de novo**. Payload de
+evento nunca carrega série, volta ou relatório — senão passam a existir duas
+versões da mesma verdade, e a que está na tela some no primeiro evento perdido.
+Emitir evento nunca pode falhar um caso de uso: a porta é `void` e a ponte
+engole o próprio erro.
+
 ## Ao tomar decisão estrutural
 
 Use a skill **`novo-adr`**. ADR sem a seção "o que se aceita perder" é

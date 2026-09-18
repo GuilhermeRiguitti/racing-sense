@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { buildDesktop } from './composition-root.js';
+import { createIpcEventPublisher } from './event-bridge.js';
 import { registerIpcHandlers } from './ipc-handlers.js';
 
 /**
@@ -33,6 +34,18 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   const desktop = buildDesktop({
+    // Empurra para todas as janelas vivas. Se não houver nenhuma, o evento
+    // simplesmente não acontece — quando a janela abrir, ela consulta o estado.
+    events: createIpcEventPublisher(
+      (channel, payload) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send(channel, payload);
+          }
+        }
+      },
+      (error) => console.error('falha ao anunciar evento', error),
+    ),
     userDataDir: app.getPath('userData'),
     cloudBaseUrl: CLOUD_BASE_URL,
     // `fetch` da sessão do Chromium: é ele que guarda e reenvia o cookie selado

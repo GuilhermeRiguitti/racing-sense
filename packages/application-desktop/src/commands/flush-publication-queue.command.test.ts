@@ -1,5 +1,6 @@
 import { toSessionId } from '@telemetry/domain';
 import { describe, expect, it, vi } from 'vitest';
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { PublicationQueuePort, SessionPublisherPort } from '../ports/publication.port.js';
 import { createFlushPublicationQueueHandler } from './flush-publication-queue.command.js';
 
@@ -15,15 +16,28 @@ function queue(pending: readonly ReturnType<typeof toSessionId>[]): PublicationQ
   };
 }
 
+const eventos = (): EventPublisherPort => ({ publish: vi.fn() });
+
 describe('FlushPublicationQueue', () => {
   it('publica o que está na fila e marca como enviado', async () => {
     const fila = queue([a, b]);
     const publisher: SessionPublisherPort = { publish: vi.fn(async () => undefined) };
 
-    const resultado = await createFlushPublicationQueueHandler({ queue: fila, publisher })();
+    const events = eventos();
+
+    const resultado = await createFlushPublicationQueueHandler({
+      queue: fila,
+      publisher,
+      events,
+    })();
 
     expect(resultado).toEqual({ published: 2, failed: 0 });
     expect(fila.markPublished).toHaveBeenCalledTimes(2);
+    expect(events.publish).toHaveBeenCalledWith({
+      type: 'publication-progressed',
+      published: 2,
+      failed: 0,
+    });
   });
 
   it('uma sessão que falha não impede as outras de subir', async () => {
@@ -34,7 +48,11 @@ describe('FlushPublicationQueue', () => {
       }),
     };
 
-    const resultado = await createFlushPublicationQueueHandler({ queue: fila, publisher })();
+    const resultado = await createFlushPublicationQueueHandler({
+      queue: fila,
+      publisher,
+      events: eventos(),
+    })();
 
     expect(resultado).toEqual({ published: 1, failed: 1 });
     expect(fila.markFailed).toHaveBeenCalledWith(a, 'sem rede');
@@ -49,8 +67,8 @@ describe('FlushPublicationQueue', () => {
       },
     };
 
-    await expect(createFlushPublicationQueueHandler({ queue: fila, publisher })()).resolves.toEqual(
-      { published: 0, failed: 1 },
-    );
+    await expect(
+      createFlushPublicationQueueHandler({ queue: fila, publisher, events: eventos() })(),
+    ).resolves.toEqual({ published: 0, failed: 1 });
   });
 });

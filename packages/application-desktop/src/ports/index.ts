@@ -1,4 +1,5 @@
 export type * from './analysis-report-store.port.js';
+export type * from './event-publisher.port.js';
 export type * from './identity.port.js';
 export type * from './narrator.port.js';
 export type * from './publication.port.js';

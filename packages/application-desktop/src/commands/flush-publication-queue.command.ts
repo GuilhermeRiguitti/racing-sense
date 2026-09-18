@@ -1,3 +1,4 @@
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { PublicationQueuePort, SessionPublisherPort } from '../ports/publication.port.js';
 
 export interface FlushPublicationQueueCommand {
@@ -8,6 +9,7 @@ export interface FlushPublicationQueueCommand {
 export interface FlushPublicationQueueDeps {
   readonly queue: PublicationQueuePort;
   readonly publisher: SessionPublisherPort;
+  readonly events: EventPublisherPort;
 }
 
 export interface FlushResult {
@@ -44,6 +46,12 @@ export function createFlushPublicationQueueHandler(deps: FlushPublicationQueueDe
         );
         failed += 1;
       }
+    }
+
+    // Rodada silenciosa não vira evento: a fila trabalha em segundo plano e não
+    // deve piscar nada na tela quando não há o que contar.
+    if (published > 0 || failed > 0) {
+      deps.events.publish({ type: 'publication-progressed', published, failed });
     }
 
     return { published, failed };

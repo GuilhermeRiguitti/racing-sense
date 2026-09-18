@@ -20,7 +20,23 @@ export default defineConfig({
       },
     },
   },
-  preload: {},
+  preload: {
+    build: {
+      rollupOptions: {
+        output: {
+          /**
+           * Preload **precisa** ser CommonJS.
+           *
+           * Com `sandbox: true` o Electron não carrega preload em ESM — e o
+           * pacote é `"type": "module"`, então sem isto o arquivo sai `.mjs` e
+           * a janela abre sem a ponte, silenciosamente.
+           */
+          format: 'cjs',
+          entryFileNames: 'index.cjs',
+        },
+      },
+    },
+  },
   renderer: {
     plugins: [react()],
   },

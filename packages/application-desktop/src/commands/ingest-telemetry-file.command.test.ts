@@ -7,6 +7,7 @@ import {
 } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { DecodedMetadata, TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -40,6 +41,8 @@ const ids: IdGeneratorPort = {
   nextAnalysisReportId: () => toAnalysisReportId('report-1'),
 };
 
+const eventos = (): EventPublisherPort => ({ publish: vi.fn() });
+
 const publicationQueue = (): PublicationQueuePort => ({
   enqueue: vi.fn(async () => undefined),
   pending: async () => [],
@@ -71,15 +74,18 @@ describe('IngestTelemetryFile', () => {
     };
     const sessions: SessionWriterPort = { save: vi.fn(), delete: vi.fn() };
 
+    const events = eventos();
     const handle = createIngestTelemetryFileHandler({
       files,
       decoder,
       sessions,
       ids,
       publicationQueue: publicationQueue(),
+      events,
     });
 
     await expect(handle({ locator: ref.locator })).rejects.toThrow(MissingChannelError);
+    expect(events.publish).not.toHaveBeenCalled();
     await expect(handle({ locator: ref.locator })).rejects.toThrow(/LapDistPct/);
     expect(sessions.save).not.toHaveBeenCalled();
   });
@@ -91,16 +97,20 @@ describe('IngestTelemetryFile', () => {
       readChannel: () => numbers([0, 0.5, 1]),
     };
 
+    const events = eventos();
     const handle = createIngestTelemetryFileHandler({
       files,
       decoder,
       sessions: { save: vi.fn(), delete: vi.fn() },
       ids,
       publicationQueue: publicationQueue(),
+      events,
     });
 
     // O recorte de voltas ainda é stub — a falha vem do domínio.
     await expect(handle({ locator: ref.locator })).rejects.toThrow(NotImplementedError);
     expect(files.close).toHaveBeenCalledWith(ref);
+    // Ingestão que falhou não anuncia sessão nova: evento é fato consumado.
+    expect(events.publish).not.toHaveBeenCalled();
   });
 });

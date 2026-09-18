@@ -2,7 +2,7 @@ import { NotFoundError } from '@telemetry/domain';
 import { aLap, aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { Desktop } from './composition-root.js';
-import { IPC, type IpcResult } from './ipc-contract.js';
+import { IPC, type IpcResult, REQUEST_CHANNELS } from './ipc-contract.js';
 import { registerIpcHandlers } from './ipc-handlers.js';
 
 /** Simula o `ipcMain.handle` do Electron sem subir Electron nenhum. */
@@ -46,14 +46,23 @@ function desktopWith(overrides: Partial<Desktop['useCases']> = {}): Desktop {
 }
 
 describe('handlers de IPC', () => {
-  it('registra exatamente os canais declarados no contrato', () => {
+  it('registra exatamente os canais de pergunta e resposta', () => {
     const bus = ipcBus();
 
     registerIpcHandlers(desktopWith(), bus.register);
 
-    for (const channel of Object.values(IPC)) {
+    for (const channel of REQUEST_CHANNELS) {
       expect(bus.channels.has(channel)).toBe(true);
     }
+  });
+
+  it('o canal de eventos não tem handler: ele é de mão única', () => {
+    const bus = ipcBus();
+
+    registerIpcHandlers(desktopWith(), bus.register);
+
+    // Quem empurra evento é o processo principal, não a interface perguntando.
+    expect(bus.channels.has(IPC.events)).toBe(false);
   });
 
   it('devolve DTO, não modelo de domínio', async () => {

@@ -7,6 +7,7 @@ import {
   type SessionId,
 } from '@telemetry/domain';
 import type { AnalysisReportWriterPort } from '../ports/analysis-report-store.port.js';
+import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type { NarratorPort } from '../ports/narrator.port.js';
 import type { ReferenceLapReaderPort } from '../ports/reference-lap-store.port.js';
 import type { SessionReaderPort } from '../ports/session-store.port.js';
@@ -23,6 +24,7 @@ export interface RequestLapAnalysisDeps {
   readonly reports: AnalysisReportWriterPort;
   readonly narrator: NarratorPort;
   readonly clock: ClockPort;
+  readonly events: EventPublisherPort;
 }
 
 export type RequestLapAnalysisHandler = (command: RequestLapAnalysisCommand) => Promise<void>;
@@ -82,5 +84,14 @@ export function createRequestLapAnalysisHandler(
     };
 
     await deps.reports.save(report);
+
+    // A análise pode demorar; o piloto pode ter ido olhar outra volta enquanto
+    // isso. O evento traz ele de volta em vez de exigir que fique esperando.
+    deps.events.publish({
+      type: 'analysis-ready',
+      sessionId,
+      lapNumber,
+      referenceLapId,
+    });
   };
 }

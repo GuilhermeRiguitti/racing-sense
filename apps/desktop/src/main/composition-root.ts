@@ -33,6 +33,7 @@ import {
   createListSessionLapsQuery,
   createListSessionsQuery,
   createRequestLapAnalysisHandler,
+  type EventPublisherPort,
   type NarratorPort,
 } from '@telemetry/application-desktop';
 
@@ -57,6 +58,13 @@ export interface DesktopEnvironment {
    */
   readonly fetch: FetchLike;
   readonly env: Record<string, string | undefined>;
+  /**
+   * Para onde vão os avisos de "mudou alguma coisa".
+   *
+   * Entra pelo ambiente porque quem sabe empurrar para a tela é o Electron, e o
+   * composition root não deve importar `BrowserWindow`.
+   */
+  readonly events: EventPublisherPort;
 }
 
 function resolveNarrator(env: Record<string, string | undefined>): NarratorPort {
@@ -84,6 +92,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
   const ids = createSequentialIdGenerator();
   const clock = { now: () => new Date() };
   const narrator = resolveNarrator(environment.env);
+  const events = environment.events;
 
   // Adapters de nuvem: opcionais por definição. Se a rede cair, só estes falham.
   const http = createHttpClient({ baseUrl: environment.cloudBaseUrl, fetch: environment.fetch });
@@ -102,6 +111,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
         sessions,
         ids,
         publicationQueue,
+        events,
       }),
       importReferenceLap: createImportReferenceLapHandler({ sessions, referenceLaps, ids }),
       requestLapAnalysis: createRequestLapAnalysisHandler({
@@ -110,10 +120,12 @@ export function buildDesktop(environment: DesktopEnvironment) {
         reports,
         narrator,
         clock,
+        events,
       }),
       flushPublicationQueue: createFlushPublicationQueueHandler({
         queue: publicationQueue,
         publisher,
+        events,
       }),
       listSessions: createListSessionsQuery({ sessions }),
       listSessionLaps: createListSessionLapsQuery({ sessions }),
