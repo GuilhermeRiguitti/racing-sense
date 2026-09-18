@@ -57,18 +57,37 @@ cadastro de piloto e a rota que recebe a sessão publicada pelo desktop.
 Quando existir Postgres no CI, o adapter roda a mesma suíte de contrato que o de
 memória e o de SQLite já passam.
 
-## 9. Reconciliação entre o local e a nuvem
+## 9. Apagar na nuvem o que foi apagado no desktop
 
-Apagar sessão no desktop não apaga da nuvem, e editar local depois de publicar
-não volta atrás. São dois donos diferentes (ADR 0015), mas a falta de um caminho
-de exclusão é problema de privacidade, não de arquitetura — precisa existir.
+Apagar sessão no desktop não apaga da nuvem. Isso **não** é problema de
+sincronização — divergência entre os dois lados é aceitável por design (ADR
+0017). É o piloto retirando algo que publicou, e precisa existir.
 
-## 10. Empacotamento do desktop
+O resto da divergência (sessão reprocessada local que não voltou para a nuvem)
+fica como está: a web pode mostrar a versão antiga sem prejuízo.
+
+## 10. O renderer não sabe quando chega sessão nova
+
+O IPC hoje é só pergunta e resposta: a interface só vê uma sessão nova se alguém
+recarregar. Como o piloto deixa o aplicativo aberto enquanto treina (ADR 0017),
+a ingestão precisa **empurrar** evento para o renderer — sessão ingerida, volta
+recortada, análise pronta.
+
+É a pendência mais importante depois de validar o decoder.
+
+## 11. Gráficos e UX do desktop
+
+O que o piloto vê é o produto: gráfico de canal com zoom, delta contra a
+referência, navegação entre voltas, e o relatório do agente ancorado no trecho.
+Nada disso começou. Usar a skill `dataviz` antes de escrever a primeira linha de
+gráfico.
+
+## 12. Empacotamento do desktop
 
 `electron-builder` configurado, instalador Windows assinado e auto-update. Inclui
 o rebuild nativo do `better-sqlite3` para a versão do Electron.
 
-## 11. Quais canais trazem as condições da sessão
+## 13. Quais canais trazem as condições da sessão
 
 `SessionConditions` está modelado (temperatura do ar e da pista, horário, céu,
 umidade, vento), mas quais canais e campos do YAML preenchem cada um só se

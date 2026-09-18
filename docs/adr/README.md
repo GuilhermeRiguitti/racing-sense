@@ -37,3 +37,4 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0014](0014-autenticacao-iron-session.md) | Um login para as duas aplicações, com iron-session | Aceito |
 | [0015](0015-dois-bancos.md) | SQLite local e Postgres na nuvem | Aceito |
 | [0016](0016-so-o-desktop-gera-telemetria.md) | Só o desktop gera telemetria | Aceito |
+| [0017](0017-desktop-e-o-produto.md) | O desktop é o produto; a nuvem é acessório | Aceito |

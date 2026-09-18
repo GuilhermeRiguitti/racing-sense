@@ -31,8 +31,14 @@ iRacing (Alt-L) → .ibt em Documentos\iRacing\telemetry\
   → apps/web: perfil, feed e voltas de outros pilotos
 ```
 
-O desktop funciona inteiro **sem internet**. A web nunca fala com a máquina do
-piloto. A LLM roda só no desktop. Ver [ADR 0011](docs/adr/0011-topologia-tres-aplicacoes.md).
+**O desktop é o produto** — o coach que o piloto deixa aberto enquanto treina.
+Ele funciona inteiro **sem internet**, e é a única origem de telemetria do
+sistema. A web e a cloud-api são funcionalidade extra, para compartilhar volta e
+comparar com outros pilotos; que elas fiquem desatualizadas não é problema.
+
+Ver [ADR 0011](docs/adr/0011-topologia-tres-aplicacoes.md),
+[0016](docs/adr/0016-so-o-desktop-gera-telemetria.md) e
+[0017](docs/adr/0017-desktop-e-o-produto.md).
 
 ## Estrutura
 

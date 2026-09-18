@@ -2,6 +2,9 @@
 
 **Status:** Aceito · 2026-09-17
 **Refina:** ADR 0011 (topologia das três aplicações)
+**Refinado por:** ADR 0017 — a decisão continua valendo; o que muda é o peso do
+custo listado abaixo: reprocessar no servidor não faz falta, porque a nuvem pode
+ficar desatualizada sem prejuízo
 
 ## Contexto
 

@@ -1,6 +1,8 @@
 # ADR 0013 — Publicação automática com visibilidade controlada
 
 **Status:** Aceito · 2026-09-17
+**Refinado por:** ADR 0017 — a fila existe para o dado não se perder, não para
+garantir prazo: a nuvem atrasar não é incidente
 
 ## Contexto
 

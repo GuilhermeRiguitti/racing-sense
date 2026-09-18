@@ -13,12 +13,18 @@ Análise agêntica de telemetria do iRacing, em três aplicações:
 | `apps/cloud-api` | NestJS + Postgres | servidor | a ponte entre desktop e web |
 | `apps/web` | Next.js | navegador | rede social: perfil, feed, voltas de outros |
 
-**O desktop é o core do sistema e a única origem de telemetria.** Ele lê o `.ibt`
-(e, na fase 2, o SDK do iRacing). A cloud-api é um gateway: recebe dado **já
-processado**, guarda, devolve e autentica. A web só lê da cloud-api.
+**O desktop é o produto.** É o coach que o piloto deixa aberto enquanto treina:
+dados sempre disponíveis, sempre atuais, bem apresentados. A web e a cloud-api
+são funcionalidade extra — compartilhar volta, comparar com um amigo, perfil.
 
-Isso não é convenção — é barreira de compilação. A cloud-api não declara
-`@telemetry/application-desktop`, então o import nem resolve; e ela não tem
+Critério para priorizar, sempre: *o piloto acabou de sair do carro e quer ver
+onde perdeu tempo*. Entre melhorar o gráfico de delta e melhorar a consistência
+da nuvem, **o gráfico ganha** (ADR 0017).
+
+**E o desktop é a única origem de telemetria.** Ele lê o `.ibt` (e, na fase 2, o
+SDK do iRacing). A cloud-api recebe dado **já processado**, guarda, devolve e
+autentica. Isso não é convenção — é barreira de compilação: a cloud-api não
+declara `@telemetry/application-desktop`, então o import nem resolve, e não tem
 `node:fs` nos builtins, então não abre arquivo. Ver ADR 0011 e **ADR 0016**.
 
 **Estado: fundação.** Arquitetura, regras e casos de uso estão de pé. O decoder
@@ -126,25 +132,30 @@ Da topologia (ADR 0011 e 0013):
 13. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
     o único seguro. Acesso negado responde "não encontrada", nunca "sem
     permissão" — distinguir os dois entrega que a sessão existe.
+14. **Nuvem desatualizada não é bug.** Divergência entre o banco local e o da
+    nuvem é aceitável por design. **Não construa** reconciliação, versionamento
+    de payload, resolução de conflito ou job de re-sincronização — se um dia
+    fizer falta, é ADR novo. A única obrigação é apagar na nuvem o que o piloto
+    apagou no desktop, e isso é privacidade, não sync (ADR 0017).
 
 De domínio:
 
-14. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
+15. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
     runtime. Canal obrigatório é declarado no caso de uso e conferido contra o
     catálogo real, falhando com o nome do canal.
-15. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
+16. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
     despercebido até o primeiro acento aparecer.
-16. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
+17. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
-17. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
-18. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
+18. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
+19. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
-19. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
+20. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
     commit.
-20. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
-21. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
+21. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
+22. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
-22. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
+23. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
 
 ## Forma de um caso de uso
@@ -176,6 +187,14 @@ use-as, não redigite números.
 Os offsets vêm da spec pública e da engenharia reversa da comunidade e **ainda
 não foram validados contra um arquivo real**. Os testes provam consistência
 interna, não correção.
+
+## Ao mexer na interface do desktop
+
+É o produto — o gráfico é o que o piloto olha depois de sair do carro. Antes de
+escrever a primeira linha de gráfico, painel ou paleta, use a skill **`dataviz`**.
+
+O renderer é um navegador sem Node: tudo que precisa de disco, rede ou chave
+passa por IPC (`apps/desktop/src/main/ipc-contract.ts`).
 
 ## Ao tomar decisão estrutural
 
@@ -216,6 +235,7 @@ Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
 | `docs/adr/0013-sincronizacao-e-visibilidade.md` | publicação automática, visibilidade e links |
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
 | `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
+| `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -233,5 +253,6 @@ e relatório do agente.
 real, broadcast de comandos para o sim. Não implemente — quando entrar, é um
 adapter novo de `TelemetryFilePort` e nada mais muda.
 
-**Escopo da nuvem hoje:** esqueleto. Postgres, migrations e autenticação de
-verdade estão em `docs/pendencias.md`. O desktop funciona inteiro sem nada disso.
+**Escopo da nuvem hoje:** esqueleto, e sem pressa. Postgres, migrations e
+autenticação estão em `docs/pendencias.md`. O desktop funciona inteiro sem nada
+disso, e é onde o esforço vai (ADR 0017).
