@@ -1,4 +1,4 @@
-import type { SessionPublisherPort, SessionReaderPort } from '@telemetry/application';
+import type { SessionPublisherPort, SessionReaderPort } from '@telemetry/application-desktop';
 import { type PublishSessionRequest, toLapDto, toSessionDto } from '@telemetry/contracts';
 import { NotFoundError, type SessionId } from '@telemetry/domain';
 import type { HttpClient } from './http-client.js';

@@ -1,3 +1,4 @@
+import type { ClockPort } from '@telemetry/application';
 import {
   type AnalysisReport,
   compareToReference,
@@ -9,7 +10,6 @@ import type { AnalysisReportWriterPort } from '../ports/analysis-report-store.po
 import type { NarratorPort } from '../ports/narrator.port.js';
 import type { ReferenceLapReaderPort } from '../ports/reference-lap-store.port.js';
 import type { SessionReaderPort } from '../ports/session-store.port.js';
-import type { ClockPort } from '../ports/system.port.js';
 
 export interface RequestLapAnalysisCommand {
   readonly sessionId: SessionId;

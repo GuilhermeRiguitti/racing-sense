@@ -3,7 +3,7 @@ import type {
   TelemetryDecoderPort,
   TelemetryFilePort,
   TelemetryFileRef,
-} from '@telemetry/application';
+} from '@telemetry/application-desktop';
 import { type ChannelDescriptor, NotImplementedError } from '@telemetry/domain';
 import {
   DISK_SUB_HEADER_SIZE,

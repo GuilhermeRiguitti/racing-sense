@@ -7,7 +7,7 @@
  *
  * Checa quatro coisas:
  *  1. as dependências declaradas no package.json respeitam o mapa de camadas;
- *  2. pacote puro não importa `node:*`;
+ *  2. cada pacote só usa os módulos `node:*` que o mapa lhe dá;
  *  3. ninguém importa adapter fora do composition root;
  *  4. ninguém fura o encapsulamento com import profundo (`@telemetry/x/src/...`)
  *     nem com caminho relativo saindo do próprio pacote.
@@ -125,17 +125,28 @@ function checkImports(name, layer, dir) {
 
       const pkg = packageOf(specifier);
 
-      if (pkg.startsWith('node:') && !layer.builtins) {
-        report(
-          relativeFile,
-          `usa "${specifier}"; ${layer.role} não pode tocar em API de plataforma`,
-        );
+      if (pkg.startsWith('node:')) {
+        // "node:fs/promises" -> "fs"
+        const builtin = pkg.slice('node:'.length).split('/')[0];
+        if (!layer.builtins.includes(builtin)) {
+          const permitidos =
+            layer.builtins.length === 0
+              ? 'nenhum módulo de plataforma'
+              : layer.builtins.map((name) => `node:${name}`).join(', ');
+          report(relativeFile, `usa "${specifier}"; ${layer.role} só pode usar ${permitidos}`);
+        }
         continue;
       }
-      if (pkg.startsWith('node:')) continue;
 
       if (specifier.startsWith('@telemetry/') && specifier.includes('/src/')) {
         report(relativeFile, `import profundo "${specifier}"; use o ponto de entrada do pacote`);
+      }
+
+      // Importar pacote que o mapa não dá a esta camada. O TypeScript também
+      // reclama (o pnpm nem instala), mas ali a mensagem é "módulo não
+      // encontrado" — aqui ela diz o que realmente está errado.
+      if (pkg.startsWith('@telemetry/') && pkg !== name && !layer.packages.includes(pkg)) {
+        report(relativeFile, `importa "${pkg}", que o mapa de camadas não dá a ${layer.role}`);
       }
 
       if (pkg.startsWith('@telemetry/adapter-') && pkg !== name) {

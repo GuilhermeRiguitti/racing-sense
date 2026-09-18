@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@telemetry/application": "workspace:*",
+    "@telemetry/application-desktop": "workspace:*",
     "@telemetry/domain": "workspace:*",
     "@telemetry/ibt-core": "workspace:*"
   },

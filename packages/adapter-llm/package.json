@@ -13,7 +13,7 @@
   "dependencies": {
     "@ai-sdk/google": "catalog:",
     "@ai-sdk/openai-compatible": "catalog:",
-    "@telemetry/application": "workspace:*",
+    "@telemetry/application-desktop": "workspace:*",
     "@telemetry/domain": "workspace:*",
     "ai": "catalog:"
   },

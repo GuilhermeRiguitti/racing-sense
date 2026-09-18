@@ -1,4 +1,4 @@
-import type { SessionReaderPort, SessionWriterPort } from '@telemetry/application';
+import type { SessionReaderPort, SessionWriterPort } from '@telemetry/application-desktop';
 import { NotImplementedError } from '@telemetry/domain';
 
 /**

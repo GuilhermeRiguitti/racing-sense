@@ -1,3 +1,4 @@
+import type { ClockPort } from '@telemetry/application';
 import {
   canView,
   NotFoundError,
@@ -7,7 +8,6 @@ import {
   type ShareToken,
 } from '@telemetry/domain';
 import type { PublishedSessionReaderPort } from '../ports/published-session-store.port.js';
-import type { ClockPort } from '../ports/system.port.js';
 
 export interface ViewPublishedSessionRequest {
   readonly sessionId: SessionId;

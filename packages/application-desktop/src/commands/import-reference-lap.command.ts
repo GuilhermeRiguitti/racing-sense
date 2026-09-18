@@ -1,3 +1,5 @@
+import type { IdGeneratorPort } from '@telemetry/application';
+import { InvalidRequestError } from '@telemetry/application';
 import {
   NotFoundError,
   type ReferenceLap,
@@ -6,8 +8,6 @@ import {
 } from '@telemetry/domain';
 import type { ReferenceLapWriterPort } from '../ports/reference-lap-store.port.js';
 import type { SessionReaderPort } from '../ports/session-store.port.js';
-import type { IdGeneratorPort } from '../ports/system.port.js';
-import { InvalidRequestError } from '../shared/errors.js';
 
 export interface ImportReferenceLapCommand {
   /** Sessão já ingerida de onde a volta sai. */

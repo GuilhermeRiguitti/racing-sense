@@ -16,6 +16,7 @@
     "@telemetry/adapter-memory": "workspace:*",
     "@telemetry/adapter-postgres": "workspace:*",
     "@telemetry/application": "workspace:*",
+    "@telemetry/application-cloud": "workspace:*",
     "@telemetry/contracts": "workspace:*",
     "@telemetry/domain": "workspace:*",
     "iron-session": "^9.0.1",

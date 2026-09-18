@@ -1,4 +1,4 @@
-import type { TelemetryWatcherPort } from '@telemetry/application';
+import type { TelemetryWatcherPort } from '@telemetry/application-desktop';
 import { NotImplementedError } from '@telemetry/domain';
 
 /**

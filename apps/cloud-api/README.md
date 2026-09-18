@@ -1,6 +1,24 @@
 # @telemetry/cloud-api
 
-A ponte entre o aplicativo do Windows e a web.
+A ponte entre o aplicativo do Windows e a web: guarda o que o desktop publicou,
+devolve para quem pode ver, e autentica os dois.
+
+## O que esta API não faz, e não consegue fazer
+
+Ela **não** lê arquivo de telemetria, **não** fala com o SDK do iRacing, **não**
+decodifica nada e **não** roda modelo. Telemetria só nasce no desktop (ADR 0016).
+
+Isso é barreira, não combinado:
+
+| Barreira | Efeito |
+|---|---|
+| não declara `@telemetry/application-desktop` | o import da ingestão nem resolve |
+| não declara `adapter-ibt`, `adapter-fs`, `ibt-core` | não há como decodificar |
+| não declara `adapter-llm` | não há como chamar modelo |
+| `builtins` sem `node:fs` | não há como abrir arquivo |
+
+O que chega aqui é o DTO de `@telemetry/contracts`: sessão, condições, voltas e
+séries — tudo já processado pelo desktop.
 
 ```bash
 pnpm dev:cloud   # http://localhost:4000

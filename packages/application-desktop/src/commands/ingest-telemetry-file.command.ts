@@ -1,7 +1,7 @@
+import type { IdGeneratorPort } from '@telemetry/application';
 import { detectLaps, type Lap, type SessionId, type TelemetrySession } from '@telemetry/domain';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
-import type { IdGeneratorPort } from '../ports/system.port.js';
 import type { TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
 import type { TelemetryFilePort } from '../ports/telemetry-file.port.js';
 import { collectChannel } from '../shared/collect-channel.js';

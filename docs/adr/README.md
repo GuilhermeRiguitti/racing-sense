@@ -36,3 +36,4 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0013](0013-sincronizacao-e-visibilidade.md) | Publicação automática com visibilidade controlada | Aceito |
 | [0014](0014-autenticacao-iron-session.md) | Um login para as duas aplicações, com iron-session | Aceito |
 | [0015](0015-dois-bancos.md) | SQLite local e Postgres na nuvem | Aceito |
+| [0016](0016-so-o-desktop-gera-telemetria.md) | Só o desktop gera telemetria | Aceito |

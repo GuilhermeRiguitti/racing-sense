@@ -2,6 +2,8 @@
 
 **Status:** Aceito · 2026-09-17
 **Refina:** ADR 0004 (watcher local), ADR 0009 (hexagonal)
+**Refinado por:** ADR 0016, que transforma "a análise mora no desktop" de
+convenção em barreira de compilação
 
 ## Contexto
 

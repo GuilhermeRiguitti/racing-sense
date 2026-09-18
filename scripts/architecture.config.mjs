@@ -6,8 +6,10 @@
  * pede um ADR (ver docs/adr/0009 e 0011).
  *
  * `packages`: o que aquele pacote pode declarar como dependência.
- * `builtins`: se pode usar `node:*`.
  * `libs`: bibliotecas externas permitidas ("[]" = nenhuma).
+ * `builtins`: módulos `node:*` permitidos, pelo nome ("[]" = nenhum).
+ *   Não é detalhe: é assim que a cloud-api fica **incapaz de abrir arquivo** —
+ *   `node:fs` não está na lista dela (ADR 0016).
  */
 export const LAYERS = {
   // ---------- núcleo: não conhece ninguém ----------
@@ -15,69 +17,91 @@ export const LAYERS = {
     role: 'domínio',
     packages: [],
     libs: [],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/application': {
-    role: 'aplicação',
+    role: 'núcleo da aplicação',
     packages: ['@telemetry/domain'],
     libs: [],
-    builtins: false,
+    builtins: [],
+  },
+  '@telemetry/application-desktop': {
+    // Ingestão, decodificação, voltas, análise e publicação. Só o desktop
+    // declara este pacote — é o que impede a nuvem de gerar telemetria.
+    role: 'aplicação do desktop',
+    packages: ['@telemetry/application', '@telemetry/domain'],
+    libs: [],
+    builtins: [],
+  },
+  '@telemetry/application-cloud': {
+    // Visibilidade, compartilhamento e leitura do que o desktop publicou.
+    role: 'aplicação da nuvem',
+    packages: ['@telemetry/application', '@telemetry/domain'],
+    libs: [],
+    builtins: [],
   },
   '@telemetry/contracts': {
     role: 'borda (DTO)',
     packages: ['@telemetry/domain'],
     libs: ['zod'],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/ibt-core': {
     role: 'biblioteca técnica',
     packages: [],
     libs: [],
-    builtins: false,
+    builtins: [],
   },
 
   // ---------- adapters: cada um dono de uma dependência externa ----------
   '@telemetry/adapter-ibt': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain', '@telemetry/ibt-core'],
+    role: 'adapter do desktop',
+    packages: ['@telemetry/application-desktop', '@telemetry/domain', '@telemetry/ibt-core'],
     libs: [],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/adapter-fs': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain', '@telemetry/ibt-core'],
+    role: 'adapter do desktop',
+    packages: ['@telemetry/application-desktop', '@telemetry/domain', '@telemetry/ibt-core'],
     libs: ['chokidar'],
-    builtins: true,
+    builtins: ['fs', 'path'],
   },
   '@telemetry/adapter-sqlite': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain'],
+    role: 'adapter do desktop',
+    packages: ['@telemetry/application-desktop', '@telemetry/domain'],
     libs: ['better-sqlite3'],
-    builtins: true,
+    builtins: ['path'],
   },
   '@telemetry/adapter-http': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/contracts', '@telemetry/domain'],
+    role: 'adapter do desktop',
+    packages: ['@telemetry/application-desktop', '@telemetry/contracts', '@telemetry/domain'],
     libs: ['zod'],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/adapter-postgres': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain'],
+    role: 'adapter da nuvem',
+    packages: ['@telemetry/application-cloud', '@telemetry/domain'],
     libs: ['pg'],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/adapter-llm': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain'],
+    role: 'adapter do desktop',
+    packages: ['@telemetry/application-desktop', '@telemetry/domain'],
     libs: ['ai', '@ai-sdk/google', '@ai-sdk/openai-compatible'],
-    builtins: false,
+    builtins: [],
   },
   '@telemetry/adapter-memory': {
-    role: 'adapter',
-    packages: ['@telemetry/application', '@telemetry/domain'],
+    // Serve os dois lados por ser adapter de teste e de desenvolvimento: ele só
+    // implementa portas, nunca expõe caso de uso de um lado para o outro.
+    role: 'adapter em memória',
+    packages: [
+      '@telemetry/application',
+      '@telemetry/application-cloud',
+      '@telemetry/application-desktop',
+      '@telemetry/domain',
+    ],
     libs: [],
-    builtins: false,
+    builtins: [],
   },
 
   // ---------- aplicações: cada uma com seu composition root ----------
@@ -91,6 +115,7 @@ export const LAYERS = {
       '@telemetry/adapter-memory',
       '@telemetry/adapter-sqlite',
       '@telemetry/application',
+      '@telemetry/application-desktop',
       '@telemetry/contracts',
       '@telemetry/domain',
     ],
@@ -103,16 +128,19 @@ export const LAYERS = {
       'vite',
       '@vitejs/plugin-react',
     ],
-    builtins: true,
+    builtins: ['path'],
   },
   '@telemetry/cloud-api': {
-    // A LLM **não** entra aqui: análise com modelo é do desktop (ADR 0011).
-    // `adapter-llm` fora desta lista faz o `pnpm arch` reprovar quem tentar.
+    // O que está fora desta lista é o ponto (ADR 0016): sem `application-desktop`
+    // a nuvem não consegue nomear a ingestão; sem `adapter-ibt`, `adapter-fs` e
+    // `ibt-core` ela não lê arquivo de telemetria; sem `adapter-llm` ela não
+    // roda modelo. E `builtins` sem `fs` a impede até de abrir arquivo na mão.
     role: 'composition root da nuvem',
     packages: [
       '@telemetry/adapter-memory',
       '@telemetry/adapter-postgres',
       '@telemetry/application',
+      '@telemetry/application-cloud',
       '@telemetry/contracts',
       '@telemetry/domain',
     ],
@@ -124,14 +152,14 @@ export const LAYERS = {
       'reflect-metadata',
       'rxjs',
     ],
-    builtins: true,
+    builtins: ['crypto', 'http'],
   },
   '@telemetry/web': {
     // Só contracts: a web nunca fala com a máquina do piloto, só com a cloud-api.
     role: 'interface web',
     packages: ['@telemetry/contracts'],
     libs: ['next', 'react', 'react-dom'],
-    builtins: false,
+    builtins: [],
   },
 };
 

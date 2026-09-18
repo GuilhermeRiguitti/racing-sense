@@ -1,5 +1,5 @@
 import { type FileHandle, open } from 'node:fs/promises';
-import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application';
+import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application-desktop';
 
 /**
  * Porta de arquivo sobre o disco local.

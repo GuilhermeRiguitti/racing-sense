@@ -44,8 +44,8 @@ justificativa nos ADRs 0009 e 0010.
    `adapter-sqlite`, `pg` em `adapter-postgres`.
 4. **CQS**: comando muda estado e devolve no máximo um id; query lê e recebe só
    portas de leitura.
-5. **Toda implementação de porta roda a suíte de contrato** de
-   `@telemetry/application/testing`.
+5. **Toda implementação de porta roda a suíte de contrato** do lado dela
+   (`@telemetry/application-desktop/testing` ou `@telemetry/application-cloud/testing`).
 6. Nada de catálogo fixo de canais; session info é CP1252; comparação por
    distância; chave de API só por ambiente; nenhum `.ibt` versionado.
 
@@ -74,9 +74,10 @@ fix(adapter-fs): trata EBUSY ao abrir arquivo ainda travado pelo sim
 docs(adr): registra escolha do provider de LLM
 ```
 
-Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
-`adapter-fs`, `adapter-sqlite`, `adapter-http`, `adapter-postgres`, `adapter-llm`,
-`adapter-memory`, `desktop`, `cloud-api`, `web`, `docs`, `adr`, `infra`.
+Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
+`contracts`, `ibt-core`, `adapter-ibt`, `adapter-fs`, `adapter-sqlite`,
+`adapter-http`, `adapter-postgres`, `adapter-llm`, `adapter-memory`, `desktop`,
+`cloud-api`, `web`, `docs`, `adr`, `infra`.
 
 ## Decisões
 

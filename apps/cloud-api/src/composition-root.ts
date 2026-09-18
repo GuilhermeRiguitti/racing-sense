@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { createInMemoryAnalysisReportStore } from '@telemetry/adapter-memory';
+import { createInMemoryPublishedSessionStore } from '@telemetry/adapter-memory';
 import { createPostgresPublishedSessionStore } from '@telemetry/adapter-postgres';
 import {
   createListPublicSessionsQuery,
@@ -10,7 +10,7 @@ import {
   type PublishedSessionReaderPort,
   type PublishedSessionWriterPort,
   type ShareTokenGeneratorPort,
-} from '@telemetry/application';
+} from '@telemetry/application-cloud';
 import { toShareToken } from '@telemetry/domain';
 
 /**
@@ -20,8 +20,14 @@ import { toShareToken } from '@telemetry/domain';
  * pensa: os módulos recebem estes handlers prontos por `useFactory` e os
  * controllers só chamam — ver `docs/adr/0011-topologia-tres-aplicacoes.md`.
  *
- * Note o que **não** está aqui: nada de `adapter-llm`. Análise com modelo é do
- * aplicativo do piloto, e `pnpm arch` reprova se alguém tentar trazer para cá.
+ * Note o que **não** está aqui, e não pode estar (ADR 0016):
+ *  - nada de `adapter-llm` — análise com modelo é do aplicativo do piloto;
+ *  - nada de `adapter-ibt`, `adapter-fs` ou `ibt-core` — a nuvem não lê arquivo
+ *    de telemetria nem fala com o SDK do iRacing;
+ *  - nada de `@telemetry/application-desktop` — ela nem consegue nomear a
+ *    ingestão, porque não declara o pacote.
+ *
+ * A nuvem recebe dado **já processado** pelo desktop, guarda e devolve.
  */
 export interface CloudStores {
   readonly published: PublishedSessionReaderPort & PublishedSessionWriterPort;
@@ -72,11 +78,15 @@ export type CloudUseCases = ReturnType<typeof buildCloudUseCases>;
 export function buildCloudUseCasesFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): CloudUseCases {
-  const published = createPostgresPublishedSessionStore({
-    connectionString: env.DATABASE_URL ?? '',
-  });
+  const connectionString = env.DATABASE_URL;
+
+  // Sem banco configurado a API sobe em memória: dá para desenvolver a web sem
+  // Postgres, e o adapter em memória passa a mesma suíte de contrato do que vai
+  // para produção.
+  const published =
+    connectionString === undefined || connectionString === ''
+      ? createInMemoryPublishedSessionStore()
+      : createPostgresPublishedSessionStore({ connectionString });
+
   return buildCloudUseCases({ published });
 }
-
-/** Relatórios ficam em memória por enquanto: a nuvem não gera análise (ADR 0011). */
-export const analysisReportsAreDesktopOnly = createInMemoryAnalysisReportStore;

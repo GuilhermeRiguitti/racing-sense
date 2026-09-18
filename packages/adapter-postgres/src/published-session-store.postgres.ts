@@ -1,7 +1,7 @@
 import type {
   PublishedSessionReaderPort,
   PublishedSessionWriterPort,
-} from '@telemetry/application';
+} from '@telemetry/application-cloud';
 import { NotImplementedError } from '@telemetry/domain';
 
 /**

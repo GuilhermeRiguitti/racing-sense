@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@telemetry/application": "workspace:*",
+    "@telemetry/application-cloud": "workspace:*",
     "@telemetry/domain": "workspace:*",
     "pg": "^8.23.0"
   },

@@ -1,4 +1,4 @@
-import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application';
+import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application-desktop';
 import {
   DISK_SUB_HEADER_OFFSETS,
   DISK_SUB_HEADER_SIZE,

@@ -2,7 +2,7 @@ import type {
   AnalysisReportKey,
   AnalysisReportReaderPort,
   AnalysisReportWriterPort,
-} from '@telemetry/application';
+} from '@telemetry/application-desktop';
 import type { AnalysisReport } from '@telemetry/domain';
 
 const keyOf = (key: AnalysisReportKey): string =>

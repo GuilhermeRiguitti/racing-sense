@@ -1,4 +1,4 @@
-import type { CloudCatalogPort } from '@telemetry/application';
+import type { CloudCatalogPort } from '@telemetry/application-desktop';
 import { publishedSessionSummaryDto } from '@telemetry/contracts';
 import { type PublishedSessionSummary, toPilotId, toSessionId } from '@telemetry/domain';
 import { z } from 'zod';

@@ -1,4 +1,7 @@
-import type { ReferenceLapReaderPort, ReferenceLapWriterPort } from '@telemetry/application';
+import type {
+  ReferenceLapReaderPort,
+  ReferenceLapWriterPort,
+} from '@telemetry/application-desktop';
 import type { ReferenceLap, ReferenceLapId } from '@telemetry/domain';
 import type { SqliteDatabase } from './database.js';
 import { decodeReferenceLap, encodeReferenceLap } from './serialization.js';

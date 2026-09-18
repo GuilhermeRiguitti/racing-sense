@@ -1,4 +1,7 @@
-import type { ReferenceLapReaderPort, ReferenceLapWriterPort } from '@telemetry/application';
+import type {
+  ReferenceLapReaderPort,
+  ReferenceLapWriterPort,
+} from '@telemetry/application-desktop';
 import type { ReferenceLap, ReferenceLapId } from '@telemetry/domain';
 
 export function createInMemoryReferenceLapStore(): ReferenceLapReaderPort & ReferenceLapWriterPort {

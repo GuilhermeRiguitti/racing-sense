@@ -1,4 +1,4 @@
-import type { NarratorPort } from '@telemetry/application';
+import type { NarratorPort } from '@telemetry/application-desktop';
 import { NotImplementedError } from '@telemetry/domain';
 import type { LlmConfig } from './config.js';
 

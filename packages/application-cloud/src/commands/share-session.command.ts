@@ -1,3 +1,4 @@
+import type { ClockPort } from '@telemetry/application';
 import {
   NotFoundError,
   type PilotId,
@@ -10,7 +11,6 @@ import type {
   PublishedSessionWriterPort,
   ShareTokenGeneratorPort,
 } from '../ports/published-session-store.port.js';
-import type { ClockPort } from '../ports/system.port.js';
 
 export interface ShareSessionCommand {
   readonly sessionId: SessionId;

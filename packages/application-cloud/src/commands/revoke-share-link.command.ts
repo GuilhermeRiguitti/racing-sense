@@ -1,9 +1,9 @@
+import type { ClockPort } from '@telemetry/application';
 import { NotFoundError, type PilotId, type SessionId, type ShareToken } from '@telemetry/domain';
 import type {
   PublishedSessionReaderPort,
   PublishedSessionWriterPort,
 } from '../ports/published-session-store.port.js';
-import type { ClockPort } from '../ports/system.port.js';
 
 export interface RevokeShareLinkCommand {
   readonly sessionId: SessionId;

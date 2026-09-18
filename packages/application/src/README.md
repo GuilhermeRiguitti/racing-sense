@@ -1,36 +1,22 @@
-# Camada de aplicação
+# @telemetry/application
 
-Casos de uso e as portas que eles exigem. Depende **só** do domínio.
+O núcleo compartilhado da camada de aplicação: o que vale para **qualquer**
+aplicação do sistema.
 
-## CQS
+- `ports/system.port.ts` — relógio e gerador de id. Injetados para que teste não
+  dependa do relógio nem do acaso.
+- `shared/errors.ts` — erro de orquestração comum.
 
-Um caso de uso ou muda estado, ou responde pergunta. Nunca os dois.
+## Por que é tão pouco
 
-| | `commands/` | `queries/` |
+Porque os casos de uso **não** são compartilhados, de propósito:
+
+| Pacote | Quem usa | O que tem |
 |---|---|---|
-| Efeito | muda estado | nenhum |
-| Retorno | nada, ou um identificador do que foi criado | os dados pedidos |
-| Portas que recebe | `...WriterPort` (e leitores de que precisar) | só `...ReaderPort` |
+| `@telemetry/application-desktop` | só o app do piloto | ingestão, decodificação, voltas, análise, publicação |
+| `@telemetry/application-cloud` | só a cloud-api | visibilidade, compartilhamento, leitura do que foi publicado |
 
-A separação das portas de leitura e escrita é o que torna a regra verificável: uma
-query que receba apenas leitores **não tem como** escrever, e isso o compilador
-garante.
-
-Caso limite resolvido: gerar a análise do agente custa dinheiro e persiste
-resultado, então é `RequestLapAnalysis` (comando). Ler o relatório pronto é
-`GetLapAnalysis` (query). "Gerar e devolver na mesma chamada" seria cômodo e é
-exatamente o que a regra proíbe.
-
-## Forma de um caso de uso
-
-```ts
-export interface ImportReferenceLapCommand { /* entrada */ }
-export interface ImportReferenceLapDeps { /* portas */ }
-export type ImportReferenceLapHandler = (command: ImportReferenceLapCommand) => Promise<ReferenceLapId>;
-
-export function createImportReferenceLapHandler(deps: ImportReferenceLapDeps): ImportReferenceLapHandler;
-```
-
-Fábrica que recebe as portas e devolve o handler. Sem classe, sem container de DI,
-sem decorator: a injeção é o argumento da função, e quem monta tudo é o
-composition root de cada aplicação (`apps/desktop`, `apps/cloud-api`).
+A cloud-api **não declara** `application-desktop`, então ela não consegue sequer
+nomear a ingestão de telemetria. Não é convenção: é o pnpm recusando resolver o
+import, e o `pnpm arch` reprovando a dependência. Ver
+`docs/adr/0016-so-o-desktop-gera-telemetria.md`.

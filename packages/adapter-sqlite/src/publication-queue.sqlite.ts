@@ -1,4 +1,4 @@
-import type { PublicationQueuePort } from '@telemetry/application';
+import type { PublicationQueuePort } from '@telemetry/application-desktop';
 import { type SessionId, toSessionId } from '@telemetry/domain';
 import type { SqliteDatabase } from './database.js';
 

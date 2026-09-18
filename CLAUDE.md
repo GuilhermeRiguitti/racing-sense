@@ -13,8 +13,13 @@ Análise agêntica de telemetria do iRacing, em três aplicações:
 | `apps/cloud-api` | NestJS + Postgres | servidor | a ponte entre desktop e web |
 | `apps/web` | Next.js | navegador | rede social: perfil, feed, voltas de outros |
 
-Ver ADR 0011. O desktop nunca espera a nuvem; a web nunca fala com a máquina do
-piloto; a LLM é só do desktop.
+**O desktop é o core do sistema e a única origem de telemetria.** Ele lê o `.ibt`
+(e, na fase 2, o SDK do iRacing). A cloud-api é um gateway: recebe dado **já
+processado**, guarda, devolve e autentica. A web só lê da cloud-api.
+
+Isso não é convenção — é barreira de compilação. A cloud-api não declara
+`@telemetry/application-desktop`, então o import nem resolve; e ela não tem
+`node:fs` nos builtins, então não abre arquivo. Ver ADR 0011 e **ADR 0016**.
 
 **Estado: fundação.** Arquitetura, regras e casos de uso estão de pé. O decoder
 tem tipos, constantes e catálogo de canais funcionando — mas **nenhum `.ibt` real
@@ -48,12 +53,19 @@ domain ◀── application (portas) ◀── adapters ◀── composition r
 | Camada | Pacote | Pode depender de |
 |---|---|---|
 | Domínio | `packages/domain` | **nada** |
-| Aplicação | `packages/application` | `domain` |
+| Núcleo da aplicação | `packages/application` | `domain` |
+| Aplicação do desktop | `packages/application-desktop` | `application`, `domain` |
+| Aplicação da nuvem | `packages/application-cloud` | `application`, `domain` |
 | Borda (DTO + validação) | `packages/contracts` | `domain`, `zod` |
 | Lib técnica | `packages/ibt-core` | **nada** |
-| Adapters | `packages/adapter-{ibt,fs,sqlite,http,postgres,llm,memory}` | `application`, `domain` + a lib que aquele adapter possui |
-| Composition roots | `apps/desktop`, `apps/cloud-api` | os adapters que cada um usa |
+| Adapters do desktop | `adapter-{ibt,fs,sqlite,http,llm}` | `application-desktop`, `domain` + a lib que possui |
+| Adapter da nuvem | `adapter-postgres` | `application-cloud`, `domain`, `pg` |
+| Composition roots | `apps/desktop`, `apps/cloud-api` | os adapters de **seu lado** |
 | Interface web | `apps/web` | `contracts` |
+
+**A separação `application-desktop` / `application-cloud` é a invariante central:**
+ingestão, decodificação e análise só existem no lado do desktop. Um caso de uso
+novo que toque em telemetria vai em `application-desktop`, sempre.
 
 Cada adapter é dono de **uma** dependência: `better-sqlite3` em `adapter-sqlite`,
 `pg` em `adapter-postgres`, `ai` em `adapter-llm`, `node:fs` em `adapter-fs`,
@@ -67,8 +79,10 @@ Cada adapter é dono de **uma** dependência: `better-sqlite3` em `adapter-sqlit
 | O que você está escrevendo | Onde vai |
 |---|---|
 | Regra de corrida (volta, delta, compatibilidade) | `domain` |
-| Orquestração de um fluxo ("ingerir arquivo", "listar voltas") | `application/commands` ou `application/queries` |
-| "Preciso de algo que faça X" | uma porta em `application/ports` |
+| Orquestração que toca em telemetria ("ingerir arquivo", "listar voltas", "comparar") | `application-desktop/commands` ou `/queries` |
+| Orquestração da nuvem ("mudar visibilidade", "compartilhar", "listar públicas") | `application-cloud/commands` ou `/queries` |
+| Relógio, id, erro que vale para os dois lados | `application` (núcleo) |
+| "Preciso de algo que faça X" | uma porta no `application-*` do lado certo |
 | Uso de lib externa ou API de plataforma | um adapter |
 | Formato que sai na API | `contracts` |
 | Escolha de qual implementação usar | `apps/desktop/src/main/composition-root.ts` ou `apps/cloud-api/src/composition-root.ts`, e só ali |
@@ -79,7 +93,7 @@ Na dúvida, use a skill **`novo-caso-de-uso`**.
 
 ## Regras que não se quebram
 
-Arquiteturais (as quatro primeiras são verificadas por `pnpm arch`):
+Arquiteturais (as cinco primeiras são verificadas por `pnpm arch`):
 
 1. **`domain` e `ibt-core` são puros.** Nada de `node:*`, nada de lib, nada de I/O.
 2. **A aplicação não conhece implementação.** Caso de uso importa porta, nunca
@@ -95,37 +109,42 @@ Arquiteturais (as quatro primeiras são verificadas por `pnpm arch`):
 6. **Porta estreita.** Uma capacidade por interface; leitura separada de escrita.
 7. **Tipo de lib não atravessa porta.** Se `Buffer`, `Request` ou `LanguageModel`
    aparece numa assinatura de `application`, a lib vazou.
-8. **Toda implementação de porta roda a suíte de contrato**
-   (`@telemetry/application/testing`). Adapter novo sem contrato verde não entra.
+8. **Toda implementação de porta roda a suíte de contrato** do lado dela
+   (`@telemetry/application-desktop/testing` ou `@telemetry/application-cloud/testing`).
+   Adapter novo sem contrato verde não entra.
 
 Da topologia (ADR 0011 e 0013):
 
-9. **O desktop nunca espera a nuvem.** Publicar é enfileirar; enviar é outro caso
-   de uso, em segundo plano. Falha de rede não vira erro na cara do piloto.
-10. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
-11. **A web só fala com a cloud-api**, nunca com a máquina do piloto.
-12. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
+9. **Só o desktop gera telemetria.** Ler `.ibt`, falar com o SDK do iRacing,
+   decodificar e recortar voltas acontece **exclusivamente** no desktop. A
+   cloud-api recebe dado já processado, guarda e devolve — ela não lê arquivo,
+   não decodifica e não tem `node:fs`. Ver ADR 0016.
+10. **O desktop nunca espera a nuvem.** Publicar é enfileirar; enviar é outro
+    caso de uso, em segundo plano. Falha de rede não vira erro na cara do piloto.
+11. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
+12. **A web só fala com a cloud-api**, nunca com a máquina do piloto.
+13. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
     o único seguro. Acesso negado responde "não encontrada", nunca "sem
     permissão" — distinguir os dois entrega que a sessão existe.
 
 De domínio:
 
-13. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
+14. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
     runtime. Canal obrigatório é declarado no caso de uso e conferido contra o
     catálogo real, falhando com o nome do canal.
-14. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
+15. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
     despercebido até o primeiro acento aparecer.
-15. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
+16. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
-16. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
-17. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
+17. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
+18. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
-18. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
+19. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
     commit.
-19. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
-20. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
+20. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
+21. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
-21. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
+22. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
 
 ## Forma de um caso de uso
@@ -168,7 +187,7 @@ que o supera.
 
 - Domínio: chamada direta, sem mock.
 - Caso de uso: fake de porta escrito à mão (ver
-  `packages/application/src/commands/*.test.ts`). Nada de mock de framework.
+  `packages/application-desktop/src/commands/*.test.ts`). Nada de mock de framework.
 - Adapter: roda a suíte de contrato da porta.
 - Teste que precisa de `.ibt` real lê de `fixtures/real/` e **pula** quando o
   arquivo não existe. Nunca falha por ausência de fixture.
@@ -180,9 +199,10 @@ que o supera.
 Conventional Commits em português:
 `feat(domain): detecta voltas com histerese na linha de chegada`
 
-Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
-`adapter-fs`, `adapter-llm`, `adapter-memory`, `api`, `web`, `docs`, `adr`,
-`infra`.
+Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
+`contracts`, `ibt-core`, `adapter-ibt`, `adapter-fs`, `adapter-sqlite`,
+`adapter-http`, `adapter-postgres`, `adapter-llm`, `adapter-memory`, `desktop`,
+`cloud-api`, `web`, `docs`, `adr`, `infra`.
 
 ## Onde ler mais
 
@@ -195,6 +215,7 @@ Escopos: `domain`, `application`, `contracts`, `ibt-core`, `adapter-ibt`,
 | `docs/adr/0012-electron-no-desktop.md` | por que Electron, e o que custa |
 | `docs/adr/0013-sincronizacao-e-visibilidade.md` | publicação automática, visibilidade e links |
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
+| `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |

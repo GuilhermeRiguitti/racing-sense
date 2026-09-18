@@ -1,6 +1,8 @@
 # ADR 0015 — SQLite local e Postgres na nuvem: dois donos, não réplicas
 
 **Status:** Aceito · 2026-09-17
+**Refinado por:** ADR 0016 (a suíte citada abaixo virou duas, uma por lado:
+`application-desktop/testing` e `application-cloud/testing`)
 
 ## Contexto
 

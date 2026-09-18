@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@telemetry/application": "workspace:*",
+    "@telemetry/application-cloud": "workspace:*",
+    "@telemetry/application-desktop": "workspace:*",
     "@telemetry/domain": "workspace:*"
   },
   "devDependencies": {

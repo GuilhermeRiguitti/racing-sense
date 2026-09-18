@@ -9,8 +9,7 @@ sessões publicadas com `visibility` em coluna, e links de compartilhamento
 revogáveis.
 
 Quando sair do esqueleto, roda a suíte de contrato de
-`@telemetry/application/testing`, a mesma que o adapter em memória e o de SQLite
-já passam. Enquanto não houver Postgres no CI, isso está em `docs/pendencias.md`.
+`@telemetry/application-cloud/testing`, a mesma que o adapter em memória já passa. Enquanto não houver Postgres no CI, isso está em `docs/pendencias.md`.
 
 ## Por que a visibilidade é coluna
 

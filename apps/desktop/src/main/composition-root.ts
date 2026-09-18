@@ -34,7 +34,7 @@ import {
   createListSessionsQuery,
   createRequestLapAnalysisHandler,
   type NarratorPort,
-} from '@telemetry/application';
+} from '@telemetry/application-desktop';
 
 /**
  * Composition root do aplicativo do Windows.

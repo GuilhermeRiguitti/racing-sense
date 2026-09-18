@@ -1,4 +1,4 @@
-import type { IdentityPort } from '@telemetry/application';
+import type { IdentityPort } from '@telemetry/application-desktop';
 import { pilotDto } from '@telemetry/contracts';
 import { type Pilot, toPilotId } from '@telemetry/domain';
 import type { HttpClient } from './http-client.js';

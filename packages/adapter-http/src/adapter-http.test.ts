@@ -1,4 +1,4 @@
-import type { SessionReaderPort } from '@telemetry/application';
+import type { SessionReaderPort } from '@telemetry/application-desktop';
 import { toSessionId } from '@telemetry/domain';
 import { aLap, aSeries, aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';

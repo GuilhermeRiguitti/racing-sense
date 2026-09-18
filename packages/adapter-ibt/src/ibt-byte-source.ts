@@ -1,4 +1,4 @@
-import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application';
+import type { TelemetryFilePort, TelemetryFileRef } from '@telemetry/application-desktop';
 import type { ByteSource } from '@telemetry/ibt-core';
 
 /**

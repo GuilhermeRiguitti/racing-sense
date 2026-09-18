@@ -1,3 +1,4 @@
+import type { IdGeneratorPort } from '@telemetry/application';
 import {
   NotImplementedError,
   toAnalysisReportId,
@@ -8,7 +9,6 @@ import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
-import type { IdGeneratorPort } from '../ports/system.port.js';
 import type { DecodedMetadata, TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
 import type { TelemetryFilePort, TelemetryFileRef } from '../ports/telemetry-file.port.js';
 import { MissingChannelError } from '../shared/errors.js';

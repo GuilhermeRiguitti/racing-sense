@@ -1,7 +1,7 @@
 import {
   describeReferenceLapStoreContract,
   describeSessionStoreContract,
-} from '@telemetry/application/testing';
+} from '@telemetry/application-desktop/testing';
 import { toSessionId } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it } from 'vitest';

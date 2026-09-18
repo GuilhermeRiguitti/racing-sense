@@ -9,11 +9,23 @@ description: Roteiro para adicionar funcionalidade respeitando as camadas do pro
 
 **1. Isso muda estado?**
 
-- Muda → `packages/application/src/commands/`, devolve no máximo um id, vira `POST`.
-- Não muda → `packages/application/src/queries/`, devolve dados, vira `GET`.
+- Muda → `commands/`, devolve no máximo um id, vira `POST`.
+- Não muda → `queries/`, devolve dados, vira `GET`.
 
 Nunca os dois. Produzir texto com LLM **muda estado** (custa dinheiro e persiste):
 é comando. Ver `docs/adr/0010-cqs-na-aplicacao.md`.
+
+**1b. De que lado ele vive?**
+
+| O caso de uso toca em... | Pacote |
+|---|---|
+| arquivo `.ibt`, SDK do iRacing, voltas, séries, análise, publicação | `packages/application-desktop` |
+| visibilidade, compartilhamento, leitura do que já foi publicado | `packages/application-cloud` |
+| nada disso (relógio, id, erro comum) | `packages/application` |
+
+Telemetria **só** existe no lado do desktop. Se o caso de uso lê arquivo do sim
+ou decodifica qualquer coisa, ele não pode nascer na nuvem — o `pnpm arch` e o
+próprio TypeScript reprovam (ADR 0016).
 
 **2. Precisa de algo do mundo externo?**
 
@@ -25,7 +37,7 @@ nunca por import direto.
 1. **Regra de negócio → `domain`.** Se a lógica vale independente de onde os dados
    vêm, ela é do domínio. Teste chamando direto, sem mock.
 
-2. **Porta → `application/src/ports/`,** se faltar alguma. A porta é declarada por
+2. **Porta → `ports/` do `application-*` daquele lado,** se faltar alguma. A porta é declarada por
    quem a usa e fala o vocabulário do domínio. Se `Buffer`, `Request` ou
    `LanguageModel` aparecer na assinatura, a lib vazou — refaça.
 
@@ -48,7 +60,7 @@ não escreve.
    é dono daquela dependência; lib nova pede adapter novo **e** uma linha no mapa
    em `scripts/architecture.config.mjs` (com ADR, porque é mudança de arquitetura).
 
-5. **Contrato do adapter → `application/src/testing/*.contract.ts`.** Toda porta
+5. **Contrato do adapter → `testing/*.contract.ts` do mesmo pacote.** Toda porta
    com mais de uma implementação possível tem suíte de contrato, e todo adapter
    roda a mesma. É o que torna "substituível" um fato verificado.
 

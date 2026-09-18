@@ -1,7 +1,7 @@
 import {
   describeReferenceLapStoreContract,
   describeSessionStoreContract,
-} from '@telemetry/application/testing';
+} from '@telemetry/application-desktop/testing';
 import { createInMemoryReferenceLapStore } from './reference-lap-store.memory.js';
 import { createInMemorySessionStore } from './session-store.memory.js';
 
