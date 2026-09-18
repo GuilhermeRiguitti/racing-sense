@@ -8,6 +8,10 @@ import {
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { EventPublisherPort } from '../ports/event-publisher.port.js';
+import type {
+  IngestedFileLogReaderPort,
+  IngestedFileLogWriterPort,
+} from '../ports/ingested-file-log.port.js';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { DecodedMetadata, TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -42,6 +46,14 @@ const ids: IdGeneratorPort = {
 };
 
 const eventos = (): EventPublisherPort => ({ publish: vi.fn() });
+
+const registroDeArquivos = (
+  jaIngerido: string | null = null,
+): IngestedFileLogReaderPort & IngestedFileLogWriterPort => ({
+  findSessionByLocator: async () => (jaIngerido === null ? null : toSessionId(jaIngerido)),
+  record: vi.fn(async () => undefined),
+  forgetSession: vi.fn(async () => undefined),
+});
 
 const publicationQueue = (): PublicationQueuePort => ({
   enqueue: vi.fn(async () => undefined),
@@ -82,6 +94,7 @@ describe('IngestTelemetryFile', () => {
       ids,
       publicationQueue: publicationQueue(),
       events,
+      ingestedFiles: registroDeArquivos(),
     });
 
     await expect(handle({ locator: ref.locator })).rejects.toThrow(MissingChannelError);
@@ -105,12 +118,39 @@ describe('IngestTelemetryFile', () => {
       ids,
       publicationQueue: publicationQueue(),
       events,
+      ingestedFiles: registroDeArquivos(),
     });
 
     // O recorte de voltas ainda é stub — a falha vem do domínio.
     await expect(handle({ locator: ref.locator })).rejects.toThrow(NotImplementedError);
     expect(files.close).toHaveBeenCalledWith(ref);
     // Ingestão que falhou não anuncia sessão nova: evento é fato consumado.
+    expect(events.publish).not.toHaveBeenCalled();
+  });
+});
+
+describe('IngestTelemetryFile, idempotência por arquivo', () => {
+  it('arquivo já ingerido devolve a sessão existente sem reabrir nada', async () => {
+    const files = filePort();
+    const abrir = vi.spyOn(files, 'open');
+    const events = eventos();
+    const sessions: SessionWriterPort = { save: vi.fn(), delete: vi.fn() };
+
+    const handle = createIngestTelemetryFileHandler({
+      files,
+      decoder: { readMetadata: vi.fn(), readChannel: vi.fn() },
+      sessions,
+      ids,
+      publicationQueue: publicationQueue(),
+      events,
+      ingestedFiles: registroDeArquivos('session-de-ontem'),
+    });
+
+    await expect(handle({ locator: ref.locator })).resolves.toBe('session-de-ontem');
+    // Nem abre o arquivo: é isso que deixa o watcher varrer a pasta toda a cada
+    // abertura do aplicativo sem custo.
+    expect(abrir).not.toHaveBeenCalled();
+    expect(sessions.save).not.toHaveBeenCalled();
     expect(events.publish).not.toHaveBeenCalled();
   });
 });

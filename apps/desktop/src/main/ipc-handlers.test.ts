@@ -30,6 +30,12 @@ function desktopWith(overrides: Partial<Desktop['useCases']> = {}): Desktop {
       currentPilot: async () => null,
     },
     catalog: { listPublicSessions: async () => [] },
+    watcher: {
+      start: vi.fn(),
+      stop: vi.fn(),
+      onFileReady: vi.fn(),
+      onFileRejected: vi.fn(),
+    },
     useCases: {
       listSessions: async () => [aSession()],
       listSessionLaps: async () => [aLap()],

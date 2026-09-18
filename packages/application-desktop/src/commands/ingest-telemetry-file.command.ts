@@ -1,6 +1,10 @@
 import type { IdGeneratorPort } from '@telemetry/application';
 import { detectLaps, type Lap, type SessionId, type TelemetrySession } from '@telemetry/domain';
 import type { EventPublisherPort } from '../ports/event-publisher.port.js';
+import type {
+  IngestedFileLogReaderPort,
+  IngestedFileLogWriterPort,
+} from '../ports/ingested-file-log.port.js';
 import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
@@ -32,6 +36,13 @@ export interface IngestTelemetryFileDeps {
   readonly publicationQueue: PublicationQueuePort;
   /** Avisa a interface que chegou sessão nova, para ela não esperar recarregar. */
   readonly events: EventPublisherPort;
+  /**
+   * Quais arquivos já viraram sessão.
+   *
+   * O watcher enxerga a pasta inteira ao abrir o aplicativo, inclusive o que já
+   * foi lido ontem — sem este registro, cada abertura duplicaria tudo.
+   */
+  readonly ingestedFiles: IngestedFileLogReaderPort & IngestedFileLogWriterPort;
 }
 
 export type IngestTelemetryFileHandler = (
@@ -42,11 +53,22 @@ export type IngestTelemetryFileHandler = (
  * Ingere um arquivo de telemetria e guarda a sessão com as voltas recortadas.
  *
  * Comando: muda estado e devolve só o identificador do que foi criado.
+ *
+ * **Idempotente por arquivo.** Chamar de novo com o mesmo caminho devolve a
+ * sessão que já existe, sem reabrir nada e sem anunciar evento — é o que
+ * permite o watcher varrer a pasta inteira toda vez que o aplicativo abre.
  */
 export function createIngestTelemetryFileHandler(
   deps: IngestTelemetryFileDeps,
 ): IngestTelemetryFileHandler {
   return async ({ locator }) => {
+    // Idempotência primeiro, antes de abrir arquivo: reprocessar custa segundos
+    // de CPU e produziria uma sessão duplicada na tela do piloto.
+    const alreadyIngested = await deps.ingestedFiles.findSessionByLocator(locator);
+    if (alreadyIngested !== null) {
+      return alreadyIngested;
+    }
+
     const ref = await deps.files.open(locator);
     try {
       const metadata = await deps.decoder.readMetadata(ref);
@@ -79,6 +101,7 @@ export function createIngestTelemetryFileHandler(
       };
 
       await deps.sessions.save({ session, laps, seriesByLap: new Map() });
+      await deps.ingestedFiles.record(locator, session.id);
 
       // Publica tudo automaticamente, mas só enfileirando: a ingestão não espera
       // rede, e a sessão nasce privada no servidor (ADR 0013).

@@ -1,5 +1,9 @@
 import { join } from 'node:path';
-import { createFileTelemetrySource } from '@telemetry/adapter-fs';
+import {
+  createFileTelemetrySource,
+  createFileTelemetryWatcher,
+  telemetryDirectory,
+} from '@telemetry/adapter-fs';
 import {
   createHttpClient,
   createHttpCloudCatalog,
@@ -18,6 +22,7 @@ import {
   createSequentialIdGenerator,
 } from '@telemetry/adapter-memory';
 import {
+  createSqliteIngestedFileLog,
   createSqlitePublicationQueue,
   createSqliteReferenceLapStore,
   createSqliteSessionStore,
@@ -51,6 +56,16 @@ export interface DesktopEnvironment {
   readonly userDataDir: string;
   /** Endereço da cloud-api. */
   readonly cloudBaseUrl: string;
+  /**
+   * A pasta Documentos do usuário.
+   *
+   * Vem de fora porque quem sabe resolvê-la no Windows — inclusive quando está
+   * redirecionada para o OneDrive — é o Electron. Onde o iRacing grava dentro
+   * dela é assunto do adapter, e quem junta as duas pontas é este arquivo.
+   */
+  readonly documentsDirectory: string;
+  /** Sobrescreve a pasta observada. Útil em desenvolvimento e em teste. */
+  readonly telemetryDirectoryOverride?: string | undefined;
   /**
    * `fetch` que carrega o cookie de sessão.
    *
@@ -88,6 +103,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
   const sessions = createSqliteSessionStore(db);
   const referenceLaps = createSqliteReferenceLapStore(db);
   const publicationQueue = createSqlitePublicationQueue(db);
+  const ingestedFiles = createSqliteIngestedFileLog(db);
   const reports = createInMemoryAnalysisReportStore();
   const ids = createSequentialIdGenerator();
   const clock = { now: () => new Date() };
@@ -95,6 +111,13 @@ export function buildDesktop(environment: DesktopEnvironment) {
   const events = environment.events;
 
   // Adapters de nuvem: opcionais por definição. Se a rede cair, só estes falham.
+  // Observa a pasta do sim. Só diz *quando* um arquivo pode ser lido — quem
+  // decodifica é o adapter do `.ibt`.
+  const watcher = createFileTelemetryWatcher({
+    directory:
+      environment.telemetryDirectoryOverride ?? telemetryDirectory(environment.documentsDirectory),
+  });
+
   const http = createHttpClient({ baseUrl: environment.cloudBaseUrl, fetch: environment.fetch });
   const identity = createHttpIdentity(http);
   const publisher = createHttpSessionPublisher(http, sessions);
@@ -104,6 +127,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
     db,
     identity,
     catalog,
+    watcher,
     useCases: {
       ingestTelemetryFile: createIngestTelemetryFileHandler({
         files,
@@ -112,6 +136,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
         ids,
         publicationQueue,
         events,
+        ingestedFiles,
       }),
       importReferenceLap: createImportReferenceLapHandler({ sessions, referenceLaps, ids }),
       requestLapAnalysis: createRequestLapAnalysisHandler({

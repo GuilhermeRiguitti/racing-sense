@@ -1,4 +1,5 @@
 import {
+  describeIngestedFileLogContract,
   describeReferenceLapStoreContract,
   describeSessionStoreContract,
 } from '@telemetry/application-desktop/testing';
@@ -6,6 +7,7 @@ import { toSessionId } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it } from 'vitest';
 import { openDatabase } from './database.js';
+import { createSqliteIngestedFileLog } from './ingested-file-log.sqlite.js';
 import { createSqlitePublicationQueue } from './publication-queue.sqlite.js';
 import { createSqliteReferenceLapStore } from './reference-lap-store.sqlite.js';
 import { createSqliteSessionStore } from './session-store.sqlite.js';
@@ -22,6 +24,11 @@ describeSessionStoreContract('SqliteSessionStore', () => {
 describeReferenceLapStoreContract('SqliteReferenceLapStore', () => {
   const store = createSqliteReferenceLapStore(openDatabase(':memory:'));
   return { reader: store, writer: store };
+});
+
+describeIngestedFileLogContract('SqliteIngestedFileLog', () => {
+  const log = createSqliteIngestedFileLog(openDatabase(':memory:'));
+  return { reader: log, writer: log };
 });
 
 describe('SqliteSessionStore, além do contrato', () => {

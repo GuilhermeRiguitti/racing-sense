@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { buildDesktop } from './composition-root.js';
 import { createIpcEventPublisher } from './event-bridge.js';
 import { registerIpcHandlers } from './ipc-handlers.js';
+import { createIngestionService } from './telemetry-ingestion.js';
 
 /**
  * Processo principal: Node, com estado e vida longa.
@@ -48,6 +49,11 @@ app.whenReady().then(() => {
     ),
     userDataDir: app.getPath('userData'),
     cloudBaseUrl: CLOUD_BASE_URL,
+    // `app.getPath('documents')` resolve a pasta real do Windows, inclusive
+    // quando ela está redirecionada para o OneDrive — adivinhar o caminho
+    // erraria em boa parte das máquinas.
+    documentsDirectory: app.getPath('documents'),
+    telemetryDirectoryOverride: process.env.TELEMETRY_DIRECTORY,
     // `fetch` da sessão do Chromium: é ele que guarda e reenvia o cookie selado
     // do login, então o adapter HTTP nunca toca em `Set-Cookie`.
     fetch: (input, init) => session.defaultSession.fetch(input, init),
@@ -57,6 +63,15 @@ app.whenReady().then(() => {
   registerIpcHandlers(desktop, (channel, handler) => {
     ipcMain.handle(channel, (_event, payload) => handler(payload));
   });
+
+  // A esteira: arquivo novo na pasta do sim vira sessão sozinho, com o
+  // aplicativo aberto. É o circuito que o piloto espera ao sair do carro.
+  const ingestion = createIngestionService({
+    watcher: desktop.watcher,
+    ingestTelemetryFile: desktop.useCases.ingestTelemetryFile,
+    onProblem: (file, reason) => console.warn(`telemetria ignorada: ${file.locator} — ${reason}`),
+  });
+  void ingestion.start().catch((error) => console.error('watcher não iniciou', error));
 
   // Publicação roda em segundo plano e nunca bloqueia o piloto. Falha de rede
   // deixa a sessão na fila para a próxima rodada (ADR 0013).
@@ -68,7 +83,7 @@ app.whenReady().then(() => {
 
   app.on('will-quit', () => {
     clearInterval(flush);
-    desktop.db.close();
+    void ingestion.stop().finally(() => desktop.db.close());
   });
 
   createWindow();

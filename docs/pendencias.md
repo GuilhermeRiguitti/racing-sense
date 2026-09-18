@@ -12,6 +12,12 @@ consistente** — nenhum arquivo real passou por ele.
 Sintomas típicos de offset errado: `numVars` absurdo, session info vindo como lixo
 binário, `bufLen` que não bate com a soma dos tamanhos dos canais.
 
+**A esteira já chega até aqui.** Com o aplicativo aberto, um `.ibt` que aparece
+na pasta é detectado, esperado destravar, aberto, e tem header, disk sub header
+e catálogo de canais lidos. A ingestão para no passo seguinte — decodificar a
+session info (CP1252 + YAML, pendência #6) — que é onde saem pista, carro e
+piloto. Depois disso vem o recorte de voltas (etapa 2 do roadmap).
+
 ## 2. `ibt-telemetry` ou decoder próprio
 
 A lib recomendada no documento inicial teve a última publicação em junho de 2022.

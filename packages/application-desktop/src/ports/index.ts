@@ -1,6 +1,7 @@
 export type * from './analysis-report-store.port.js';
 export type * from './event-publisher.port.js';
 export type * from './identity.port.js';
+export type * from './ingested-file-log.port.js';
 export type * from './narrator.port.js';
 export type * from './publication.port.js';
 export type * from './reference-lap-store.port.js';

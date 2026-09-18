@@ -13,6 +13,9 @@
  * - **A fila de publicação mora aqui.** Ela precisa sobreviver a reinício, que é
  *   justamente o que faz "publica tudo automaticamente" não perder o que
  *   aconteceu offline.
+ * - **`ingested_files` guarda caminho de arquivo, e por isso nunca é publicado.**
+ *   O caminho tem o nome de usuário do Windows dentro. Ele serve só para o
+ *   watcher não reprocessar, a cada abertura, tudo que já está na pasta.
  */
 export const SCHEMA = `
 PRAGMA journal_mode = WAL;
@@ -52,6 +55,15 @@ CREATE TABLE IF NOT EXISTS publication_queue (
   last_error    TEXT,
   published_at  TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ingested_files (
+  locator       TEXT PRIMARY KEY,
+  session_id    TEXT NOT NULL,
+  ingested_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ingested_files_session
+  ON ingested_files (session_id);
 
 CREATE INDEX IF NOT EXISTS idx_publication_pending
   ON publication_queue (published_at, enqueued_at);

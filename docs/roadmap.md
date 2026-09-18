@@ -57,7 +57,7 @@ extensão. É o teste que pega erro de alinhamento.
 
 A etapa que entrega o produto.
 
-- [ ] Watcher ligado à ingestão (file-lock resolvido, em `adapter-fs`)
+- [x] Watcher ligado à ingestão (file-lock resolvido, em `adapter-fs`)
 - [x] IPC empurrando evento para o renderer: sessão ingerida, análise pronta,
       publicação — com a interface consultando de novo em vez de confiar no payload
 - [ ] Gráfico de canal com zoom e navegação entre voltas
