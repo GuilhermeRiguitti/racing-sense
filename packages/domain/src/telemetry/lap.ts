@@ -60,12 +60,16 @@ export function lapDurationSeconds(lap: Lap, tickRate: number): number {
 }
 
 /**
- * Voltas que servem de referência para comparação.
+ * Volta válida: a única que serve de material de análise (ADR 0018).
  *
- * Note que isto **não** é "voltas que valem a pena analisar". Uma volta com
- * saída de pista tem conteúdo útil — é onde o piloto perdeu tempo, e é isso que
- * o coach existe para contar. Ela só não pode ser a régua.
+ * Qualquer marcação invalida — saída de pista inclusive, sem limiar de duração.
+ * Volta suja mede outra coisa: a excursão muda velocidade de entrada, carga de
+ * pneu e linha do resto do setor, e o delta passa a somar erro com estilo sem
+ * dizer qual é qual.
+ *
+ * A volta inválida continua gravada e listada; o que ela não é, é entrada de
+ * análise, de comparação ou de referência.
  */
-export function isComparable(lap: Lap): boolean {
+export function isValidLap(lap: Lap): boolean {
   return lap.flags.length === 0 && lap.lapTimeSeconds !== null;
 }

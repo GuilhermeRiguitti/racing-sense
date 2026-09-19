@@ -40,6 +40,41 @@ const command = {
   referenceLapId: reference.id,
 };
 
+describe('RequestLapAnalysis, só volta válida (ADR 0018)', () => {
+  it('recusa volta com saída de pista, nomeando o motivo', async () => {
+    const narrator: NarratorPort = { narrate: vi.fn() };
+    const handle = createRequestLapAnalysisHandler({
+      sessions: sessionsReading({
+        listLaps: async () => [aLap({ number: 3, flags: ['off-track'] })],
+      }),
+      referenceLaps: referencesReading(),
+      reports: { save: vi.fn() } as AnalysisReportWriterPort,
+      narrator,
+      clock: { now: () => new Date() },
+      events: eventos(),
+    });
+
+    await expect(handle(command)).rejects.toThrow(/off-track/);
+    // Recusa antes de gastar chamada de modelo.
+    expect(narrator.narrate).not.toHaveBeenCalled();
+  });
+
+  it('recusa volta cortada pela gravação', async () => {
+    const handle = createRequestLapAnalysisHandler({
+      sessions: sessionsReading({
+        listLaps: async () => [aLap({ number: 3, flags: ['incomplete'], lapTimeSeconds: null })],
+      }),
+      referenceLaps: referencesReading(),
+      reports: { save: vi.fn() } as AnalysisReportWriterPort,
+      narrator: { narrate: vi.fn() },
+      clock: { now: () => new Date() },
+      events: eventos(),
+    });
+
+    await expect(handle(command)).rejects.toThrow(/incomplete/);
+  });
+});
+
 describe('RequestLapAnalysis', () => {
   it('não chama o narrador antes de o delta estar calculado', async () => {
     const narrator: NarratorPort = { narrate: vi.fn() };

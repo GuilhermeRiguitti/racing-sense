@@ -94,32 +94,3 @@ Vêm do `WeekendInfo`, não das amostras: `TrackAirTemp`, `TrackSurfaceTempCrew`
 `TrackRelativeHumidity`, `TrackWindVel`, `TrackSkies`, e `WeekendOptions.TimeOfDay`.
 O estado da borracha vem do bloco da sessão corrente
 (`SessionTrackRubberState`).
-
-## 13. Qual volta pode ser referência
-
-`detectLaps` marca a volta com o que aconteceu nela (`pit`, `off-track`,
-`incident`, `teleport`, `incomplete`) e `isComparable` só aceita volta sem
-marcação nenhuma. Medido contra os oito arquivos reais, **isso rejeita todas**:
-não há uma única volta gravada sem saída de pista.
-
-O número bruto não separa os casos. A volta 3 de Road Atlanta teve 3,58 s fora da
-pista em 3 trechos e **o sim cronometrou** (105,466); a volta 7 de Suzuka teve
-5,32 s em 7 trechos e o sim **não** cronometrou. Dois pontos não definem limiar, e
-a diferença pode estar na configuração da sessão, não na gravidade.
-
-O que falta decidir, na etapa 3:
-
-- o piloto escolhe a referência na mão, e a marcação é só aviso na tela?
-- ou o sistema escolhe a melhor volta disponível e diz com o que ela está suja?
-- e uma volta com toque curto de zebra a 249 km/h deveria contar como saída de
-  pista, ou existe uma duração mínima?
-
-Enquanto não se decide, `isComparable` fica **estrita**: recusar é reversível,
-eleger referência suja em silêncio não é.
-
-## 14. Por que o sim deixa de cronometrar uma volta
-
-`LapLastLapTime` veio `-1` para voltas que o recorte considera completas. Saída
-dos boxes explica parte, mas não tudo — ver a comparação na pendência #13. Sem a
-regra, o sistema não pode usar esse campo como fonte: o tempo sai da nossa
-contagem de amostras, que bateu com o do sim em 1 ms na única volta cronometrada.

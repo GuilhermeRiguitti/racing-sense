@@ -151,6 +151,11 @@ De domínio:
 17. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
 18. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
+18b. **Só volta válida é material de análise** (ADR 0018). `isValidLap` é a única
+    regra: qualquer marcação invalida, saída de pista inclusive, sem limiar de
+    duração. Analisar, comparar ou eleger referência sobre volta inválida falha
+    nomeando o motivo. A volta inválida continua gravada e listada — ela é o
+    registro do que o piloto rodou, só não é entrada de análise.
 19. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
 20. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
@@ -249,6 +254,7 @@ Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
 | `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
+| `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |

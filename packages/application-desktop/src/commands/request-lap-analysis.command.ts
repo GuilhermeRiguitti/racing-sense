@@ -1,7 +1,9 @@
 import type { ClockPort } from '@telemetry/application';
+import { InvalidRequestError } from '@telemetry/application';
 import {
   type AnalysisReport,
   compareToReference,
+  isValidLap,
   NotFoundError,
   type ReferenceLapId,
   type SessionId,
@@ -58,6 +60,12 @@ export function createRequestLapAnalysisHandler(
     const lap = laps.find((candidate) => candidate.number === lapNumber);
     if (lap === undefined) {
       throw new NotFoundError(`Volta ${lapNumber} não existe na sessão ${sessionId}`);
+    }
+    if (!isValidLap(lap)) {
+      // ADR 0018: volta marcada não é material de análise. Recusar é o erro que
+      // aparece; aceitar em silêncio desloca todo delta seguinte sem avisar.
+      const motivos = lap.flags.length > 0 ? lap.flags.join(', ') : 'sem tempo cronometrado';
+      throw new InvalidRequestError(`Volta ${lapNumber} não é válida (${motivos})`);
     }
 
     const series = await deps.sessions.readLapSeries(sessionId, lapNumber);

@@ -38,3 +38,4 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0015](0015-dois-bancos.md) | SQLite local e Postgres na nuvem | Aceito |
 | [0016](0016-so-o-desktop-gera-telemetria.md) | Só o desktop gera telemetria | Aceito |
 | [0017](0017-desktop-e-o-produto.md) | O desktop é o produto; a nuvem é acessório | Aceito |
+| [0018](0018-so-volta-valida-e-material-de-analise.md) | Só volta válida é material de análise | Aceito |

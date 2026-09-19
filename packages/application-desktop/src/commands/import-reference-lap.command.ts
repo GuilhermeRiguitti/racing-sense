@@ -1,7 +1,7 @@
 import type { IdGeneratorPort } from '@telemetry/application';
 import { InvalidRequestError } from '@telemetry/application';
 import {
-  isComparable,
+  isValidLap,
   NotFoundError,
   type ReferenceLap,
   type ReferenceLapId,
@@ -49,7 +49,7 @@ export function createImportReferenceLapHandler(
     }
     // Volta marcada continua visível e analisável; o que ela não pode é virar a
     // régua. Referência com corte de pista contamina toda comparação seguinte.
-    if (!isComparable(lap)) {
+    if (!isValidLap(lap)) {
       const motivos = lap.flags.length > 0 ? lap.flags.join(', ') : 'sem tempo cronometrado';
       throw new InvalidRequestError(`Volta ${lapNumber} não serve de referência (${motivos})`);
     }

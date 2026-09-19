@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { InvariantError } from '../shared/errors.js';
 import { aLap } from '../testing/factories.js';
-import { isComparable, lapDurationSeconds } from './lap.js';
+import { isValidLap, lapDurationSeconds } from './lap.js';
 
 describe('lapDurationSeconds', () => {
   it('deriva a duração dos índices de amostra', () => {
@@ -19,15 +19,15 @@ describe('lapDurationSeconds', () => {
   });
 });
 
-describe('isComparable', () => {
+describe('isValidLap', () => {
   it('rejeita volta incompleta (out lap, in lap, gravação cortada)', () => {
-    expect(isComparable(aLap({ flags: ['incomplete'] }))).toBe(false);
-    expect(isComparable(aLap({ lapTimeSeconds: null }))).toBe(false);
-    expect(isComparable(aLap())).toBe(true);
+    expect(isValidLap(aLap({ flags: ['incomplete'] }))).toBe(false);
+    expect(isValidLap(aLap({ lapTimeSeconds: null }))).toBe(false);
+    expect(isValidLap(aLap())).toBe(true);
   });
 
   it('rejeita volta marcada, mesmo completa e cronometrada', () => {
-    expect(isComparable(aLap({ flags: ['off-track'] }))).toBe(false);
-    expect(isComparable(aLap({ flags: ['pit'] }))).toBe(false);
+    expect(isValidLap(aLap({ flags: ['off-track'] }))).toBe(false);
+    expect(isValidLap(aLap({ flags: ['pit'] }))).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
+import { InvalidRequestError } from '@telemetry/application';
 import {
   compareToReference,
+  isValidLap,
   type LapComparison,
   NotFoundError,
   type ReferenceLapId,
@@ -49,6 +51,12 @@ export function createCompareLapToReferenceQuery(
     const lap = laps.find((candidate) => candidate.number === lapNumber);
     if (lap === undefined) {
       throw new NotFoundError(`Volta ${lapNumber} não existe na sessão ${sessionId}`);
+    }
+    if (!isValidLap(lap)) {
+      // ADR 0018: volta marcada não é material de análise. Recusar é o erro que
+      // aparece; aceitar em silêncio desloca todo delta seguinte sem avisar.
+      const motivos = lap.flags.length > 0 ? lap.flags.join(', ') : 'sem tempo cronometrado';
+      throw new InvalidRequestError(`Volta ${lapNumber} não é válida (${motivos})`);
     }
 
     return compareToReference(reference, {
