@@ -1,7 +1,7 @@
 import { createFileTelemetrySource } from '@telemetry/adapter-fs';
 import { createIbtTelemetryDecoder } from '@telemetry/adapter-ibt';
 import type { TelemetryFileRef } from '@telemetry/application-desktop';
-import { detectLaps } from '@telemetry/domain';
+import { createChannelSeries, detectLaps, downsample, toDistanceSeries } from '@telemetry/domain';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -144,6 +144,66 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
       expect(volta.lapTimeSeconds).not.toBeNull();
       expect(Math.abs((volta.lapTimeSeconds as number) - publicado)).toBeLessThan(0.05);
     }
+  });
+
+  it('reamostra por distância sem perder o pico e sem inventar pista', async () => {
+    const alvo = ref as TelemetryFileRef;
+    const meta = await decoder.readMetadata(alvo);
+    const colher = async (canal: string): Promise<number[]> => {
+      const valores: number[] = [];
+      for await (const valor of decoder.readChannel(alvo, canal)) valores.push(valor);
+      return valores;
+    };
+
+    const [lapNumber, lapDistPct, onPitRoad, surface, speed] = await Promise.all([
+      colher('Lap'),
+      colher('LapDistPct'),
+      colher('OnPitRoad'),
+      colher('PlayerTrackSurface'),
+      colher('Speed'),
+    ]);
+
+    const voltas = detectLaps({
+      tickRate: meta.tickRate,
+      lapNumber,
+      lapDistPct,
+      onPitRoad: onPitRoad.map((v) => v !== 0),
+      offTrack: surface.map((v) => v === 0),
+    });
+    const volta = voltas.find((candidata) => candidata.isComplete);
+    expect(volta).toBeDefined();
+    const { startSample, endSample } = volta as NonNullable<typeof volta>;
+
+    const bruto = speed.slice(startSample, endSample + 1);
+    const posicoes = lapDistPct.slice(startSample, endSample + 1);
+    const porDistancia = toDistanceSeries(
+      createChannelSeries({
+        channel: 'Speed',
+        unit: 'm/s',
+        axis: 'time',
+        x: bruto.map((_, i) => i / meta.tickRate),
+        y: bruto,
+      }),
+      posicoes,
+      1000,
+    );
+
+    // O eixo tem que ser monótono e caber em [0, 1]: gráfico com x andando para
+    // trás desenha rabisco, e delta fica sem sentido.
+    for (let i = 1; i < porDistancia.x.length; i += 1) {
+      expect(porDistancia.x[i] as number).toBeGreaterThan(porDistancia.x[i - 1] as number);
+    }
+    expect(Math.min(...porDistancia.x)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...porDistancia.x)).toBeLessThanOrEqual(1);
+
+    // A velocidade máxima da volta sobrevive à reamostragem.
+    expect(Math.max(...porDistancia.y)).toBeCloseTo(Math.max(...bruto), 1);
+
+    // E sobrevive também à redução para desenhar — é a razão de não usar média.
+    const reduzida = downsample(porDistancia, 400);
+    expect(reduzida.x.length).toBeLessThanOrEqual(402);
+    expect(Math.max(...reduzida.y)).toBe(Math.max(...porDistancia.y));
+    expect(Math.min(...reduzida.y)).toBe(Math.min(...porDistancia.y));
   });
 
   it('canal inexistente falha dizendo o nome', async () => {

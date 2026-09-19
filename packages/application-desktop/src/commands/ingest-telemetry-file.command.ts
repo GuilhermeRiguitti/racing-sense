@@ -1,5 +1,13 @@
 import type { IdGeneratorPort } from '@telemetry/application';
-import { detectLaps, type Lap, type SessionId, type TelemetrySession } from '@telemetry/domain';
+import {
+  type ChannelSeries,
+  createChannelSeries,
+  detectLaps,
+  type Lap,
+  type SessionId,
+  type TelemetrySession,
+  toDistanceSeries,
+} from '@telemetry/domain';
 import type { EventPublisherPort } from '../ports/event-publisher.port.js';
 import type {
   IngestedFileLogReaderPort,
@@ -41,6 +49,33 @@ export const OPTIONAL_LAP_CHANNELS = [
  * O vocabulário do sim para aqui: o domínio recebe booleano, não código.
  */
 const SURFACE_OFF_TRACK = 0;
+
+/**
+ * Canais que viram série gravada por volta.
+ *
+ * Não são todos: um arquivo tem quase 300 canais, e guardar todos por volta
+ * multiplicaria o banco por dez para mostrar dado que ninguém abre. Estes são os
+ * que respondem "onde perdi tempo" — o resto continua no `.ibt`, que não é
+ * descartado, e pode ser relido quando fizer falta (ADR 0007).
+ *
+ * Canal ausente é ignorado, não é erro: o conjunto muda entre carros.
+ */
+export const ANALYSIS_CHANNELS = [
+  'Speed',
+  'Throttle',
+  'Brake',
+  'Gear',
+  'RPM',
+  'SteeringWheelAngle',
+] as const;
+
+/**
+ * Pontos por volta na série gravada.
+ *
+ * Alto o bastante para o delta ser calculado em cima dela sem perder frenagem,
+ * e a redução para desenhar acontece depois, na hora de mostrar (ADR 0007).
+ */
+const SERIES_RESOLUTION = 1000;
 
 export interface IngestTelemetryFileCommand {
   /** Onde o arquivo está, no vocabulário do adapter (caminho, chave...). */
@@ -131,7 +166,43 @@ export function createIngestTelemetryFileHandler(
         channels: metadata.channels,
       };
 
-      await deps.sessions.save({ session, laps, seriesByLap: new Map() });
+      // Série por distância, e não por tempo: é o que torna duas voltas
+      // somáveis ponto a ponto, independente de quem freou mais tarde.
+      const canaisDeAnalise = ANALYSIS_CHANNELS.filter((name) => available.has(name));
+      const valoresPorCanal = new Map<string, readonly number[]>(
+        await Promise.all(
+          canaisDeAnalise.map(
+            async (name) =>
+              [name, await collectChannel(deps.decoder.readChannel(ref, name))] as const,
+          ),
+        ),
+      );
+
+      const seriesByLap = new Map<number, readonly ChannelSeries[]>();
+      for (const lap of laps) {
+        const posicoes = lapDistPct.slice(lap.startSample, lap.endSample + 1);
+        const series: ChannelSeries[] = [];
+        for (const [name, valores] of valoresPorCanal) {
+          const trecho = valores.slice(lap.startSample, lap.endSample + 1);
+          const unidade = metadata.channels.find((canal) => canal.name === name)?.unit ?? '';
+          series.push(
+            toDistanceSeries(
+              createChannelSeries({
+                channel: name,
+                unit: unidade,
+                axis: 'time',
+                x: trecho.map((_, i) => i / metadata.tickRate),
+                y: trecho,
+              }),
+              posicoes,
+              SERIES_RESOLUTION,
+            ),
+          );
+        }
+        seriesByLap.set(lap.number, series);
+      }
+
+      await deps.sessions.save({ session, laps, seriesByLap });
       await deps.ingestedFiles.record(locator, session.id);
 
       // Publica tudo automaticamente, mas só enfileirando: a ingestão não espera

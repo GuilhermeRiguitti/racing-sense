@@ -40,8 +40,8 @@ batem com o que o sim mostrou na sessão.
 - [x] Marcar out lap, in lap, saída de pista, incidente, teleporte e volta
       cortada pelo início/fim da gravação (marcar, não descartar: a volta suja
       tem conteúdo, só não pode ser referência)
-- [ ] Séries por `lapDistPct`
-- [ ] Downsampling que preserva picos
+- [x] Séries por `lapDistPct`
+- [x] Downsampling que preserva picos (min/max por balde)
 
 **Pronto quando:** a contagem e os tempos de volta batem com os do sim, incluindo
 sessão com reset para os boxes.

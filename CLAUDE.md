@@ -31,9 +31,9 @@ declara `@telemetry/application-desktop`, então o import nem resolve, e não te
 pé. Desde 2026-09-19 o decoder abre um `.ibt` de verdade de ponta a ponta: header,
 session info, catálogo de canais montado em runtime e amostras em streaming, com
 os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
-296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O que ainda é
-stub são os **algoritmos de análise** — recorte de voltas com histerese, delta e
-narrador. Ver `docs/pendencias.md` e `docs/roadmap.md`.
+296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O recorte de voltas, a reamostragem
+por distância e o downsampling também estão de pé e conferidos contra arquivo
+real. O que ainda é stub são o **delta contra a referência** e o **narrador**. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
 
