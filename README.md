@@ -4,9 +4,11 @@ Análise agêntica de telemetria do iRacing. Lê os arquivos `.ibt` que o sim gr
 disco, recorta as voltas, compara com uma volta de referência e usa um agente de LLM
 para explicar onde o tempo foi perdido.
 
-> **Estado: fundação.** A estrutura, a documentação e as regras estão de pé; o decoder
-> tem tipos, constantes de formato e testes de consistência. A decodificação de um
-> arquivo real ainda não foi validada — é a etapa 1 do [roadmap](docs/roadmap.md).
+> **Estado: o decoder lê arquivo real.** A estrutura, a documentação e as regras estão
+> de pé, e desde 2026-09-19 o decoder abre um `.ibt` de verdade de ponta a ponta —
+> pista, carro, condições, catálogo de canais e amostras em streaming, com os offsets
+> conferidos contra quatro arquivos. A etapa 1 do [roadmap](docs/roadmap.md) fechou; o
+> que ainda é stub são os algoritmos de análise (recorte de voltas, delta, narrador).
 
 ## Começando
 

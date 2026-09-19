@@ -10,6 +10,8 @@ import {
   VAR_HEADER_OFFSETS,
   VAR_HEADER_SIZE,
   VAR_HEADER_TEXT_LENGTHS,
+  VarType,
+  type VarTypeCode,
 } from './format.js';
 import type { DiskSubHeader, IbtHeader, VarBufDescriptor, VarHeader } from './types.js';
 
@@ -128,6 +130,31 @@ export function durationInSeconds(recordCount: number, tickRate: number): number
   return recordCount / tickRate;
 }
 
+/**
+ * Lê um valor de canal de dentro de uma amostra.
+ *
+ * `bool` e `bitField` viram número de propósito: quem chama sabe o que o canal
+ * significa (`OnPitRoad` é 0 ou 1, `SessionFlags` é máscara) e converte. O
+ * decoder não adivinha semântica.
+ */
+export function readChannelValue(view: DataView, byteOffset: number, type: VarTypeCode): number {
+  switch (type) {
+    case VarType.Char:
+      return view.getUint8(byteOffset);
+    case VarType.Bool:
+      return view.getUint8(byteOffset);
+    case VarType.Int:
+    case VarType.BitField:
+      return view.getInt32(byteOffset, LITTLE_ENDIAN);
+    case VarType.Float:
+      return view.getFloat32(byteOffset, LITTLE_ENDIAN);
+    case VarType.Double:
+      return view.getFloat64(byteOffset, LITTLE_ENDIAN);
+    default:
+      throw new IbtFormatError(`Tipo de variável desconhecido ao ler valor: ${String(type)}`);
+  }
+}
+
 /** Offset absoluto do valor de um canal dentro do arquivo, para a amostra `index`. */
 export function sampleValueOffset(
   bufOffset: number,
@@ -136,16 +163,4 @@ export function sampleValueOffset(
   varOffset: number,
 ): number {
   return bufOffset + index * bufLen + varOffset;
-}
-
-/**
- * Decodifica a string YAML de session info a partir dos bytes crus.
- *
- * TODO(mvp): decodificar de CP1252 e parsear o YAML.
- * Duas armadilhas conhecidas, ver `docs/formato-ibt.md`:
- *  - o encoding é CP1252, não UTF-8 (`TextDecoder('windows-1252')` resolve);
- *  - o YAML da iRacing tem valores não citados que quebram parser estrito.
- */
-export function decodeSessionInfo(_bytes: Uint8Array): never {
-  throw new NotImplementedError('decodeSessionInfo ainda não foi implementado');
 }

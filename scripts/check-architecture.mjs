@@ -8,7 +8,8 @@
  * Checa quatro coisas:
  *  1. as dependências declaradas no package.json respeitam o mapa de camadas;
  *  2. cada pacote só usa os módulos `node:*` que o mapa lhe dá;
- *  3. ninguém importa adapter fora do composition root;
+ *  3. ninguém importa adapter fora do composition root (teste de integração é a
+ *     exceção: montar adapter real é o ponto dele);
  *  4. ninguém fura o encapsulamento com import profundo (`@telemetry/x/src/...`)
  *     nem com caminho relativo saindo do próprio pacote.
  */
@@ -22,6 +23,8 @@ const WORKSPACE_DIRS = ['packages', 'apps'];
 const IMPORT_PATTERN = /(?:from|import)\s+['"]([^'"]+)['"]/g;
 
 const violations = [];
+
+const isTestFile = (file) => /\.(test|spec)\.(ts|tsx|mts)$/.test(file);
 
 function report(file, message) {
   violations.push({ file, message });
@@ -150,7 +153,13 @@ function checkImports(name, layer, dir) {
       }
 
       if (pkg.startsWith('@telemetry/adapter-') && pkg !== name) {
-        const allowed = ADAPTER_IMPORT_ALLOWLIST.some((entry) => relativeFile === entry);
+        // Teste de integração monta adapter real de propósito — é justamente o
+        // trabalho do composition root, feito de fora. A fronteira continua de
+        // pé pelo mapa de camadas: só quem declara o adapter consegue nomeá-lo,
+        // e nenhum `application-*` declara nenhum.
+        const allowed =
+          isTestFile(relativeFile) ||
+          ADAPTER_IMPORT_ALLOWLIST.some((entry) => relativeFile === entry);
         if (!allowed) {
           report(
             relativeFile,

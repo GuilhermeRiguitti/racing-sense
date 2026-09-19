@@ -5,6 +5,7 @@ import {
   decodeVarHeader,
   durationInSeconds,
   IbtFormatError,
+  readChannelValue,
   sampleValueOffset,
 } from './decoder.js';
 import {
@@ -149,5 +150,28 @@ describe('cálculos derivados', () => {
 
   it('offset de valor combina base do buffer, índice da amostra e offset do canal', () => {
     expect(sampleValueOffset(43840, 1120, 100, 40)).toBe(43840 + 100 * 1120 + 40);
+  });
+});
+
+describe('readChannelValue', () => {
+  const bytes = new Uint8Array(32);
+  const view = new DataView(bytes.buffer);
+
+  it('lê cada tipo do formato no seu tamanho', () => {
+    view.setInt32(0, -7, LE);
+    view.setFloat32(4, 0.5, LE);
+    view.setFloat64(8, 123.456, LE);
+    view.setUint8(16, 1);
+
+    expect(readChannelValue(view, 0, VarType.Int)).toBe(-7);
+    expect(readChannelValue(view, 4, VarType.Float)).toBeCloseTo(0.5);
+    expect(readChannelValue(view, 8, VarType.Double)).toBeCloseTo(123.456);
+    expect(readChannelValue(view, 16, VarType.Bool)).toBe(1);
+  });
+
+  it('bitField sai como inteiro: a máscara é de quem entende o canal', () => {
+    view.setInt32(20, 0b1011, LE);
+
+    expect(readChannelValue(view, 20, VarType.BitField)).toBe(0b1011);
   });
 });

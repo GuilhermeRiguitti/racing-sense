@@ -17,6 +17,17 @@ piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e `fixtures/real/`.
 Para os testes de detecção de volta, um arquivo com **reset para os boxes** no meio
 vale mais que um limpo: é o caso que quebra implementação ingênua.
 
+## Rodando os testes de integração
+
+Ponha um arquivo em **`fixtures/real/sample.ibt`** (ou aponte a variável
+`TELEMETRY_FIXTURE` para um caminho). O teste
+`apps/desktop/src/main/ibt-real-file.test.ts` roda sozinho quando encontra, e
+**pula** quando não encontra — nunca falha por ausência.
+
+É esse teste que sustenta a validação dos offsets do formato: ele confere que a
+contagem de amostras lidas bate com a declarada e que `LapDistPct` fica em
+[0, 1]. Um byte de deslocamento derruba as duas coisas na hora.
+
 ## Fixtures sintéticas
 
 Teste que depende de arquivo real não roda em CI. Por isso:

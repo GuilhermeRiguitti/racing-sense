@@ -59,6 +59,22 @@ bufOffset + (índiceDaAmostra * bufLen) + varHeader.offset
    `@telemetry/adapter-ibt` — ele traduz `VarHeader` em `ChannelDescriptor`, para o
    vocabulário do formato não subir para os casos de uso.
 
+## Duas contas que provam que os offsets estão certos
+
+Faça as duas antes de acreditar em qualquer valor decodificado. Elas fecham no byte —
+um único byte de deslocamento derruba as duas:
+
+```
+bufOffset + recordCount * bufLen  ==  tamanho do arquivo
+Σ (VAR_TYPE_SIZES[canal.type] * canal.count)  ==  bufLen
+```
+
+Depois, uma terceira de sanidade semântica: **`LapDistPct` tem que ficar em [0, 1]**.
+É o detector mais barato de offset torto que existe neste formato.
+
+Ordem de grandeza num arquivo real de GT3 (Ferrari 296, Road Atlanta, build 2026.06):
+288 canais, `bufLen` 1108 B, `tickRate` 60, ~10 mil amostras por 3 minutos de pista.
+
 ## Diagnóstico quando o valor vem errado
 
 | Sintoma | Causa provável |
@@ -70,4 +86,7 @@ bufOffset + (índiceDaAmostra * bufLen) + varHeader.offset
 | Últimas amostras com lixo | arquivo truncado: sessão ainda estava gravando. Ver o watcher em `@telemetry/adapter-fs` |
 | Canais misturados no tempo (fase 2) | buffer não congelado antes da leitura do tick |
 
-Detalhes e fontes: `docs/formato-ibt.md`. Estado de validação: `docs/pendencias.md`.
+Detalhes e fontes: `docs/formato-ibt.md`. Os offsets acima foram conferidos contra
+arquivos reais em 2026-09-19; o teste que sustenta isso é
+`apps/desktop/src/main/ibt-real-file.test.ts`, que **pula** quando não há fixture em
+`fixtures/real/` — sem arquivo lá, o verde prova só consistência interna.

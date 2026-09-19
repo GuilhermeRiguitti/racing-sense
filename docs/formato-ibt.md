@@ -4,8 +4,11 @@ Referência de trabalho para quem for mexer em `@telemetry/ibt-core`.
 
 > A iRacing não publica a descrição do formato binário. O que está aqui vem do
 > `irsdk.h` do SDK oficial e da engenharia reversa da comunidade (crate `itelem`,
-> `goiracing`, `pyirsdk`). **Nada disso foi validado contra um `.ibt` real neste
-> projeto ainda** — ver `docs/pendencias.md`, pendência #1.
+> `goiracing`, `pyirsdk`).
+>
+> **Validado em 2026-09-19** contra quatro arquivos reais (Ferrari 296 GT3 em Road
+> Atlanta, build 2026.06): a aritmética de offsets fecha no byte e os valores lidos
+> batem com o que o sim mostrou. Ver `docs/pendencias.md`, pendência #1.
 
 Tudo é little-endian.
 
@@ -49,9 +52,9 @@ Ler cedo demais dá `EBUSY` ou arquivo truncado — por isso o watcher espera es
 | 48 | `varBuf[4]` | 4 × 16 bytes | `{ tickCount: int32, bufOffset: int32, pad: 8 }` |
 
 > ⚠️ O documento de referência inicial lista `sessionInfoOffset` antes de
-> `sessionInfoLength`. O `irsdk.h` traz a ordem acima. Como os dois são int32
-> adjacentes, trocar os dois dá offsets absurdos na hora de ler o YAML — é o
-> primeiro sintoma a checar se a session info vier lixo.
+> `sessionInfoLength`. O `irsdk.h` traz a ordem acima, e o arquivo real **confirmou
+> o `irsdk.h`**: com a ordem trocada, a session info vem lixo. Como os dois são
+> int32 adjacentes, é o primeiro sintoma a checar se o YAML não parsear.
 
 ### 2. Disk sub header (32 bytes)
 

@@ -3,20 +3,22 @@
 O que ainda não foi decidido ou validado. Item resolvido sai daqui e vira ADR ou
 código — esta lista não é histórico.
 
-## 1. Validar o layout do formato contra um `.ibt` real ⚠️ bloqueia tudo
+## ~~1. Validar o layout do formato contra um `.ibt` real~~ ✅ resolvido
 
-Os offsets em `packages/ibt-core/src/format.ts` vêm da spec pública e da engenharia
-reversa da comunidade. Os testes atuais provam apenas que o layout é **internamente
-consistente** — nenhum arquivo real passou por ele.
+Validado em 2026-09-19 contra quatro arquivos de Ferrari 296 GT3 em Road Atlanta
+(build 2026.06 do sim). Três provas independentes:
 
-Sintomas típicos de offset errado: `numVars` absurdo, session info vindo como lixo
-binário, `bufLen` que não bate com a soma dos tamanhos dos canais.
+- `bufOffset + recordCount × bufLen` deu **o tamanho exato** do arquivo;
+- a soma de `tamanho × count` de todos os 288 canais deu **exatamente** `bufLen`;
+- `LapDistPct` lido das amostras ficou em [0, 1] com máximo em 100% — um byte de
+  deslocamento no offset transformaria isso em lixo na hora.
 
-**A esteira já chega até aqui.** Com o aplicativo aberto, um `.ibt` que aparece
-na pasta é detectado, esperado destravar, aberto, e tem header, disk sub header
-e catálogo de canais lidos. A ingestão para no passo seguinte — decodificar a
-session info (CP1252 + YAML, pendência #6) — que é onde saem pista, carro e
-piloto. Depois disso vem o recorte de voltas (etapa 2 do roadmap).
+Também ficou resolvida a dúvida sobre a ordem dos campos: `sessionInfoLength` em
+16 e `sessionInfoOffset` em 20, como o `irsdk.h` diz (e não como o documento de
+referência inicial sugeria). Com a ordem trocada, a session info viria ilegível.
+
+O teste que sustenta isso é `apps/desktop/src/main/ibt-real-file.test.ts`, que
+**pula** quando não há fixture — ver `docs/fixtures.md`.
 
 ## 2. `ibt-telemetry` ou decoder próprio
 
@@ -84,8 +86,10 @@ gráfico.
 `electron-builder` configurado, instalador Windows assinado e auto-update. Inclui
 o rebuild nativo do `better-sqlite3` para a versão do Electron.
 
-## 12. Quais canais trazem as condições da sessão
+## ~~12. Quais canais trazem as condições da sessão~~ ✅ resolvido
 
-`SessionConditions` está modelado (temperatura do ar e da pista, horário, céu,
-umidade, vento), mas quais canais e campos do YAML preenchem cada um só se
-confirma com um `.ibt` real — mesma dependência da pendência #1.
+Vêm do `WeekendInfo`, não das amostras: `TrackAirTemp`, `TrackSurfaceTempCrew`
+(a medida que o sim mostra ao engenheiro, não a da superfície ao sol),
+`TrackRelativeHumidity`, `TrackWindVel`, `TrackSkies`, e `WeekendOptions.TimeOfDay`.
+O estado da borracha vem do bloco da sessão corrente
+(`SessionTrackRubberState`).

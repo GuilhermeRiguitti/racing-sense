@@ -156,7 +156,9 @@ uso mude.
    tocar em `application-desktop`;
 3. módulo `node:*` fora da lista daquele pacote — a cloud-api tem `node:crypto` e
    `node:http`, e **não** tem `node:fs`;
-4. import de adapter fora do composition root;
+4. import de adapter fora do composition root — com uma exceção: arquivo `.test.ts`,
+   porque teste de integração monta adapter real de propósito, e o mapa de camadas já
+   impede que qualquer `application-*` sequer nomeie um adapter;
 5. import profundo (`@telemetry/x/src/...`) ou relativo saindo do pacote.
 
 O mapa está em `scripts/architecture.config.mjs`. Mudar aquele arquivo é mudar a

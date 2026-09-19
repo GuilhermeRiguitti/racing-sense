@@ -23,11 +23,12 @@ fronteiras, documentação e regras do agente de código.
 
 O passo que destrava todo o resto.
 
-- [ ] Obter um `.ibt` de build recente do sim (ver `docs/fixtures.md`)
-- [ ] Validar header, disk sub header e tabela de variáveis contra o arquivo real
-- [ ] Decidir: `ibt-telemetry` como dependência ou decoder próprio (ADR 0003)
-- [ ] Decodificar a session info (CP1252 + YAML)
-- [ ] Iterar amostras em streaming, com catálogo montado em runtime
+- [x] Obter um `.ibt` de build recente do sim (ver `docs/fixtures.md`)
+- [x] Validar header, disk sub header e tabela de variáveis contra o arquivo real
+- [x] Decodificar a session info (CP1252 + YAML)
+- [x] Iterar amostras em streaming, com catálogo montado em runtime
+- [x] Decidir: decoder próprio (ADR 0003 — o `ibt-telemetry` deixou de ser
+      necessário, porque o nosso passou no arquivo real)
 
 **Pronto quando:** dado um `.ibt` real, o sistema imprime pista, carro, piloto,
 quantidade de amostras, duração e os primeiros 10 valores de 3 canais — e os números

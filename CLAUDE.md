@@ -27,10 +27,12 @@ autentica. Isso não é convenção — é barreira de compilação: a cloud-api
 declara `@telemetry/application-desktop`, então o import nem resolve, e não tem
 `node:fs` nos builtins, então não abre arquivo. Ver ADR 0011 e **ADR 0016**.
 
-**Estado: fundação.** Arquitetura, regras e casos de uso estão de pé. O decoder
-tem tipos, constantes e catálogo de canais funcionando — mas **nenhum `.ibt` real
-passou por ele ainda**, e os algoritmos de análise são stubs. Ver
-`docs/pendencias.md` e `docs/roadmap.md`.
+**Estado: o decoder lê arquivo real.** Arquitetura, regras e casos de uso estão de
+pé. Desde 2026-09-19 o decoder abre um `.ibt` de verdade de ponta a ponta: header,
+session info, catálogo de 288 canais e amostras em streaming, com os offsets
+conferidos contra quatro arquivos (Ferrari 296 GT3 / Road Atlanta). O que ainda é
+stub são os **algoritmos de análise** — recorte de voltas com histerese, delta e
+narrador. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
 
@@ -184,9 +186,12 @@ Use a skill **`ibt-format`**: offsets, tipos e roteiro de diagnóstico para quan
 um valor vier absurdo. As constantes estão em `packages/ibt-core/src/format.ts` —
 use-as, não redigite números.
 
-Os offsets vêm da spec pública e da engenharia reversa da comunidade e **ainda
-não foram validados contra um arquivo real**. Os testes provam consistência
-interna, não correção.
+Os offsets vêm da spec pública e da engenharia reversa da comunidade e **foram
+validados contra arquivos reais em 2026-09-19** — ver `docs/formato-ibt.md`. O
+teste que sustenta isso é `apps/desktop/src/main/ibt-real-file.test.ts`, que pula
+quando não há fixture em `fixtures/real/` (nenhum `.ibt` entra no repositório,
+regra 21). Se você mexer no decoder, ponha um arquivo lá antes de confiar no
+verde: sem fixture, os testes provam só consistência interna.
 
 ## Ao mexer na interface do desktop
 
