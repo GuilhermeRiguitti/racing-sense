@@ -72,8 +72,20 @@ bufOffset + recordCount * bufLen  ==  tamanho do arquivo
 Depois, uma terceira de sanidade semântica: **`LapDistPct` tem que ficar em [0, 1]**.
 É o detector mais barato de offset torto que existe neste formato.
 
-Ordem de grandeza num arquivo real de GT3 (Ferrari 296, Road Atlanta, build 2026.06):
-288 canais, `bufLen` 1108 B, `tickRate` 60, ~10 mil amostras por 3 minutos de pista.
+Ordem de grandeza em arquivos reais de GT3 (build 2026.06), `tickRate` 60:
+
+| Carro / pista | Canais | `bufLen` |
+|---|---|---|
+| Ferrari 296 GT3 / Road Atlanta | 288 | 1108 B |
+| Mercedes-AMG GT3 / Suzuka | 287 | 1101 B |
+
+**Os dois mudam entre carros.** Nunca assuma `bufLen` nem contagem de canais: os
+dois saem do header do arquivo em mãos.
+
+**A amostra 0 pode ser fantasma.** Vista num arquivo real: `Lap` e `LapDistPct`
+zerados na amostra 0 e o valor real já na amostra 1, com o relógio da sessão
+contínuo entre as duas — o sim gravou o tick antes de popular o buffer. Quem
+recorta volta descarta a amostra 0; quem decodifica devolve ela como está.
 
 ## Diagnóstico quando o valor vem errado
 

@@ -5,8 +5,9 @@ código — esta lista não é histórico.
 
 ## ~~1. Validar o layout do formato contra um `.ibt` real~~ ✅ resolvido
 
-Validado em 2026-09-19 contra quatro arquivos de Ferrari 296 GT3 em Road Atlanta
-(build 2026.06 do sim). Três provas independentes:
+Validado em 2026-09-19 contra oito arquivos, em dois carros e duas pistas: Ferrari
+296 GT3 em Road Atlanta (288 canais, `bufLen` 1108) e Mercedes-AMG GT3 em Suzuka
+(287 canais, `bufLen` 1101), build 2026.06 do sim. Três provas independentes:
 
 - `bufOffset + recordCount × bufLen` deu **o tamanho exato** do arquivo;
 - a soma de `tamanho × count` de todos os 288 canais deu **exatamente** `bufLen`;

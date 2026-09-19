@@ -29,8 +29,9 @@ declara `@telemetry/application-desktop`, então o import nem resolve, e não te
 
 **Estado: o decoder lê arquivo real.** Arquitetura, regras e casos de uso estão de
 pé. Desde 2026-09-19 o decoder abre um `.ibt` de verdade de ponta a ponta: header,
-session info, catálogo de 288 canais e amostras em streaming, com os offsets
-conferidos contra quatro arquivos (Ferrari 296 GT3 / Road Atlanta). O que ainda é
+session info, catálogo de canais montado em runtime e amostras em streaming, com
+os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
+296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O que ainda é
 stub são os **algoritmos de análise** — recorte de voltas com histerese, delta e
 narrador. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 

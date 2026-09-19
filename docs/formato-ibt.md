@@ -6,9 +6,12 @@ Referência de trabalho para quem for mexer em `@telemetry/ibt-core`.
 > `irsdk.h` do SDK oficial e da engenharia reversa da comunidade (crate `itelem`,
 > `goiracing`, `pyirsdk`).
 >
-> **Validado em 2026-09-19** contra quatro arquivos reais (Ferrari 296 GT3 em Road
-> Atlanta, build 2026.06): a aritmética de offsets fecha no byte e os valores lidos
-> batem com o que o sim mostrou. Ver `docs/pendencias.md`, pendência #1.
+> **Validado em 2026-09-19** contra oito arquivos reais, em dois carros e duas
+> pistas: Ferrari 296 GT3 em Road Atlanta (288 canais, `bufLen` 1108) e
+> Mercedes-AMG GT3 em Suzuka (287 canais, `bufLen` 1101). A aritmética de offsets
+> fecha no byte nos oito, e os valores lidos batem com o que o sim mostrou. Que
+> `bufLen` e a contagem de canais mudem entre carros e a leitura continue certa é
+> o que descarta "acertou por acaso num arquivo". Ver `docs/pendencias.md`.
 
 Tudo é little-endian.
 
@@ -143,3 +146,13 @@ bufOffset + (N * bufLen) + varHeader.offset
 ## Fontes
 
 Ver `docs/referencias.md`.
+
+### A primeira amostra pode ser fantasma
+
+O primeiro registro do arquivo às vezes sai com `Lap` e `LapDistPct` zerados
+enquanto o resto já está preenchido — o sim grava o tick antes de popular o
+buffer. Visto num arquivo real: amostra 0 com `Lap = 0`, amostra 1 com `Lap = 6`,
+e o relógio da sessão contínuo entre as duas.
+
+Quem recorta voltas **descarta a amostra 0**, senão nasce uma volta 0 de duração
+zero e a detecção de linha de chegada vê um salto que não existiu.
