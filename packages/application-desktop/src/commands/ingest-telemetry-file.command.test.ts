@@ -1,10 +1,5 @@
 import type { IdGeneratorPort } from '@telemetry/application';
-import {
-  NotImplementedError,
-  toAnalysisReportId,
-  toReferenceLapId,
-  toSessionId,
-} from '@telemetry/domain';
+import { toAnalysisReportId, toReferenceLapId, toSessionId } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { EventPublisherPort } from '../ports/event-publisher.port.js';
@@ -105,9 +100,13 @@ describe('IngestTelemetryFile', () => {
 
   it('fecha o arquivo mesmo quando a ingestão falha', async () => {
     const files = filePort();
+    // Disco com defeito no meio da leitura: o catálogo passou, os bytes não.
     const decoder: TelemetryDecoderPort = {
       readMetadata: async () => metadataWith(['Lap', 'LapDistPct']),
-      readChannel: () => numbers([0, 0.5, 1]),
+      readChannel: async function* () {
+        yield 0;
+        throw new Error('leitura interrompida no meio do arquivo');
+      },
     };
 
     const events = eventos();
@@ -121,8 +120,7 @@ describe('IngestTelemetryFile', () => {
       ingestedFiles: registroDeArquivos(),
     });
 
-    // O recorte de voltas ainda é stub — a falha vem do domínio.
-    await expect(handle({ locator: ref.locator })).rejects.toThrow(NotImplementedError);
+    await expect(handle({ locator: ref.locator })).rejects.toThrow(/leitura interrompida/);
     expect(files.close).toHaveBeenCalledWith(ref);
     // Ingestão que falhou não anuncia sessão nova: evento é fato consumado.
     expect(events.publish).not.toHaveBeenCalled();

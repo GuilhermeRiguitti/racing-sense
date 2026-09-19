@@ -1,6 +1,7 @@
 import { createFileTelemetrySource } from '@telemetry/adapter-fs';
 import { createIbtTelemetryDecoder } from '@telemetry/adapter-ibt';
 import type { TelemetryFileRef } from '@telemetry/application-desktop';
+import { detectLaps } from '@telemetry/domain';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -95,6 +96,54 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
     }
 
     expect(sempreCrescente).toBe(true);
+  });
+
+  it('recorta as voltas e bate com o tempo que o próprio sim gravou', async () => {
+    const alvo = ref as TelemetryFileRef;
+    const meta = await decoder.readMetadata(alvo);
+    const colher = async (canal: string): Promise<number[]> => {
+      const valores: number[] = [];
+      for await (const valor of decoder.readChannel(alvo, canal)) valores.push(valor);
+      return valores;
+    };
+
+    const [lapNumber, lapDistPct, onPitRoad, surface, lastLapTime] = await Promise.all([
+      colher('Lap'),
+      colher('LapDistPct'),
+      colher('OnPitRoad'),
+      colher('PlayerTrackSurface'),
+      colher('LapLastLapTime'),
+    ]);
+
+    const voltas = detectLaps({
+      tickRate: meta.tickRate,
+      lapNumber,
+      lapDistPct,
+      onPitRoad: onPitRoad.map((v) => v !== 0),
+      offTrack: surface.map((v) => v === 0),
+    });
+
+    // A gravação sempre corta a primeira e a última: o piloto entrou no carro
+    // no meio de uma volta e saiu no meio de outra.
+    expect(voltas.length).toBeGreaterThanOrEqual(2);
+    expect(voltas[0]?.flags).toContain('incomplete');
+    expect(voltas.at(-1)?.flags).toContain('incomplete');
+
+    const completas = voltas.filter((volta) => volta.isComplete);
+    expect(completas.length).toBeGreaterThan(0);
+
+    // A prova de fogo: para cada volta completa, o sim publica o tempo dela logo
+    // no começo da volta seguinte. Os dois números têm que bater.
+    for (const volta of completas) {
+      const seguinte = voltas[voltas.indexOf(volta) + 1];
+      if (seguinte === undefined) continue;
+      // Uns segundos depois da virada: a publicação não é instantânea.
+      const publicado = lastLapTime[seguinte.startSample + Math.round(meta.tickRate * 5)];
+      if (publicado === undefined || publicado <= 0) continue; // volta invalidada pelo sim
+
+      expect(volta.lapTimeSeconds).not.toBeNull();
+      expect(Math.abs((volta.lapTimeSeconds as number) - publicado)).toBeLessThan(0.05);
+    }
   });
 
   it('canal inexistente falha dizendo o nome', async () => {

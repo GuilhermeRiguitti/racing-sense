@@ -36,8 +36,10 @@ batem com o que o sim mostrou na sessão.
 
 ## Etapa 2 — Voltas
 
-- [ ] `detectLaps` com histerese na linha de chegada (`packages/domain`)
-- [ ] Descartar out lap, in lap e voltas cortadas pelo início/fim da gravação
+- [x] `detectLaps` com histerese na linha de chegada (`packages/domain`)
+- [x] Marcar out lap, in lap, saída de pista, incidente, teleporte e volta
+      cortada pelo início/fim da gravação (marcar, não descartar: a volta suja
+      tem conteúdo, só não pode ser referência)
 - [ ] Séries por `lapDistPct`
 - [ ] Downsampling que preserva picos
 

@@ -22,6 +22,26 @@ import { MissingChannelError } from '../shared/errors.js';
  */
 export const REQUIRED_LAP_CHANNELS = ['Lap', 'LapDistPct'] as const;
 
+/**
+ * Canais que melhoram o recorte quando existem, e cuja ausência não impede nada.
+ *
+ * Separados dos obrigatórios de propósito: sem eles a volta ainda é recortada,
+ * só não dá para dizer se ela passou pela box ou saiu da pista. Exigi-los seria
+ * recusar arquivo por causa de informação acessória.
+ */
+export const OPTIONAL_LAP_CHANNELS = [
+  'OnPitRoad',
+  'PlayerTrackSurface',
+  'PlayerCarMyIncidentCount',
+] as const;
+
+/**
+ * Código do iRacing para "fora dos limites da pista" em `PlayerTrackSurface`.
+ *
+ * O vocabulário do sim para aqui: o domínio recebe booleano, não código.
+ */
+const SURFACE_OFF_TRACK = 0;
+
 export interface IngestTelemetryFileCommand {
   /** Onde o arquivo está, no vocabulário do adapter (caminho, chave...). */
   readonly locator: string;
@@ -81,15 +101,26 @@ export function createIngestTelemetryFileHandler(
         );
       }
 
-      const [lapNumber, lapDistPct] = await Promise.all([
+      const opcional = async (name: string): Promise<number[] | undefined> =>
+        available.has(name) ? collectChannel(deps.decoder.readChannel(ref, name)) : undefined;
+
+      const [lapNumber, lapDistPct, onPitRoad, trackSurface, incidentCount] = await Promise.all([
         collectChannel(deps.decoder.readChannel(ref, 'Lap')),
         collectChannel(deps.decoder.readChannel(ref, 'LapDistPct')),
+        opcional('OnPitRoad'),
+        opcional('PlayerTrackSurface'),
+        opcional('PlayerCarMyIncidentCount'),
       ]);
 
       const laps: readonly Lap[] = detectLaps({
         tickRate: metadata.tickRate,
         lapNumber,
         lapDistPct,
+        ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
+        ...(trackSurface !== undefined
+          ? { offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK) }
+          : {}),
+        ...(incidentCount !== undefined ? { incidentCount } : {}),
       });
 
       const session: TelemetrySession = {

@@ -74,9 +74,30 @@ export function describePublishedSessionStoreContract(
       const published = aPublishedSession({
         ownerId: dono,
         laps: [
-          { number: 1, startSample: 0, endSample: 10, lapTimeSeconds: 80, isComplete: true },
-          { number: 2, startSample: 10, endSample: 20, lapTimeSeconds: 75.4, isComplete: true },
-          { number: 3, startSample: 20, endSample: 30, lapTimeSeconds: 60, isComplete: false },
+          {
+            number: 1,
+            startSample: 0,
+            endSample: 10,
+            lapTimeSeconds: 80,
+            isComplete: true,
+            flags: [],
+          },
+          {
+            number: 2,
+            startSample: 10,
+            endSample: 20,
+            lapTimeSeconds: 75.4,
+            isComplete: true,
+            flags: [],
+          },
+          {
+            number: 3,
+            startSample: 20,
+            endSample: 30,
+            lapTimeSeconds: 60,
+            isComplete: false,
+            flags: ['incomplete'],
+          },
         ],
       });
 

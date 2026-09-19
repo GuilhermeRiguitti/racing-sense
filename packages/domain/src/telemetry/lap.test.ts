@@ -5,7 +5,7 @@ import { isComparable, lapDurationSeconds } from './lap.js';
 
 describe('lapDurationSeconds', () => {
   it('deriva a duração dos índices de amostra', () => {
-    expect(lapDurationSeconds(aLap({ startSample: 600, endSample: 5100 }), 60)).toBe(75);
+    expect(lapDurationSeconds(aLap({ startSample: 600, endSample: 5099 }), 60)).toBe(75);
   });
 
   it('recusa tickRate inválido em vez de devolver Infinity', () => {
@@ -21,8 +21,13 @@ describe('lapDurationSeconds', () => {
 
 describe('isComparable', () => {
   it('rejeita volta incompleta (out lap, in lap, gravação cortada)', () => {
-    expect(isComparable(aLap({ isComplete: false }))).toBe(false);
+    expect(isComparable(aLap({ flags: ['incomplete'] }))).toBe(false);
     expect(isComparable(aLap({ lapTimeSeconds: null }))).toBe(false);
     expect(isComparable(aLap())).toBe(true);
+  });
+
+  it('rejeita volta marcada, mesmo completa e cronometrada', () => {
+    expect(isComparable(aLap({ flags: ['off-track'] }))).toBe(false);
+    expect(isComparable(aLap({ flags: ['pit'] }))).toBe(false);
   });
 });

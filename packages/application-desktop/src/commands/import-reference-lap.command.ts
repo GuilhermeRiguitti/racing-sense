@@ -1,6 +1,7 @@
 import type { IdGeneratorPort } from '@telemetry/application';
 import { InvalidRequestError } from '@telemetry/application';
 import {
+  isComparable,
   NotFoundError,
   type ReferenceLap,
   type ReferenceLapId,
@@ -46,10 +47,11 @@ export function createImportReferenceLapHandler(
     if (lap === undefined) {
       throw new NotFoundError(`Volta ${lapNumber} não existe na sessão ${sessionId}`);
     }
-    if (!lap.isComplete) {
-      throw new InvalidRequestError(
-        `Volta ${lapNumber} está incompleta (out lap, in lap ou gravação cortada) e não serve de referência`,
-      );
+    // Volta marcada continua visível e analisável; o que ela não pode é virar a
+    // régua. Referência com corte de pista contamina toda comparação seguinte.
+    if (!isComparable(lap)) {
+      const motivos = lap.flags.length > 0 ? lap.flags.join(', ') : 'sem tempo cronometrado';
+      throw new InvalidRequestError(`Volta ${lapNumber} não serve de referência (${motivos})`);
     }
 
     const referenceLap: ReferenceLap = {

@@ -35,6 +35,7 @@ export const aLap = (overrides: Partial<Lap> = {}): Lap => ({
   endSample: 4500,
   lapTimeSeconds: 75.2,
   isComplete: true,
+  flags: [],
   ...overrides,
 });
 

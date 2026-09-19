@@ -11,6 +11,7 @@ import type {
   ShareToken,
   Visibility,
 } from '@telemetry/domain';
+import { isComparable } from '@telemetry/domain';
 
 const toSummary = (published: PublishedSession): PublishedSessionSummary => ({
   sessionId: published.session.id,
@@ -19,7 +20,7 @@ const toSummary = (published: PublishedSession): PublishedSessionSummary => ({
   carName: published.session.car.name,
   visibility: published.visibility,
   bestLapTimeSeconds: published.laps.reduce<number | null>((best, lap) => {
-    if (lap.lapTimeSeconds === null || !lap.isComplete) return best;
+    if (!isComparable(lap) || lap.lapTimeSeconds === null) return best;
     return best === null ? lap.lapTimeSeconds : Math.min(best, lap.lapTimeSeconds);
   }, null),
   lapCount: published.laps.length,

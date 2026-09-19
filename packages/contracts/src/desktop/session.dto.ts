@@ -52,6 +52,8 @@ export const lapDto = z.object({
   endSample: z.int().nonnegative(),
   lapTimeSeconds: z.number().positive().nullable(),
   isComplete: z.boolean(),
+  /** Por que a volta não serve de referência. Vazio = serve. */
+  flags: z.array(z.enum(['incomplete', 'pit', 'off-track', 'incident', 'teleport'] as const)),
 });
 export type LapDto = z.infer<typeof lapDto>;
 
@@ -79,5 +81,6 @@ export function toLapDto(lap: Lap): LapDto {
     endSample: lap.endSample,
     lapTimeSeconds: lap.lapTimeSeconds,
     isComplete: lap.isComplete,
+    flags: [...lap.flags],
   };
 }
