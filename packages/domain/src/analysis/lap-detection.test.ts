@@ -78,14 +78,13 @@ describe('detectLaps', () => {
     expect(voltas[1]?.isComplete).toBe(true);
   });
 
-  it('marca saída de pista e incidente sem tirar a volta da lista', () => {
+  it('marca saída de pista sem tirar a volta da lista', () => {
     const base = pista([60, 120, 60]);
     const offTrack = base.lapNumber.map((_, i) => i === 100);
-    const incidentCount = base.lapNumber.map((_, i) => (i < 100 ? 4 : 6));
 
-    const voltas = detectLaps({ ...base, offTrack, incidentCount });
+    const voltas = detectLaps({ ...base, offTrack });
 
-    expect(voltas[1]?.flags).toEqual(expect.arrayContaining(['off-track', 'incident']));
+    expect(voltas[1]?.flags).toEqual(['off-track']);
     expect(voltas[1]?.lapTimeSeconds).toBe(2);
   });
 
@@ -95,7 +94,6 @@ describe('detectLaps', () => {
       ...base,
       onPitRoad: base.lapNumber.map(() => false),
       offTrack: base.lapNumber.map(() => false),
-      incidentCount: base.lapNumber.map(() => 7),
     });
 
     expect(voltas[1]?.flags).toEqual([]);

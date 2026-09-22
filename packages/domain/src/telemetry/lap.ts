@@ -14,9 +14,18 @@ export type LapFlag =
   /** Passou pelo pit lane: out lap ou in lap. Tempo não representa ritmo. */
   | 'pit'
   /** Saiu da pista em algum ponto. É o que o sim usa para invalidar volta. */
-  | 'off-track'
-  /** O sim contou incidente durante a volta. */
-  | 'incident';
+  | 'off-track';
+
+/**
+ * A definição de volta válida é do piloto, e é esta: **completa, sem box e sem
+ * corte de pista** (2026-09-22). Cada marcação acima é um desses três fatos, e
+ * nada além deles.
+ *
+ * Por isso não há marcação de incidente. Incidente por saída de pista já é
+ * `off-track`; os outros — rodar dentro da pista, bater sem sair dela — não são
+ * corte de pista, e a volta vale. O contador de incidentes continua no `.ibt` e
+ * pode virar informação para o coach um dia; critério de validade, não.
+ */
 
 /**
  * Por que não existe marcação de "carro parado" nem nada derivado de tempo.

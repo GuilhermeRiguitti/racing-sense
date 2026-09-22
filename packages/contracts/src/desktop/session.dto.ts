@@ -53,12 +53,7 @@ export type SessionDto = z.infer<typeof sessionDto>;
  * impede o contrário — marcação nova no domínio sem a borda acompanhar vira erro
  * de compilação, não DTO silenciosamente desatualizado.
  */
-const LAP_FLAGS = [
-  'incomplete',
-  'pit',
-  'off-track',
-  'incident',
-] as const satisfies readonly LapFlag[];
+const LAP_FLAGS = ['incomplete', 'pit', 'off-track'] as const satisfies readonly LapFlag[];
 
 type EsqueciAlgumaFlag = Exclude<LapFlag, (typeof LAP_FLAGS)[number]>;
 const _flagsCobertas: EsqueciAlgumaFlag[] = [];

@@ -36,11 +36,7 @@ export const REQUIRED_LAP_CHANNELS = ['Lap', 'LapDistPct'] as const;
  * só não dá para dizer se ela passou pela box ou saiu da pista. Exigi-los seria
  * recusar arquivo por causa de informação acessória.
  */
-export const OPTIONAL_LAP_CHANNELS = [
-  'OnPitRoad',
-  'PlayerTrackSurface',
-  'PlayerCarMyIncidentCount',
-] as const;
+export const OPTIONAL_LAP_CHANNELS = ['OnPitRoad', 'PlayerTrackSurface'] as const;
 
 /**
  * Código do iRacing para "fora dos limites da pista" em `PlayerTrackSurface`.
@@ -144,12 +140,11 @@ export function createIngestTelemetryFileHandler(
       const opcional = async (name: string): Promise<number[] | undefined> =>
         available.has(name) ? collectChannel(deps.decoder.readChannel(ref, name)) : undefined;
 
-      const [lapNumber, lapDistPct, onPitRoad, trackSurface, incidentCount] = await Promise.all([
+      const [lapNumber, lapDistPct, onPitRoad, trackSurface] = await Promise.all([
         collectChannel(deps.decoder.readChannel(ref, 'Lap')),
         collectChannel(deps.decoder.readChannel(ref, 'LapDistPct')),
         opcional('OnPitRoad'),
         opcional('PlayerTrackSurface'),
-        opcional('PlayerCarMyIncidentCount'),
       ]);
 
       const laps: readonly Lap[] = detectLaps({
@@ -160,7 +155,6 @@ export function createIngestTelemetryFileHandler(
         ...(trackSurface !== undefined
           ? { offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK) }
           : {}),
-        ...(incidentCount !== undefined ? { incidentCount } : {}),
       });
 
       const session: TelemetrySession = {

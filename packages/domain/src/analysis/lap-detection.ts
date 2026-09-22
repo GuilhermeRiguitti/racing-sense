@@ -19,8 +19,6 @@ export interface LapSignals {
   readonly onPitRoad?: readonly boolean[];
   /** Verdadeiro quando o carro está fora dos limites da pista. */
   readonly offTrack?: readonly boolean[];
-  /** Contador acumulado de incidentes do piloto. Só a variação na volta importa. */
-  readonly incidentCount?: readonly number[];
 }
 
 /**
@@ -42,7 +40,7 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
   const flags: LapFlag[] = [];
   if (!complete) flags.push('incomplete');
 
-  const { onPitRoad, offTrack, incidentCount } = signals;
+  const { onPitRoad, offTrack } = signals;
   if (onPitRoad !== undefined) {
     for (let i = start; i <= end; i += 1) {
       if (onPitRoad[i] === true) {
@@ -58,9 +56,6 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
         break;
       }
     }
-  }
-  if (incidentCount !== undefined && (incidentCount[end] ?? 0) > (incidentCount[start] ?? 0)) {
-    flags.push('incident');
   }
   return flags;
 }
