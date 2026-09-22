@@ -23,11 +23,11 @@ Consequência: quando a telemetria ao vivo entrar (fase 2), só se implementa um
 
 ## Estado
 
-Header, disk sub header e tabela de variáveis: decodificados e testados
-(consistência do layout aqui, e leitura de um `.ibt` sintético em
-`@telemetry/adapter-ibt`). Session info (YAML em CP1252) e leitura de amostras
-ainda são stubs.
+Header, disk sub header, tabela de variáveis, session info (YAML em CP1252) e
+leitura de amostras: tudo decodificado e testado.
 
-⚠️ Os offsets vêm da spec pública do SDK C++ e da engenharia reversa da comunidade
-(ver `docs/formato-ibt.md`). **Ainda não foram validados contra um `.ibt` real** —
-essa é a pendência #1 do projeto.
+Os offsets vêm da spec pública do SDK C++ e da engenharia reversa da comunidade
+(ver `docs/formato-ibt.md`) e **foram validados contra oito arquivos reais**, em
+dois carros com contagem de canais e tamanho de amostra diferentes. O teste que
+sustenta isso é `apps/desktop/src/main/ibt-real-file.test.ts`, que pula quando não
+há fixture.

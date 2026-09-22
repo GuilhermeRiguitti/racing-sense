@@ -27,7 +27,8 @@ const LE = true;
 /**
  * Estes testes checam a **consistência interna** do layout declarado e o
  * round-trip dos decoders. Eles não provam que o layout bate com o `.ibt` real —
- * isso só um arquivo de verdade prova (ver docs/pendencias.md, pendência #1).
+ * isso só um arquivo de verdade prova — e provou: ver docs/formato-ibt.md e o
+ * teste de integração em apps/desktop/src/main/ibt-real-file.test.ts.
  */
 describe('layout do formato', () => {
   it('o header principal termina exatamente após os descritores de buffer', () => {
