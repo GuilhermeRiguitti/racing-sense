@@ -64,7 +64,10 @@ A etapa que entrega o produto.
 - [x] Watcher ligado à ingestão (file-lock resolvido, em `adapter-fs`)
 - [x] IPC empurrando evento para o renderer: sessão ingerida, análise pronta,
       publicação — com a interface consultando de novo em vez de confiar no payload
-- [ ] Gráfico de canal com zoom e navegação entre voltas
+- [x] Gráfico de canal por distância, com cursor sincronizado entre os painéis e
+      leitura pelo teclado; navegação entre sessões e voltas
+- [ ] Zoom num trecho da volta
+- [ ] Marcar no gráfico onde a volta saiu da pista
 - [ ] Gráfico de delta contra a referência
 - [x] Persistência local passando a suíte de contrato das portas (SQLite,
       amostra bruta sem perda — ADR 0019)

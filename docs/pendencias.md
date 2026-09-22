@@ -37,10 +37,10 @@ fica como está: a web pode mostrar a versão antiga sem prejuízo.
 
 ## 10. Gráficos e UX do desktop
 
-O que o piloto vê é o produto: gráfico de canal com zoom, delta contra a
-referência, navegação entre voltas, e o relatório do agente ancorado no trecho.
-Nada disso começou. Usar a skill `dataviz` antes de escrever a primeira linha de
-gráfico.
+O que o piloto vê é o produto. A primeira tela existe (sessões, voltas, cinco
+painéis por distância com cursor sincronizado). Falta: zoom num trecho, marcar
+onde a volta saiu da pista, o delta contra a referência e o relatório do agente
+ancorado no trecho. Usar a skill `dataviz` antes de mexer em gráfico.
 
 ## 11. Empacotamento do desktop
 

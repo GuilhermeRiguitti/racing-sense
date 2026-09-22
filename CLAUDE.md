@@ -34,8 +34,10 @@ os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
 296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O recorte de voltas, a reamostragem
 por distância e o downsampling também estão de pé e conferidos contra arquivo
 real. A persistência local é SQLite de verdade, guardando a amostra exatamente
-como o arquivo entregou (ADR 0019). O que ainda é stub são o **delta contra a referência**, o **narrador**
-e **a interface** — nenhum gráfico foi escrito ainda. Ver `docs/pendencias.md` e `docs/roadmap.md`.
+como o arquivo entregou (ADR 0019). A primeira tela existe: sessões, voltas com a
+situação de cada uma e a volta em cinco painéis sobre o eixo de distância, com
+cursor sincronizado. O que ainda é stub são o **delta contra a referência** e o
+**narrador**. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
 
