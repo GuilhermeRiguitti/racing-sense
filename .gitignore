@@ -33,3 +33,6 @@ next-env.d.ts
 
 # testes
 coverage/
+
+# pastas temporárias dos testes do adapter-fs
+.tmp-telemetria-*/
