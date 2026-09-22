@@ -12,6 +12,8 @@ import { IPC } from '../main/ipc-contract.js';
 const api = {
   listSessions: () => ipcRenderer.invoke(IPC.listSessions),
   listSessionLaps: (sessionId: string) => ipcRenderer.invoke(IPC.listSessionLaps, { sessionId }),
+  getLapSeries: (sessionId: string, lapNumber: number) =>
+    ipcRenderer.invoke(IPC.getLapSeries, { sessionId, lapNumber }),
   listReferenceLaps: () => ipcRenderer.invoke(IPC.listReferenceLaps),
   getLapAnalysis: (request: { sessionId: string; lapNumber: number; referenceLapId: string }) =>
     ipcRenderer.invoke(IPC.getLapAnalysis, request),

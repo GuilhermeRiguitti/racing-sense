@@ -1,4 +1,10 @@
-import { toAnalysisReportDto, toComparisonDto, toLapDto, toSessionDto } from '@telemetry/contracts';
+import {
+  toAnalysisReportDto,
+  toComparisonDto,
+  toLapDto,
+  toSeriesDto,
+  toSessionDto,
+} from '@telemetry/contracts';
 import { DomainError, toReferenceLapId, toSessionId } from '@telemetry/domain';
 import type { Desktop } from './composition-root.js';
 import { IPC, type IpcResult } from './ipc-contract.js';
@@ -42,6 +48,17 @@ export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
     guard(async () => {
       const { sessionId } = payload as { sessionId: string };
       return (await useCases.listSessionLaps({ sessionId: toSessionId(sessionId) })).map(toLapDto);
+    }),
+  );
+
+  handle(IPC.getLapSeries, (payload) =>
+    guard(async () => {
+      const { sessionId, lapNumber } = payload as { sessionId: string; lapNumber: number };
+      const series = await useCases.getLapSeries({
+        sessionId: toSessionId(sessionId),
+        lapNumber,
+      });
+      return series.map(toSeriesDto);
     }),
   );
 

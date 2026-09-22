@@ -1,5 +1,5 @@
 import { NotFoundError } from '@telemetry/domain';
-import { aLap, aSession } from '@telemetry/domain/testing';
+import { aLap, aSeries, aSession } from '@telemetry/domain/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { Desktop } from './composition-root.js';
 import { IPC, type IpcResult, REQUEST_CHANNELS } from './ipc-contract.js';
@@ -39,6 +39,7 @@ function desktopWith(overrides: Partial<Desktop['useCases']> = {}): Desktop {
     useCases: {
       listSessions: async () => [aSession()],
       listSessionLaps: async () => [aLap()],
+      getLapSeries: async () => [aSeries()],
       listReferenceLaps: async () => [],
       compareLapToReference: vi.fn(),
       getLapAnalysis: vi.fn(),

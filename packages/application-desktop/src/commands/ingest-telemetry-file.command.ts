@@ -45,6 +45,9 @@ export const OPTIONAL_LAP_CHANNELS = ['OnPitRoad', 'PlayerTrackSurface'] as cons
  */
 const SURFACE_OFF_TRACK = 0;
 
+/** Código do iRacing para "carro fora do mundo do sim" (`irsdk_TrkLoc::NotInWorld`). */
+const SURFACE_NOT_IN_WORLD = -1;
+
 /**
  * Canais que viram série gravada por volta.
  *
@@ -153,7 +156,10 @@ export function createIngestTelemetryFileHandler(
         lapDistPct,
         ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
         ...(trackSurface !== undefined
-          ? { offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK) }
+          ? {
+              offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK),
+              inWorld: trackSurface.map((v) => v !== SURFACE_NOT_IN_WORLD),
+            }
           : {}),
       });
 

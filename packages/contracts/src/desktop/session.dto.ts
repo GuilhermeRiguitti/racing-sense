@@ -33,6 +33,12 @@ export const sessionDto = z.object({
   id: z.string(),
   trackName: z.string(),
   trackConfig: z.string().nullable(),
+  /**
+   * Comprimento do traçado, lido do arquivo. É o que deixa a tela mostrar
+   * distância em metros em vez de fração da volta — a unidade em que o piloto
+   * pensa ("freei 30 m antes"). `null` quando o arquivo não informa.
+   */
+  trackLengthMeters: z.number().positive().nullable(),
   carName: z.string(),
   driverName: z.string().nullable(),
   sessionType: z.string().nullable(),
@@ -75,6 +81,7 @@ export function toSessionDto(session: TelemetrySession): SessionDto {
     id: session.id,
     trackName: session.track.name,
     trackConfig: session.track.config,
+    trackLengthMeters: session.track.lengthMeters,
     carName: session.car.name,
     driverName: session.driverName,
     sessionType: session.sessionType,

@@ -88,6 +88,24 @@ describe('detectLaps', () => {
     expect(voltas[1]?.lapTimeSeconds).toBe(2);
   });
 
+  it('amostra fora do mundo nas pontas não entra em volta nenhuma', () => {
+    // A amostra fantasma real: posição 0, número 0, carro fora do mundo.
+    const base = pista([120, 120], 6);
+    const lapNumber = [0, ...base.lapNumber.slice(1)];
+    const lapDistPct = [0, ...base.lapDistPct.slice(1)];
+    const inWorld = lapNumber.map((_, i) => i !== 0);
+
+    const voltas = detectLaps({ ...base, lapNumber, lapDistPct, inWorld });
+
+    expect(voltas[0]?.startSample).toBe(1);
+  });
+
+  it('gravação inteira fora do mundo não tem volta', () => {
+    const base = pista([60]);
+
+    expect(detectLaps({ ...base, inWorld: base.lapNumber.map(() => false) })).toEqual([]);
+  });
+
   it('volta limpa não tem marcação nenhuma', () => {
     const base = pista([60, 120, 60]);
     const voltas = detectLaps({

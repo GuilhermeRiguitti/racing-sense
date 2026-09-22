@@ -19,6 +19,12 @@ export interface LapSignals {
   readonly onPitRoad?: readonly boolean[];
   /** Verdadeiro quando o carro está fora dos limites da pista. */
   readonly offTrack?: readonly boolean[];
+  /**
+   * Falso quando o carro não estava no mundo do sim — não tinha posição. É o
+   * caso da primeira amostra de muitos arquivos, gravada antes de o sim
+   * preencher o buffer (ver `docs/formato-ibt.md`).
+   */
+  readonly inWorld?: readonly boolean[];
 }
 
 /**
@@ -74,12 +80,23 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
  * que o sim publicou numa volta real, com 1 ms de diferença.
  */
 export function detectLaps(signals: LapSignals): Lap[] {
-  const { lapNumber, lapDistPct, tickRate } = signals;
-  const total = lapNumber.length;
-  if (total === 0) return [];
+  const { lapNumber, lapDistPct, tickRate, inWorld } = signals;
 
-  const starts: number[] = [0];
-  for (let i = 1; i < total; i += 1) {
+  // Amostra em que o carro não estava no mundo não tem posição, e não pertence
+  // a volta nenhuma. Nas pontas da gravação ela é cortada — é o que tira a
+  // amostra fantasma do começo do arquivo, que desenharia uma rampa de 0 m até
+  // a primeira posição real que nunca aconteceu.
+  let inicio = 0;
+  let fim = lapNumber.length - 1;
+  if (inWorld !== undefined) {
+    while (inicio <= fim && inWorld[inicio] === false) inicio += 1;
+    while (fim >= inicio && inWorld[fim] === false) fim -= 1;
+  }
+  const total = fim + 1;
+  if (inicio > fim) return [];
+
+  const starts: number[] = [inicio];
+  for (let i = inicio + 1; i < total; i += 1) {
     const cruzou =
       (lapNumber[i] ?? 0) > (lapNumber[i - 1] ?? 0) &&
       (lapDistPct[i] ?? 0) < (lapDistPct[i - 1] ?? 0);

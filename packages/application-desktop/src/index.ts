@@ -5,6 +5,7 @@ export * from './commands/request-lap-analysis.command.js';
 export * from './ports/index.js';
 export * from './queries/compare-lap-to-reference.query.js';
 export * from './queries/get-lap-analysis.query.js';
+export * from './queries/get-lap-series.query.js';
 export * from './queries/list-reference-laps.query.js';
 export * from './queries/list-session-laps.query.js';
 export * from './queries/list-sessions.query.js';

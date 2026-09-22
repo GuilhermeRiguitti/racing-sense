@@ -1,4 +1,4 @@
-import type { DesktopEventDto, LapDto, SessionDto } from '@telemetry/contracts';
+import type { DesktopEventDto, LapDto, SeriesDto, SessionDto } from '@telemetry/contracts';
 
 /** Resultado de uma chamada pela ponte: sucesso ou falha, nunca exceção. */
 export type BridgeResult<T> =
@@ -8,6 +8,7 @@ export type BridgeResult<T> =
 export interface TelemetryBridge {
   listSessions(): Promise<BridgeResult<readonly SessionDto[]>>;
   listSessionLaps(sessionId: string): Promise<BridgeResult<readonly LapDto[]>>;
+  getLapSeries(sessionId: string, lapNumber: number): Promise<BridgeResult<readonly SeriesDto[]>>;
   listReferenceLaps(): Promise<BridgeResult<readonly unknown[]>>;
   ingestTelemetryFile(locator: string): Promise<BridgeResult<{ sessionId: string }>>;
   /** Assina os avisos do processo principal. Devolve como cancelar. */

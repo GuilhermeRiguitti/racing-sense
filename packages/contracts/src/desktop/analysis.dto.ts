@@ -1,13 +1,30 @@
-import type { AnalysisReport, LapComparison } from '@telemetry/domain';
+import type { AnalysisReport, ChannelSeries, LapComparison } from '@telemetry/domain';
 import { z } from 'zod';
 
 export const seriesDto = z.object({
   channel: z.string(),
   unit: z.string(),
+  /**
+   * Viaja até a tela: quem desenha precisa saber se pode ligar dois pontos com
+   * uma reta (contínuo) ou se tem que desenhar degrau (marcha, booleano).
+   */
+  type: z.enum(['number', 'integer', 'boolean', 'text', 'bitfield']),
   axis: z.enum(['time', 'lapDistPct']),
   x: z.array(z.number()),
   y: z.array(z.number()),
 });
+export type SeriesDto = z.infer<typeof seriesDto>;
+
+export function toSeriesDto(series: ChannelSeries): SeriesDto {
+  return {
+    channel: series.channel,
+    unit: series.unit,
+    type: series.type,
+    axis: series.axis,
+    x: [...series.x],
+    y: [...series.y],
+  };
+}
 
 export const comparisonDto = z.object({
   referenceLapId: z.string(),
@@ -52,13 +69,7 @@ export function toComparisonDto(comparison: LapComparison): ComparisonDto {
     referenceLapId: comparison.referenceLapId,
     lapNumber: comparison.lapNumber,
     totalDeltaSeconds: comparison.totalDeltaSeconds,
-    deltaSeries: {
-      channel: comparison.deltaSeries.channel,
-      unit: comparison.deltaSeries.unit,
-      axis: comparison.deltaSeries.axis,
-      x: [...comparison.deltaSeries.x],
-      y: [...comparison.deltaSeries.y],
-    },
+    deltaSeries: toSeriesDto(comparison.deltaSeries),
     segments: comparison.segments.map((segment) => ({ ...segment })),
   };
 }

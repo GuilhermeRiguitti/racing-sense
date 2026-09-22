@@ -11,6 +11,7 @@
 export const IPC = {
   listSessions: 'sessions:list',
   listSessionLaps: 'sessions:laps',
+  getLapSeries: 'laps:series',
   listReferenceLaps: 'reference-laps:list',
   compareLapToReference: 'laps:compare',
   getLapAnalysis: 'analysis:get',
