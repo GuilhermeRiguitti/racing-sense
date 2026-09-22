@@ -33,8 +33,8 @@ session info, catálogo de canais montado em runtime e amostras em streaming, co
 os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
 296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O recorte de voltas, a reamostragem
 por distância e o downsampling também estão de pé e conferidos contra arquivo
-real. A persistência local é SQLite de verdade, com as séries em binário
-(ADR 0007). O que ainda é stub são o **delta contra a referência**, o **narrador**
+real. A persistência local é SQLite de verdade, guardando a amostra exatamente
+como o arquivo entregou (ADR 0019). O que ainda é stub são o **delta contra a referência**, o **narrador**
 e **a interface** — nenhum gráfico foi escrito ainda. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
@@ -158,6 +158,16 @@ De domínio:
     duração. Analisar, comparar ou eleger referência sobre volta inválida falha
     nomeando o motivo. A volta inválida continua gravada e listada — ela é o
     registro do que o piloto rodou, só não é entrada de análise.
+18c. **Nenhum número arbitrado na análise.** Limiar, janela, grade, "valor
+    típico" — se o número foi escolhido e não medido, ele não entra. Pior ainda
+    se o efeito dele depende do que o piloto fez (onde freou, quão devagar
+    passou): aí a análise erra diferente a cada volta. Marcação de volta sai de
+    **fato binário do arquivo**; tempo, de contagem de amostras; gravação, do
+    dado sem alteração. Antes de escrever uma constante numérica no caminho da
+    análise, pergunte: isto foi medido, ou eu escolhi? (ADR 0018 e 0019)
+18d. **Canal discreto não se interpola.** Um terço dos canais do iRacing é
+    inteiro, booleano ou bitfield. Entre a 3ª e a 4ª marcha não existe 3,5ª:
+    reamostragem segura o último valor. O tipo viaja com a série (`isContinuous`).
 19. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
 20. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
@@ -256,7 +266,7 @@ Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
 | `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
-| `docs/adr/0007-persistencia-e-downsampling.md` | o que se grava por volta, em que resolução e por quê |
+| `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |

@@ -15,7 +15,7 @@ export const channelDto = z.object({
   name: z.string(),
   description: z.string(),
   unit: z.string(),
-  type: z.enum(['number', 'boolean', 'text', 'bitfield']),
+  type: z.enum(['number', 'integer', 'boolean', 'text', 'bitfield']),
   valuesPerSample: z.int().positive(),
 });
 
@@ -58,7 +58,6 @@ const LAP_FLAGS = [
   'pit',
   'off-track',
   'incident',
-  'teleport',
 ] as const satisfies readonly LapFlag[];
 
 type EsqueciAlgumaFlag = Exclude<LapFlag, (typeof LAP_FLAGS)[number]>;

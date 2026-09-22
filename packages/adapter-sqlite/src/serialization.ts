@@ -31,68 +31,110 @@ export const encodeLap = (lap: Lap): string => JSON.stringify(lap);
 export const decodeLap = (payload: string): Lap => JSON.parse(payload) as Lap;
 
 /**
- * Séries: cabeçalho em JSON, valores em binário.
+ * Séries: cabeçalho em JSON, valores em binário, **sem perda nenhuma**.
  *
- * Em JSON puro, uma volta de Road Atlanta ocupava **616 KB** — seis canais de
- * quatro mil pontos, cada número virando vinte e tantos caracteres de texto. Cem
- * stints de vinte voltas dariam 1,18 GB no computador do piloto, para guardar o
- * que o `.ibt` original já tem.
+ * Em JSON puro uma volta ocupava 616 KB — cada número virando vinte e tantos
+ * caracteres. Em binário, cada array usa a largura mais estreita que guarda
+ * todos os valores **exatamente**:
  *
- * Duas mudanças resolvem:
+ * - `Float32` quando todo valor do array sobrevive à conversão sem mudar um bit.
+ *   É o caso de todo canal que o arquivo já grava como `float` — 197 dos 288 —
+ *   e dos inteiros pequenos, como marcha;
+ * - `Float64` quando algum valor não sobrevive. É o caso dos canais `double` do
+ *   arquivo e de bitfield com bit alto ligado.
  *
- * 1. **O eixo `x` não é gravado.** Ele é uma grade uniforme — o ponto `i` está
- *    sempre em `from + i` dividido por `resolution - 1`. Guardar isso é guardar
- *    uma conta.
- * 2. **`y` vira `Float32`**, quatro bytes por ponto em vez de texto. A precisão
- *    sobra: o canal mais exigente é velocidade, e float32 erra menos de um
- *    milímetro por segundo na faixa que um carro de corrida usa.
+ * Quem decide é o dado, conferindo valor a valor — não uma tabela de tipos
+ * mantida à mão. Canal novo, de qualquer um dos cinco tipos do iRacing, entra
+ * sem mexer aqui e sem perder precisão.
  *
- * O resultado é exato para a nossa série, não aproximado: como a grade é
- * uniforme e contígua, `from` e `to` reconstroem o `x` ponto a ponto.
+ * E o eixo é gravado **uma vez por volta**, não uma por canal. Os canais de uma
+ * volta foram medidos nas mesmas amostras, então o `x` deles é o mesmo array —
+ * gravá-lo seis vezes era metade do banco repetindo a mesma distância. O
+ * compartilhamento é decidido comparando valor a valor, não presumido: série
+ * com eixo próprio continua tendo o seu.
  */
 interface StoredSeriesHeader {
   readonly channel: string;
   readonly unit: string;
+  readonly type: ChannelSeries['type'];
   readonly axis: ChannelSeries['axis'];
-  /** Quantos pontos a grade inteira teria, de 0 a 1. */
-  readonly resolution: number;
-  /** Índice do primeiro ponto coberto pela gravação. */
-  readonly from: number;
   readonly length: number;
+  readonly xWidth: Width;
+  readonly yWidth: Width;
+  /** Índice de uma série anterior com eixo idêntico, ou `null` se o eixo é próprio. */
+  readonly xFrom: number | null;
 }
 
-const FLOAT_BYTES = 4;
+type Width = 4 | 8;
+
+/** A largura mais estreita que guarda todos os valores sem alterar nenhum. */
+function larguraExata(valores: readonly number[]): Width {
+  for (const valor of valores) {
+    if (Math.fround(valor) !== valor) return 8;
+  }
+  return 4;
+}
+
+function escrever(view: DataView, offset: number, valores: readonly number[], largura: Width) {
+  let posicao = offset;
+  for (const valor of valores) {
+    if (largura === 4) view.setFloat32(posicao, valor, true);
+    else view.setFloat64(posicao, valor, true);
+    posicao += largura;
+  }
+  return posicao;
+}
+
+function ler(view: DataView, offset: number, quantidade: number, largura: Width): number[] {
+  const valores: number[] = [];
+  for (let i = 0; i < quantidade; i += 1) {
+    const posicao = offset + i * largura;
+    valores.push(largura === 4 ? view.getFloat32(posicao, true) : view.getFloat64(posicao, true));
+  }
+  return valores;
+}
+
+function mesmosValores(a: readonly number[], b: readonly number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (!Object.is(a[i], b[i])) return false;
+  }
+  return true;
+}
 
 export function encodeSeries(series: readonly ChannelSeries[]): Uint8Array {
-  const cabecalhos: StoredSeriesHeader[] = [];
-  let totalPontos = 0;
-
-  for (const serie of series) {
-    const { resolution, from } = gradeDe(serie);
-    cabecalhos.push({
+  const cabecalhos: StoredSeriesHeader[] = series.map((serie, indice) => {
+    const anterior = series.findIndex((outra, j) => j < indice && mesmosValores(outra.x, serie.x));
+    return {
       channel: serie.channel,
       unit: serie.unit,
+      type: serie.type,
       axis: serie.axis,
-      resolution,
-      from,
       length: serie.y.length,
-    });
-    totalPontos += serie.y.length;
-  }
+      xWidth: larguraExata(serie.x),
+      yWidth: larguraExata(serie.y),
+      xFrom: anterior >= 0 ? anterior : null,
+    };
+  });
+  const corpo = cabecalhos.reduce(
+    (total, c) => total + c.length * ((c.xFrom === null ? c.xWidth : 0) + c.yWidth),
+    0,
+  );
 
   const json = new TextEncoder().encode(JSON.stringify(cabecalhos));
-  const saida = new Uint8Array(4 + json.length + totalPontos * FLOAT_BYTES);
+  const saida = new Uint8Array(4 + json.length + corpo);
   const view = new DataView(saida.buffer);
   view.setUint32(0, json.length, true);
   saida.set(json, 4);
 
   let offset = 4 + json.length;
-  for (const serie of series) {
-    for (const valor of serie.y) {
-      view.setFloat32(offset, valor, true);
-      offset += FLOAT_BYTES;
+  series.forEach((serie, indice) => {
+    const cabecalho = cabecalhos[indice] as StoredSeriesHeader;
+    if (cabecalho.xFrom === null) {
+      offset = escrever(view, offset, serie.x, cabecalho.xWidth);
     }
-  }
+    offset = escrever(view, offset, serie.y, cabecalho.yWidth);
+  });
   return saida;
 }
 
@@ -105,34 +147,27 @@ export function decodeSeries(payload: Uint8Array): readonly ChannelSeries[] {
   ) as StoredSeriesHeader[];
 
   let offset = 4 + tamanhoJson;
+  const eixos: (readonly number[])[] = [];
   return cabecalhos.map((cabecalho) => {
-    const x: number[] = [];
-    const y: number[] = [];
-    for (let i = 0; i < cabecalho.length; i += 1) {
-      x.push(cabecalho.resolution > 1 ? (cabecalho.from + i) / (cabecalho.resolution - 1) : 0);
-      y.push(view.getFloat32(offset, true));
-      offset += FLOAT_BYTES;
+    let x: readonly number[];
+    if (cabecalho.xFrom === null) {
+      x = ler(view, offset, cabecalho.length, cabecalho.xWidth);
+      offset += cabecalho.length * cabecalho.xWidth;
+    } else {
+      x = eixos[cabecalho.xFrom] ?? [];
     }
-    return { channel: cabecalho.channel, unit: cabecalho.unit, axis: cabecalho.axis, x, y };
+    eixos.push(x);
+    const y = ler(view, offset, cabecalho.length, cabecalho.yWidth);
+    offset += cabecalho.length * cabecalho.yWidth;
+    return {
+      channel: cabecalho.channel,
+      unit: cabecalho.unit,
+      type: cabecalho.type,
+      axis: cabecalho.axis,
+      x,
+      y,
+    };
   });
-}
-
-/**
- * Descobre a grade a partir do `x` gravado.
- *
- * O passo entre pontos vizinhos é `1 / (resolution - 1)`; daí sai a resolução, e
- * o primeiro `x` dá o índice inicial. Série de um ponto só, ou com eixo que não
- * é grade, cai no caso degenerado e é guardada como se fosse a grade inteira —
- * nunca perde valor, no máximo perde compressão.
- */
-function gradeDe(serie: ChannelSeries): { resolution: number; from: number } {
-  const primeiro = serie.x[0] ?? 0;
-  const segundo = serie.x[1];
-  if (segundo === undefined || segundo <= primeiro) {
-    return { resolution: Math.max(serie.y.length, 2), from: 0 };
-  }
-  const resolution = Math.round(1 / (segundo - primeiro)) + 1;
-  return { resolution, from: Math.round(primeiro * (resolution - 1)) };
 }
 
 export const encodeReferenceLap = (reference: ReferenceLap): string => JSON.stringify(reference);

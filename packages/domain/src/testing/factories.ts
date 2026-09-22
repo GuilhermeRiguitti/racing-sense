@@ -44,6 +44,7 @@ export const aSeries = (overrides: Partial<ChannelSeries> = {}): ChannelSeries =
   createChannelSeries({
     channel: 'Speed',
     unit: 'm/s',
+    type: 'number',
     axis: 'lapDistPct',
     x: [0, 0.5, 1],
     y: [40, 62, 38],

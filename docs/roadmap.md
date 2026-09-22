@@ -37,11 +37,11 @@ batem com o que o sim mostrou na sessão.
 ## Etapa 2 — Voltas
 
 - [x] `detectLaps` com histerese na linha de chegada (`packages/domain`)
-- [x] Marcar out lap, in lap, saída de pista, incidente, teleporte e volta
+- [x] Marcar out lap, in lap, saída de pista, incidente e volta
       cortada pelo início/fim da gravação (marcar, não descartar: a volta suja
       tem conteúdo, só não pode ser referência)
-- [x] Séries por `lapDistPct`, com a grade em um ponto por metro (medida, não
-      arbitrada — ver `docs/pendencias.md` #4)
+- [x] Séries por `lapDistPct`: gravadas como o arquivo entregou, reamostradas só
+      para comparar, sem interpolar canal discreto (ADR 0019)
 - [x] Downsampling que preserva picos (min/max por balde)
 
 **Pronto quando:** a contagem e os tempos de volta batem com os do sim, incluindo
@@ -67,7 +67,7 @@ A etapa que entrega o produto.
 - [ ] Gráfico de canal com zoom e navegação entre voltas
 - [ ] Gráfico de delta contra a referência
 - [x] Persistência local passando a suíte de contrato das portas (SQLite,
-      séries em binário — ADR 0007)
+      amostra bruta sem perda — ADR 0019)
 
 **Pronto quando:** rodar uma sessão no sim, com o aplicativo aberto, e a volta
 aparecer na tela sozinha — sem clicar em nada.

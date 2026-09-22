@@ -110,7 +110,7 @@ describe('readTechnicalMetadata', () => {
 
     // `type` aqui é o vocabulário do domínio, não o código numérico do irsdk.
     for (const channel of metadata.channels) {
-      expect(['number', 'boolean', 'text', 'bitfield']).toContain(channel.type);
+      expect(['number', 'integer', 'boolean', 'text', 'bitfield']).toContain(channel.type);
     }
   });
 });

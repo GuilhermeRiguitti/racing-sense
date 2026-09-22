@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS laps (
 CREATE TABLE IF NOT EXISTS lap_series (
   session_id    TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   lap_number    INTEGER NOT NULL,
-  -- BLOB, não TEXT: as séries são números, e em JSON ocupavam seis vezes mais.
+  -- BLOB, não TEXT: as séries são números, e em JSON ocupavam 3,5 vezes mais.
   payload       BLOB NOT NULL,
   PRIMARY KEY (session_id, lap_number)
 );

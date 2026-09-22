@@ -1,5 +1,5 @@
 import { InvariantError } from '../shared/errors.js';
-import { type ChannelSeries, createChannelSeries } from '../telemetry/channel.js';
+import { type ChannelSeries, createChannelSeries, isContinuous } from '../telemetry/channel.js';
 
 /**
  * Reamostra uma série do eixo tempo para o eixo distância.
@@ -15,6 +15,14 @@ import { type ChannelSeries, createChannelSeries } from '../telemetry/channel.js
  * **Só emite grade coberta pelos dados.** Uma volta cortada pela gravação vai de
  * 0 a 55% da pista; inventar os 45% restantes por extrapolação produziria
  * gráfico plausível e falso. O `x` da saída diz até onde a volta foi.
+ *
+ * **Canal discreto não é interpolado.** Entre duas amostras de `Gear` o valor é
+ * o da amostra anterior — é o que o sim sabia naquele instante. Interpolar
+ * produzia 3,66ª marcha: medido numa volta real, 38 de 4055 pontos eram marchas
+ * que não existem. Ver `isContinuous`.
+ *
+ * Esta função é para **comparar** duas voltas, não para gravar: o que vai para o
+ * banco é a amostra bruta (ADR 0019). A resolução é escolha de quem compara.
  */
 export function toDistanceSeries(
   series: ChannelSeries,
@@ -33,6 +41,7 @@ export function toDistanceSeries(
     return createChannelSeries({ ...series, axis: 'lapDistPct', x: [], y: [] });
   }
 
+  const continuo = isContinuous(series.type);
   const x: number[] = [];
   const y: number[] = [];
   // Ponteiro que só avança: a distância cresce ao longo da volta, então varrer
@@ -48,17 +57,23 @@ export function toDistanceSeries(
     const depois = lapDistPct[amostra + 1];
     if (depois === undefined || alvo < antes) continue; // fora do trecho gravado
 
+    const a = series.y[amostra] ?? 0;
+    x.push(alvo);
+    if (!continuo) {
+      // Segura o último valor conhecido: é o que o carro estava fazendo.
+      y.push(a);
+      continue;
+    }
     const vao = depois - antes;
     const peso = vao > 0 ? (alvo - antes) / vao : 0;
-    const a = series.y[amostra] ?? 0;
     const b = series.y[amostra + 1] ?? a;
-    x.push(alvo);
     y.push(a + (b - a) * peso);
   }
 
   return createChannelSeries({
     channel: series.channel,
     unit: series.unit,
+    type: series.type,
     axis: 'lapDistPct',
     x,
     y,
@@ -109,6 +124,7 @@ export function downsample(series: ChannelSeries, targetPoints: number): Channel
   return createChannelSeries({
     channel: series.channel,
     unit: series.unit,
+    type: series.type,
     axis: series.axis,
     x: indices.map((i) => series.x[i] ?? 0),
     y: indices.map((i) => series.y[i] ?? 0),

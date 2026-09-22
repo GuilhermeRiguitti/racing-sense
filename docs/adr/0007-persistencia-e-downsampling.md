@@ -1,6 +1,10 @@
 # ADR 0007 — Persistência e downsampling
 
-**Status:** Aceito · 2026-09-17 · medido e fechado em 2026-09-22
+**Status:** Superado por ADR 0019 na parte de gravação · 2026-09-17 · medido em 2026-09-22
+
+> A decisão de manter o `.ibt` como fonte da verdade e de reduzir com min/max
+> por balde continua valendo. O que o ADR 0019 supera é **o que se grava**: a
+> grade de um ponto por metro e o custo declarado do `Float32`, que era falso.
 
 ## Contexto
 

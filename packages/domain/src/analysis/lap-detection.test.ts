@@ -89,17 +89,6 @@ describe('detectLaps', () => {
     expect(voltas[1]?.lapTimeSeconds).toBe(2);
   });
 
-  it('marca teleporte quando a distância anda para trás no meio da volta', () => {
-    const base = pista([60, 120, 60]);
-    const lapDistPct = [...base.lapDistPct];
-    // Reset para os boxes: o carro volta ao começo da pista sem cruzar a linha.
-    for (let i = 120; i < 180; i += 1) lapDistPct[i] = 0.05;
-
-    const voltas = detectLaps({ ...base, lapDistPct });
-
-    expect(voltas[1]?.flags).toContain('teleport');
-  });
-
   it('volta limpa não tem marcação nenhuma', () => {
     const base = pista([60, 120, 60]);
     const voltas = detectLaps({

@@ -3,7 +3,7 @@ import {
   describeReferenceLapStoreContract,
   describeSessionStoreContract,
 } from '@telemetry/application-desktop/testing';
-import { createChannelSeries, toSessionId } from '@telemetry/domain';
+import { type ChannelSeries, createChannelSeries, toSessionId } from '@telemetry/domain';
 import { aSession } from '@telemetry/domain/testing';
 import { describe, expect, it } from 'vitest';
 import { openDatabase } from './database.js';
@@ -31,62 +31,108 @@ describeIngestedFileLogContract('SqliteIngestedFileLog', () => {
   return { reader: log, writer: log };
 });
 
-describe('SqliteSessionStore, séries em binário', () => {
-  const serieDeVolta = (canal: string, pontos: number, de: number, resolucao: number) =>
-    createChannelSeries({
-      channel: canal,
-      unit: 'm/s',
-      axis: 'lapDistPct',
-      x: Array.from({ length: pontos }, (_, i) => (de + i) / (resolucao - 1)),
-      y: Array.from({ length: pontos }, (_, i) => Math.sin(i / 50) * 60 + 70),
-    });
-
-  it('devolve a série com o mesmo eixo e valores que entraram', async () => {
+describe('SqliteSessionStore, séries em binário sem perda', () => {
+  const gravarELer = async (series: ChannelSeries[]) => {
     const store = createSqliteSessionStore(openDatabase(':memory:'));
     const session = aSession();
-    const original = serieDeVolta('Speed', 4055, 1, 4057);
+    await store.save({ session, laps: [], seriesByLap: new Map([[3, series]]) });
+    return store.readLapSeries(session.id, 3);
+  };
 
-    await store.save({
-      session,
-      laps: [],
-      seriesByLap: new Map([[3, [original]]]),
+  it('devolve cada valor bit a bit, inclusive os que o arquivo grava como float', async () => {
+    // Valores como o decoder entrega: float32 do arquivo, já promovidos a number.
+    const velocidade = [66.97, 18.39, 41.8].map(Math.fround);
+    const original = createChannelSeries({
+      channel: 'Speed',
+      unit: 'm/s',
+      type: 'number',
+      axis: 'lapDistPct',
+      // A distância levemente negativa que o sim reporta logo depois da linha.
+      x: [-0.0000129, 0.5, 0.99994].map(Math.fround),
+      y: velocidade,
     });
-    const [lida] = await store.readLapSeries(session.id, 3);
 
-    expect(lida?.channel).toBe('Speed');
-    expect(lida?.x.length).toBe(original.x.length);
-    // O eixo é reconstruído da grade, não lido do banco: tem que bater ponto a ponto.
-    for (let i = 0; i < original.x.length; i += 1) {
-      expect(lida?.x[i] as number).toBeCloseTo(original.x[i] as number, 9);
-    }
-    // `y` passa por float32, então perde casas — mas não pode perder o pico.
-    for (let i = 0; i < original.y.length; i += 1) {
-      expect(lida?.y[i] as number).toBeCloseTo(original.y[i] as number, 4);
-    }
-    expect(Math.max(...(lida?.y ?? []))).toBeCloseTo(Math.max(...original.y), 4);
+    const [lida] = await gravarELer([original]);
+
+    expect(lida?.x).toEqual(original.x);
+    expect(lida?.y).toEqual(original.y);
   });
 
-  it('série que não é grade uniforme continua voltando inteira', async () => {
-    const store = createSqliteSessionStore(openDatabase(':memory:'));
-    const session = aSession();
-    const irregular = createChannelSeries({
-      channel: 'Brake',
-      unit: '',
+  it('não arredonda valor que só cabe em 64 bits', async () => {
+    // Canal `double` do arquivo, como `SessionTime`: float32 perderia casas.
+    const tempo = createChannelSeries({
+      channel: 'SessionTime',
+      unit: 's',
+      type: 'number',
       axis: 'time',
-      x: [0, 0.5, 3, 3.1],
-      y: [1, 2, 3, 4],
+      x: [0, 1, 2],
+      y: [3047.316666666667, 3047.333333333333, 3047.35],
     });
 
-    await store.save({ session, laps: [], seriesByLap: new Map([[1, [irregular]]]) });
-    const [lida] = await store.readLapSeries(session.id, 1);
+    const [lida] = await gravarELer([tempo]);
 
-    expect(lida?.y).toEqual([1, 2, 3, 4]);
+    expect(lida?.y).toEqual(tempo.y);
+  });
+
+  it('não corrompe bitfield com bit alto ligado', async () => {
+    // Máscara de bandeira: acima de 2^24, float32 já não guarda o inteiro exato.
+    const bandeiras = createChannelSeries({
+      channel: 'SessionFlags',
+      unit: '',
+      type: 'bitfield',
+      axis: 'time',
+      x: [0, 1],
+      y: [0x10000004, 0x80000000 - 1],
+    });
+
+    const [lida] = await gravarELer([bandeiras]);
+
+    expect(lida?.y).toEqual(bandeiras.y);
+  });
+
+  it('marcha volta inteira e com o tipo preservado', async () => {
+    const marcha = createChannelSeries({
+      channel: 'Gear',
+      unit: '',
+      type: 'integer',
+      axis: 'lapDistPct',
+      x: [0, 0.3, 0.6].map(Math.fround),
+      y: [3, 4, 5],
+    });
+
+    const [lida] = await gravarELer([marcha]);
+
+    expect(lida?.y).toEqual([3, 4, 5]);
+    expect(lida?.type).toBe('integer');
+  });
+
+  it('canais com o mesmo eixo e canal com eixo próprio voltam cada um com o seu', async () => {
+    // Na gravação o eixo idêntico é guardado uma vez só. A leitura tem que
+    // devolver o eixo certo para cada série — inclusive a que não compartilha.
+    const eixo = [0, 0.25, 0.5].map(Math.fround);
+    const outroEixo = [0, 0.4, 0.9].map(Math.fround);
+    const serie = (channel: string, x: number[], y: number[]) =>
+      createChannelSeries({ channel, unit: '', type: 'number', axis: 'lapDistPct', x, y });
+
+    const lidas = await gravarELer([
+      serie('Speed', eixo, [10, 20, 30]),
+      serie('Brake', [...eixo], [0, 1, 0]),
+      serie('Other', outroEixo, [5, 6, 7]),
+      serie('Throttle', eixo, [1, 0, 1]),
+    ]);
+
+    expect(lidas.map((s) => s.x)).toEqual([eixo, eixo, outroEixo, eixo]);
+    expect(lidas.map((s) => s.y)).toEqual([
+      [10, 20, 30],
+      [0, 1, 0],
+      [5, 6, 7],
+      [1, 0, 1],
+    ]);
   });
 
   it('volta sem série devolve lista vazia, não erro', async () => {
     const store = createSqliteSessionStore(openDatabase(':memory:'));
     const session = aSession();
-
     await store.save({ session, laps: [], seriesByLap: new Map() });
 
     expect(await store.readLapSeries(session.id, 99)).toEqual([]);

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { InvariantError } from '../shared/errors.js';
-import { createChannelSeries } from '../telemetry/channel.js';
+import { type ChannelType, createChannelSeries } from '../telemetry/channel.js';
 import { downsample, toDistanceSeries } from './distance-series.js';
 
-const serieDeTempo = (y: readonly number[]) =>
+const serieDeTempo = (y: readonly number[], type: ChannelType = 'number') =>
   createChannelSeries({
-    channel: 'Speed',
-    unit: 'm/s',
+    channel: type === 'number' ? 'Speed' : 'Gear',
+    unit: type === 'number' ? 'm/s' : '',
+    type,
     axis: 'time',
     x: y.map((_, i) => i / 60),
     y,
@@ -47,6 +48,23 @@ describe('toDistanceSeries', () => {
 
     expect(Math.max(...saida.x)).toBeLessThanOrEqual(0.5);
     expect(saida.x.length).toBeLessThan(11);
+  });
+
+  it('não inventa marcha entre duas marchas', () => {
+    // O bug que a interpolação linear produzia numa volta real: 3,66ª marcha.
+    const saida = toDistanceSeries(serieDeTempo([3, 4, 4, 5], 'integer'), [0, 0.3, 0.6, 0.9], 10);
+
+    for (const marcha of saida.y) {
+      expect(Number.isInteger(marcha)).toBe(true);
+    }
+    // Entre 0% e 30% a marcha era 3; em 20% continua 3, não 3,67.
+    expect(saida.y[2]).toBe(3);
+  });
+
+  it('booleano continua sendo 0 ou 1 depois de reamostrado', () => {
+    const saida = toDistanceSeries(serieDeTempo([0, 1, 1, 0], 'boolean'), [0, 0.3, 0.6, 0.9], 20);
+
+    expect(new Set(saida.y)).toEqual(new Set([0, 1]));
   });
 
   it('recusa série e posições de tamanhos diferentes', () => {

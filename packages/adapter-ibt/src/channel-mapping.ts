@@ -4,7 +4,8 @@ import { type VarHeader, VarType, type VarTypeCode } from '@telemetry/ibt-core';
 const CHANNEL_TYPE_BY_VAR_TYPE: Readonly<Record<VarTypeCode, ChannelType>> = {
   [VarType.Char]: 'text',
   [VarType.Bool]: 'boolean',
-  [VarType.Int]: 'number',
+  // Inteiro não é número contínuo: `Gear` interpolado vira 3,66ª marcha.
+  [VarType.Int]: 'integer',
   [VarType.BitField]: 'bitfield',
   [VarType.Float]: 'number',
   [VarType.Double]: 'number',

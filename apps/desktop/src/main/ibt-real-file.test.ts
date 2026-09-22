@@ -1,7 +1,24 @@
 import { createFileTelemetrySource } from '@telemetry/adapter-fs';
-import { createIbtTelemetryDecoder } from '@telemetry/adapter-ibt';
-import type { TelemetryFileRef } from '@telemetry/application-desktop';
-import { createChannelSeries, detectLaps, downsample, toDistanceSeries } from '@telemetry/domain';
+import { createIbtTelemetryDecoder, readTechnicalMetadata } from '@telemetry/adapter-ibt';
+import {
+  createSqliteIngestedFileLog,
+  createSqlitePublicationQueue,
+  createSqliteSessionStore,
+  openDatabase,
+} from '@telemetry/adapter-sqlite';
+import {
+  createIngestTelemetryFileHandler,
+  type TelemetryFileRef,
+} from '@telemetry/application-desktop';
+import {
+  createChannelSeries,
+  detectLaps,
+  downsample,
+  toAnalysisReportId,
+  toDistanceSeries,
+  toReferenceLapId,
+  toSessionId,
+} from '@telemetry/domain';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -73,18 +90,22 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
     expect(lidas).toBe(meta.sampleCount);
   });
 
-  it('LapDistPct fica em [0, 1] — a prova de que o offset está certo', async () => {
-    let minimo = Number.POSITIVE_INFINITY;
-    let maximo = Number.NEGATIVE_INFINITY;
-    for await (const valor of decoder.readChannel(ref as TelemetryFileRef, 'LapDistPct')) {
-      minimo = Math.min(minimo, valor);
-      maximo = Math.max(maximo, valor);
-    }
+  it('o formato fecha no byte — a prova de que os offsets estão certos', async () => {
+    // Duas identidades exatas, sem tolerância nenhuma. Um byte de deslocamento em
+    // qualquer offset quebra as duas.
+    //
+    // Antes a prova era "LapDistPct fica em [0, 1]". Não é verdade: numa volta
+    // válida de Suzuka o sim reporta -0,0000129 logo depois da linha. O teste
+    // passava por sorte do arquivo escolhido.
+    const alvo = ref as TelemetryFileRef;
+    const { header, diskSubHeader, variables } = await readTechnicalMetadata(files, alvo);
+    const bufOffset = header.varBufs[0]?.bufOffset ?? 0;
+    const bytesPorTipo = [1, 1, 4, 4, 4, 8];
 
-    // Um byte de deslocamento no offset transformaria isto em lixo na hora.
-    expect(minimo).toBeGreaterThanOrEqual(0);
-    expect(maximo).toBeLessThanOrEqual(1);
-    expect(maximo).toBeGreaterThan(0.9);
+    expect(bufOffset + diskSubHeader.recordCount * header.bufLen).toBe(alvo.sizeBytes);
+    expect(variables.reduce((soma, v) => soma + (bytesPorTipo[v.type] ?? 0) * v.count, 0)).toBe(
+      header.bufLen,
+    );
   });
 
   it('o número da volta só cresce ao longo da gravação', async () => {
@@ -180,6 +201,7 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
       createChannelSeries({
         channel: 'Speed',
         unit: 'm/s',
+        type: 'number',
         axis: 'time',
         x: bruto.map((_, i) => i / meta.tickRate),
         y: bruto,
@@ -188,13 +210,11 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
       1000,
     );
 
-    // O eixo tem que ser monótono e caber em [0, 1]: gráfico com x andando para
-    // trás desenha rabisco, e delta fica sem sentido.
+    // O eixo tem que ser monótono: gráfico com x andando para trás desenha
+    // rabisco, e delta fica sem sentido.
     for (let i = 1; i < porDistancia.x.length; i += 1) {
       expect(porDistancia.x[i] as number).toBeGreaterThan(porDistancia.x[i - 1] as number);
     }
-    expect(Math.min(...porDistancia.x)).toBeGreaterThanOrEqual(0);
-    expect(Math.max(...porDistancia.x)).toBeLessThanOrEqual(1);
 
     // A velocidade máxima da volta sobrevive à reamostragem.
     expect(Math.max(...porDistancia.y)).toBeCloseTo(Math.max(...bruto), 1);
@@ -204,6 +224,53 @@ describe.skipIf(ref === null)('decodificação de um .ibt real', () => {
     expect(reduzida.x.length).toBeLessThanOrEqual(402);
     expect(Math.max(...reduzida.y)).toBe(Math.max(...porDistancia.y));
     expect(Math.min(...reduzida.y)).toBe(Math.min(...porDistancia.y));
+  });
+
+  it('a ingestão grava cada amostra sem alterar um bit', async () => {
+    // Ponta a ponta: o caso de uso real, o SQLite real, o arquivo real. O que
+    // volta do banco tem que ser exatamente o que o arquivo tem — sem grade,
+    // sem interpolação, sem arredondamento.
+    const db = openDatabase(':memory:');
+    const sessions = createSqliteSessionStore(db);
+    const ingerir = createIngestTelemetryFileHandler({
+      files,
+      decoder,
+      sessions,
+      ids: {
+        nextSessionId: () => toSessionId('s1'),
+        nextReferenceLapId: () => toReferenceLapId('r1'),
+        nextAnalysisReportId: () => toAnalysisReportId('a1'),
+      },
+      publicationQueue: createSqlitePublicationQueue(db),
+      events: { publish: () => {} },
+      ingestedFiles: createSqliteIngestedFileLog(db),
+    });
+
+    const sessionId = await ingerir({ locator: fixture });
+    const voltas = await sessions.listLaps(sessionId);
+    const alvo = ref as TelemetryFileRef;
+    const bruto = async (canal: string): Promise<number[]> => {
+      const valores: number[] = [];
+      for await (const valor of decoder.readChannel(alvo, canal)) valores.push(valor);
+      return valores;
+    };
+    const [distancia, marcha, velocidade] = await Promise.all([
+      bruto('LapDistPct'),
+      bruto('Gear'),
+      bruto('Speed'),
+    ]);
+
+    for (const volta of voltas) {
+      const series = await sessions.readLapSeries(sessionId, volta.number);
+      const trecho = (valores: number[]) => valores.slice(volta.startSample, volta.endSample + 1);
+
+      const gear = series.find((serie) => serie.channel === 'Gear');
+      expect(gear?.type).toBe('integer');
+      expect(gear?.x).toEqual(trecho(distancia));
+      expect(gear?.y).toEqual(trecho(marcha));
+      expect(series.find((serie) => serie.channel === 'Speed')?.y).toEqual(trecho(velocidade));
+    }
+    db.close();
   });
 
   it('canal inexistente falha dizendo o nome', async () => {

@@ -16,9 +16,7 @@ export type LapFlag =
   /** Saiu da pista em algum ponto. É o que o sim usa para invalidar volta. */
   | 'off-track'
   /** O sim contou incidente durante a volta. */
-  | 'incident'
-  /** Reset para os boxes ou teleporte: a distância andou para trás. */
-  | 'teleport';
+  | 'incident';
 
 /**
  * Por que não existe marcação de "carro parado" nem nada derivado de tempo.
@@ -36,6 +34,13 @@ export type LapFlag =
  * Antes de acrescentar marcação nova aqui, confira se ela responde a um fato
  * binário do arquivo (passou pela box: sim ou não) ou a um número arbitrado.
  * Fato entra; número arbitrado não.
+ *
+ * Pelo mesmo critério saiu a marcação de teleporte, que disparava quando a
+ * distância recuava mais de 20% da pista. Os 20% eram escolha minha. O caso que
+ * ela cobria — reset e reboque — deposita o carro no box, e aí `pit` já marca
+ * a volta a partir de um fato do sim. Se um arquivo real um dia mostrar reset
+ * que não passa pelo box, a marcação volta, a partir de um fato conferido
+ * naquele arquivo.
  */
 
 /**

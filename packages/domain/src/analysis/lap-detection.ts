@@ -24,30 +24,25 @@ export interface LapSignals {
 }
 
 /**
- * Histerese da linha de chegada.
+ * A linha de chegada, sem limiar.
  *
- * `lapDistPct` oscila perto de zero enquanto o carro manobra na box, e o número
- * da volta também muda em situações que não são cruzamento — a gravação começa
- * no meio da sessão, o sim reseta o carro, a primeira amostra do arquivo sai
- * zerada. Exigir as duas coisas ao mesmo tempo (número subiu **e** a distância
- * saltou do fim para o começo) elimina os três casos sem tratá-los um a um.
- */
-const CROSSING_END = 0.9;
-const CROSSING_START = 0.1;
-
-/**
- * Recuo de distância que denuncia teleporte.
+ * Cruzar a linha é a coincidência de dois fatos do arquivo: o número da volta
+ * subiu **e** a distância andou para trás (de ~1 para ~0). Nenhum número entra.
  *
- * Reset para os boxes joga o carro para trás na pista sem cruzar a linha. Um
- * recuo desse tamanho não acontece dirigindo.
+ * A versão anterior exigia "a distância estava acima de 0,9 e caiu abaixo de
+ * 0,1". Funcionava, mas eram dois números escolhidos por mim. Conferido nos oito
+ * arquivos reais, a regra sem limiar marca exatamente os mesmos cruzamentos —
+ * e ela continua descartando os três casos que motivaram a histerese: a
+ * gravação que começa no meio da sessão e a primeira amostra zerada (o número
+ * sobe, mas a distância também sobe), e a manobra por cima da linha na box (a
+ * distância recua, mas o número não sobe).
  */
-const TELEPORT_DROP = 0.2;
 
 function flagsOf(signals: LapSignals, start: number, end: number, complete: boolean): LapFlag[] {
   const flags: LapFlag[] = [];
   if (!complete) flags.push('incomplete');
 
-  const { onPitRoad, offTrack, incidentCount, lapDistPct } = signals;
+  const { onPitRoad, offTrack, incidentCount } = signals;
   if (onPitRoad !== undefined) {
     for (let i = start; i <= end; i += 1) {
       if (onPitRoad[i] === true) {
@@ -67,20 +62,14 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
   if (incidentCount !== undefined && (incidentCount[end] ?? 0) > (incidentCount[start] ?? 0)) {
     flags.push('incident');
   }
-  for (let i = start + 1; i <= end; i += 1) {
-    if ((lapDistPct[i] ?? 0) < (lapDistPct[i - 1] ?? 0) - TELEPORT_DROP) {
-      flags.push('teleport');
-      break;
-    }
-  }
   return flags;
 }
 
 /**
  * Recorta as amostras em voltas.
  *
- * A linha de chegada é reconhecida pela coincidência de dois sinais, nunca por
- * um só — ver `CROSSING_END`/`CROSSING_START`.
+ * A linha de chegada é reconhecida pela coincidência de dois fatos do arquivo,
+ * nunca por um só — ver o comentário acima de `detectLaps`.
  *
  * A primeira e a última volta do recorte são sempre incompletas: a gravação
  * começa e termina no meio de uma volta. Elas continuam na lista, com tempo
@@ -98,8 +87,7 @@ export function detectLaps(signals: LapSignals): Lap[] {
   for (let i = 1; i < total; i += 1) {
     const cruzou =
       (lapNumber[i] ?? 0) > (lapNumber[i - 1] ?? 0) &&
-      (lapDistPct[i - 1] ?? 0) >= CROSSING_END &&
-      (lapDistPct[i] ?? 0) <= CROSSING_START;
+      (lapDistPct[i] ?? 0) < (lapDistPct[i - 1] ?? 0);
     if (cruzou) starts.push(i);
   }
 
