@@ -59,7 +59,6 @@ const LAP_FLAGS = [
   'off-track',
   'incident',
   'teleport',
-  'stopped',
 ] as const satisfies readonly LapFlag[];
 
 type EsqueciAlgumaFlag = Exclude<LapFlag, (typeof LAP_FLAGS)[number]>;

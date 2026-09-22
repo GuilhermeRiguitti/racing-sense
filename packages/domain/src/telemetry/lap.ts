@@ -18,16 +18,25 @@ export type LapFlag =
   /** O sim contou incidente durante a volta. */
   | 'incident'
   /** Reset para os boxes ou teleporte: a distância andou para trás. */
-  | 'teleport'
-  /**
-   * O carro ficou parado na pista.
-   *
-   * O tempo continua correndo enquanto a distância não anda, então a volta ganha
-   * minutos que não são pilotagem. Sem esta marcação, uma volta em que o piloto
-   * parou passaria por todas as outras — não tem box, não tem saída de pista,
-   * não tem incidente — e poderia virar referência.
-   */
-  | 'stopped';
+  | 'teleport';
+
+/**
+ * Por que não existe marcação de "carro parado" nem nada derivado de tempo.
+ *
+ * Decisão do piloto, 2026-09-22: **tempo de volta não invalida volta**. Se ela
+ * foi completa e sem corte de pista, vale — tenha durado 1min45 ou dez minutos
+ * porque o carro ficou parado no meio.
+ *
+ * O motivo de estar escrito aqui, e não só no histórico: toda tentativa de
+ * detectar carro parado precisa de um limiar (X metros em Y segundos), e limiar
+ * é calibrado contra um carro. O que é "devagar demais" num GT3 é ritmo normal
+ * num carro de entrada, e o sistema não é só de GT3. É a mesma razão pela qual o
+ * ADR 0018 recusou limiar de duração para saída de pista.
+ *
+ * Antes de acrescentar marcação nova aqui, confira se ela responde a um fato
+ * binário do arquivo (passou pela box: sim ou não) ou a um número arbitrado.
+ * Fato entra; número arbitrado não.
+ */
 
 /**
  * Uma volta recortada da gravação.

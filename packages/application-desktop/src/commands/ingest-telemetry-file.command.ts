@@ -155,13 +155,15 @@ export function createIngestTelemetryFileHandler(
         opcional('PlayerCarMyIncidentCount'),
       ]);
 
+      // Só a grade das séries usa isto. O recorte de voltas não recebe distância
+      // em metros de propósito: marcação de volta sai de fato binário do arquivo,
+      // nunca de número arbitrado — ver o comentário em `LapFlag`.
       const trackLengthMeters = metadata.session.track.lengthMeters ?? FALLBACK_TRACK_METERS;
 
       const laps: readonly Lap[] = detectLaps({
         tickRate: metadata.tickRate,
         lapNumber,
         lapDistPct,
-        trackLengthMeters,
         ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
         ...(trackSurface !== undefined
           ? { offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK) }

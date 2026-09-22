@@ -21,11 +21,6 @@ export interface LapSignals {
   readonly offTrack?: readonly boolean[];
   /** Contador acumulado de incidentes do piloto. Só a variação na volta importa. */
   readonly incidentCount?: readonly number[];
-  /**
-   * Comprimento do traçado em metros. Sem ele não dá para saber se o carro
-   * parou, porque `lapDistPct` sozinho não diz quanto vale uma fração.
-   */
-  readonly trackLengthMeters?: number;
 }
 
 /**
@@ -47,31 +42,6 @@ const CROSSING_START = 0.1;
  * recuo desse tamanho não acontece dirigindo.
  */
 const TELEPORT_DROP = 0.2;
-
-/**
- * Carro parado: janela de tempo e avanço mínimo dentro dela.
- *
- * Os números têm folga proposital. O trecho mais lento de uma volta de GT3 passa
- * de 50 km/h, que percorre quase 140 m em 3 s — duas ordens de grandeza acima do
- * limite. Não existe pilotagem que dispare isto; carro parado dispara sempre.
- */
-const STOPPED_WINDOW_SECONDS = 3;
-const STOPPED_ADVANCE_METERS = 5;
-
-/** O carro deixou de andar em algum ponto da volta? */
-function ficouParado(signals: LapSignals, start: number, end: number): boolean {
-  const { trackLengthMeters, lapDistPct, tickRate } = signals;
-  if (trackLengthMeters === undefined || trackLengthMeters <= 0) return false;
-
-  const janela = Math.round(STOPPED_WINDOW_SECONDS * tickRate);
-  if (janela <= 0) return false;
-
-  for (let i = start + janela; i <= end; i += 1) {
-    const avanco = ((lapDistPct[i] ?? 0) - (lapDistPct[i - janela] ?? 0)) * trackLengthMeters;
-    if (avanco < STOPPED_ADVANCE_METERS) return true;
-  }
-  return false;
-}
 
 function flagsOf(signals: LapSignals, start: number, end: number, complete: boolean): LapFlag[] {
   const flags: LapFlag[] = [];
@@ -102,9 +72,6 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
       flags.push('teleport');
       break;
     }
-  }
-  if (ficouParado(signals, start, end)) {
-    flags.push('stopped');
   }
   return flags;
 }
