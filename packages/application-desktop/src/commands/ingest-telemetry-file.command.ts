@@ -17,7 +17,7 @@ import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
 import type { TelemetryFilePort } from '../ports/telemetry-file.port.js';
 import { collectChannel } from '../shared/collect-channel.js';
-import { MissingChannelError } from '../shared/errors.js';
+import { MissingChannelError, RepeatedLapNumberError } from '../shared/errors.js';
 
 /**
  * Canais exigidos para recortar voltas.
@@ -162,6 +162,24 @@ export function createIngestTelemetryFileHandler(
             }
           : {}),
       });
+
+      const repetidos = [
+        ...new Set(laps.map((lap) => lap.number).filter((n, i, todos) => todos.indexOf(n) !== i)),
+      ];
+      if (repetidos.length > 0) {
+        // O diagnóstico vai na mensagem: sem o arquivo em mãos, é o que diz se o
+        // reinício foi troca de sessão do sim ou outra coisa.
+        const sessoesDoSim = available.has('SessionNum')
+          ? [...new Set(await collectChannel(deps.decoder.readChannel(ref, 'SessionNum')))]
+          : null;
+        throw new RepeatedLapNumberError(
+          `O contador de voltas do sim repetiu a volta ${repetidos.join(', ')} neste arquivo. ` +
+            (sessoesDoSim === null
+              ? 'O arquivo não tem o canal SessionNum para dizer por quê.'
+              : `Sessões do sim no arquivo (SessionNum): ${sessoesDoSim.join(', ')}.`) +
+            ` Voltas recortadas: ${laps.map((lap) => lap.number).join(' ')}.`,
+        );
+      }
 
       const session: TelemetrySession = {
         ...metadata.session,

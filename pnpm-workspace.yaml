@@ -2,8 +2,12 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# Pacotes autorizados a rodar script de instalação. O pnpm 10 bloqueia por
+# padrão; sem o `electron` aqui, o binário não baixa e `pnpm dev:desktop` falha
+# com "Electron uninstall".
 onlyBuiltDependencies:
   - "@biomejs/biome"
+  - "electron"
   - "esbuild"
   - "sharp"
   - "better-sqlite3"
