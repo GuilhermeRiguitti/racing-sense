@@ -1,4 +1,4 @@
-import type { Lap, TelemetrySession } from '@telemetry/domain';
+import type { Lap, LapFlag, TelemetrySession } from '@telemetry/domain';
 import { z } from 'zod';
 
 /**
@@ -46,6 +46,26 @@ export const sessionDto = z.object({
 });
 export type SessionDto = z.infer<typeof sessionDto>;
 
+/**
+ * As marcações, na borda.
+ *
+ * `satisfies` impede valor que o domínio não conhece, e `EsqueciAlgumaFlag`
+ * impede o contrário — marcação nova no domínio sem a borda acompanhar vira erro
+ * de compilação, não DTO silenciosamente desatualizado.
+ */
+const LAP_FLAGS = [
+  'incomplete',
+  'pit',
+  'off-track',
+  'incident',
+  'teleport',
+  'stopped',
+] as const satisfies readonly LapFlag[];
+
+type EsqueciAlgumaFlag = Exclude<LapFlag, (typeof LAP_FLAGS)[number]>;
+const _flagsCobertas: EsqueciAlgumaFlag[] = [];
+void _flagsCobertas;
+
 export const lapDto = z.object({
   number: z.int(),
   startSample: z.int().nonnegative(),
@@ -53,7 +73,7 @@ export const lapDto = z.object({
   lapTimeSeconds: z.number().positive().nullable(),
   isComplete: z.boolean(),
   /** Por que a volta não serve de referência. Vazio = serve. */
-  flags: z.array(z.enum(['incomplete', 'pit', 'off-track', 'incident', 'teleport'] as const)),
+  flags: z.array(z.enum(LAP_FLAGS)),
 });
 export type LapDto = z.infer<typeof lapDto>;
 

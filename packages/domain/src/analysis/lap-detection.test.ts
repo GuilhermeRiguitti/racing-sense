@@ -100,6 +100,38 @@ describe('detectLaps', () => {
     expect(voltas[1]?.flags).toContain('teleport');
   });
 
+  it('marca a volta em que o carro ficou parado na pista', () => {
+    // O caso que nenhuma outra marcação pega: sem box, sem saída de pista, sem
+    // incidente, sem teleporte — só o piloto parado, e o relógio andando.
+    const base = pista([60, 600, 60]);
+    const lapDistPct = [...base.lapDistPct];
+    for (let i = 200; i < 500; i += 1) lapDistPct[i] = lapDistPct[200] as number;
+
+    const voltas = detectLaps({ ...base, lapDistPct, trackLengthMeters: 4057 });
+
+    expect(voltas[1]?.flags).toContain('stopped');
+  });
+
+  it('não confunde trecho lento com carro parado', () => {
+    // Uma volta inteira a 50 km/h — o trecho mais lento de qualquer traçado
+    // avança muito mais que o limite, então nada pode disparar.
+    const base = pista([60, 7200, 60]);
+
+    const voltas = detectLaps({ ...base, trackLengthMeters: 4057 });
+
+    expect(voltas[1]?.flags).not.toContain('stopped');
+  });
+
+  it('sem o comprimento da pista, não arrisca palpite sobre carro parado', () => {
+    const base = pista([60, 600, 60]);
+    const lapDistPct = [...base.lapDistPct];
+    for (let i = 200; i < 500; i += 1) lapDistPct[i] = lapDistPct[200] as number;
+
+    const voltas = detectLaps({ ...base, lapDistPct });
+
+    expect(voltas[1]?.flags).not.toContain('stopped');
+  });
+
   it('volta limpa não tem marcação nenhuma', () => {
     const base = pista([60, 120, 60]);
     const voltas = detectLaps({

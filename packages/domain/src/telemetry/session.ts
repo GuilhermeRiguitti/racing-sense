@@ -7,6 +7,15 @@ export interface TrackRef {
   readonly id: string;
   readonly name: string;
   readonly config: string | null;
+  /**
+   * Comprimento do traçado em metros.
+   *
+   * Não é enfeite: é o que converte `lapDistPct` em distância de verdade. Sem
+   * ele, a resolução das séries teria que ser um número fixo, e número fixo
+   * significa resolução diferente em cada pista — grossa numa longa, exagerada
+   * numa curta. `null` quando o arquivo não informa.
+   */
+  readonly lengthMeters: number | null;
 }
 
 export interface CarRef {

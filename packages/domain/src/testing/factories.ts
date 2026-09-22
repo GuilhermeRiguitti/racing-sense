@@ -20,6 +20,7 @@ export const aTrack = (overrides: Partial<TrackRef> = {}): TrackRef => ({
   id: 'interlagos',
   name: 'Autódromo José Carlos Pace',
   config: 'Grand Prix',
+  lengthMeters: 5754,
   ...overrides,
 });
 

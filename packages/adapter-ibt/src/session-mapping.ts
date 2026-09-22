@@ -40,10 +40,14 @@ export function toTrackRef(doc: SessionInfoNode): TrackRef {
   // `TrackName` já vem com o layout dentro ("roadatlanta full"): é o id estável.
   const id = readPath(weekend, 'TrackName') ?? 'desconhecida';
 
+  // Vem como "4.0569 km"; `readNumber` tira a unidade.
+  const km = readNumber(readPath(weekend, 'TrackLength'));
+
   return {
     id,
     name: readPath(weekend, 'TrackDisplayName') ?? id,
     config: readPath(weekend, 'TrackConfigName') ?? null,
+    lengthMeters: km === null ? null : Math.round(km * 1000),
   };
 }
 

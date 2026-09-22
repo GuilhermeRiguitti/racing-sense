@@ -18,7 +18,16 @@ export type LapFlag =
   /** O sim contou incidente durante a volta. */
   | 'incident'
   /** Reset para os boxes ou teleporte: a distância andou para trás. */
-  | 'teleport';
+  | 'teleport'
+  /**
+   * O carro ficou parado na pista.
+   *
+   * O tempo continua correndo enquanto a distância não anda, então a volta ganha
+   * minutos que não são pilotagem. Sem esta marcação, uma volta em que o piloto
+   * parou passaria por todas as outras — não tem box, não tem saída de pista,
+   * não tem incidente — e poderia virar referência.
+   */
+  | 'stopped';
 
 /**
  * Uma volta recortada da gravação.

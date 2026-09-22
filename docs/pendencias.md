@@ -10,7 +10,16 @@ fora não apontar para o lugar errado.
 
 **O downsampling está resolvido:** min/max por balde, implementado em
 `packages/domain/src/analysis/distance-series.ts` e conferido contra arquivo real.
-A ingestão grava seis canais por volta em mil pontos por distância.
+
+**A resolução da grade também**, e por medição, não por palpite. A 60 Hz um GT3
+gera uma amostra a cada 0,23 a 1,17 m (mediana 0,62 m em Road Atlanta, 0,76 m em
+Suzuka). A grade de mil pontos que o ADR 0007 propunha daria 4,06 m por ponto em
+Road Atlanta e 5,75 m em Suzuka — **seis a oito vezes mais grossa que o dado
+bruto**, num sistema cuja frase-produto é "você freou 12 m mais tarde".
+
+A grade passou a ser **um ponto por metro**, derivada do `TrackLength` do arquivo:
+4057 pontos em Road Atlanta, 5753 em Suzuka. Fica perto do bruto em toda a volta e
+igual em qualquer pista.
 
 **O que falta é a persistência.** O ADR 0007 continua proposto porque a decisão
 dependia de medir o tamanho do derivado com arquivo real — agora dá para medir, e

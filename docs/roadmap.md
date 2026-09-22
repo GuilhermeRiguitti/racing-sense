@@ -40,7 +40,8 @@ batem com o que o sim mostrou na sessão.
 - [x] Marcar out lap, in lap, saída de pista, incidente, teleporte e volta
       cortada pelo início/fim da gravação (marcar, não descartar: a volta suja
       tem conteúdo, só não pode ser referência)
-- [x] Séries por `lapDistPct`
+- [x] Séries por `lapDistPct`, com a grade em um ponto por metro (medida, não
+      arbitrada — ver `docs/pendencias.md` #4)
 - [x] Downsampling que preserva picos (min/max por balde)
 
 **Pronto quando:** a contagem e os tempos de volta batem com os do sim, incluindo

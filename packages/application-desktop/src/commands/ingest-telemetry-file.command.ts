@@ -70,12 +70,20 @@ export const ANALYSIS_CHANNELS = [
 ] as const;
 
 /**
- * Pontos por volta na série gravada.
+ * Espaçamento da grade de distância, em metros.
  *
- * Alto o bastante para o delta ser calculado em cima dela sem perder frenagem,
- * e a redução para desenhar acontece depois, na hora de mostrar (ADR 0007).
+ * Um ponto por metro. O número **não** é fixo por volta de propósito: a 60 Hz um
+ * GT3 gera uma amostra a cada 0,2 a 1,2 m, então uma grade de mil pontos jogaria
+ * fora seis a oito vezes a resolução do dado bruto — e resolução é exatamente o
+ * que faz sentido a frase "você freou 12 m mais tarde". Por metro, a grade fica
+ * perto do dado original em toda a volta, e igual em qualquer pista.
+ *
+ * A redução para desenhar acontece depois, na hora de mostrar (ADR 0007).
  */
-const SERIES_RESOLUTION = 1000;
+const SERIES_METERS_PER_POINT = 1;
+
+/** Quando o arquivo não informa o comprimento da pista. Um traçado mediano. */
+const FALLBACK_TRACK_METERS = 4500;
 
 export interface IngestTelemetryFileCommand {
   /** Onde o arquivo está, no vocabulário do adapter (caminho, chave...). */
@@ -147,10 +155,13 @@ export function createIngestTelemetryFileHandler(
         opcional('PlayerCarMyIncidentCount'),
       ]);
 
+      const trackLengthMeters = metadata.session.track.lengthMeters ?? FALLBACK_TRACK_METERS;
+
       const laps: readonly Lap[] = detectLaps({
         tickRate: metadata.tickRate,
         lapNumber,
         lapDistPct,
+        trackLengthMeters,
         ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
         ...(trackSurface !== undefined
           ? { offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK) }
@@ -195,7 +206,7 @@ export function createIngestTelemetryFileHandler(
                 y: trecho,
               }),
               posicoes,
-              SERIES_RESOLUTION,
+              Math.round(trackLengthMeters / SERIES_METERS_PER_POINT),
             ),
           );
         }
