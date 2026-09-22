@@ -33,7 +33,9 @@ session info, catálogo de canais montado em runtime e amostras em streaming, co
 os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
 296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O recorte de voltas, a reamostragem
 por distância e o downsampling também estão de pé e conferidos contra arquivo
-real. O que ainda é stub são o **delta contra a referência** e o **narrador**. Ver `docs/pendencias.md` e `docs/roadmap.md`.
+real. A persistência local é SQLite de verdade, com as séries em binário
+(ADR 0007). O que ainda é stub são o **delta contra a referência**, o **narrador**
+e **a interface** — nenhum gráfico foi escrito ainda. Ver `docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
 
@@ -254,6 +256,7 @@ Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
 | `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
+| `docs/adr/0007-persistencia-e-downsampling.md` | o que se grava por volta, em que resolução e por quê |
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |

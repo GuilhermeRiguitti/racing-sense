@@ -66,7 +66,8 @@ A etapa que entrega o produto.
       publicação — com a interface consultando de novo em vez de confiar no payload
 - [ ] Gráfico de canal com zoom e navegação entre voltas
 - [ ] Gráfico de delta contra a referência
-- [ ] Persistência local passando a suíte de contrato das portas
+- [x] Persistência local passando a suíte de contrato das portas (SQLite,
+      séries em binário — ADR 0007)
 
 **Pronto quando:** rodar uma sessão no sim, com o aplicativo aberto, e a volta
 aparecer na tela sozinha — sem clicar em nada.

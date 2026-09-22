@@ -87,7 +87,7 @@ export function createSqliteSessionStore(
     },
 
     async readLapSeries(id: SessionId, lapNumber: number) {
-      const row = statements.readSeries.get(id, lapNumber) as { payload: string } | undefined;
+      const row = statements.readSeries.get(id, lapNumber) as { payload: Uint8Array } | undefined;
       return row === undefined ? [] : decodeSeries(row.payload);
     },
 
