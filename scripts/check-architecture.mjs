@@ -14,7 +14,7 @@
  *     nem com caminho relativo saindo do próprio pacote.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADAPTER_IMPORT_ALLOWLIST, LAYERS } from './architecture.config.mjs';
 
@@ -105,7 +105,9 @@ function checkImports(name, layer, dir) {
   const packageSrc = join(dir, 'src');
 
   for (const file of listSourceFiles(packageSrc)) {
-    const relativeFile = relative(ROOT, file);
+    // Separador POSIX sempre: a allowlist é escrita com "/", e no Windows o
+    // `relative` devolve "\" — o composition root deixava de ser reconhecido.
+    const relativeFile = relative(ROOT, file).split(sep).join('/');
     const source = readFileSync(file, 'utf8');
 
     for (const match of source.matchAll(IMPORT_PATTERN)) {

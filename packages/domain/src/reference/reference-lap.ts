@@ -10,8 +10,8 @@ export type ReferenceLapOrigin = 'imported-file' | 'session-lap';
 /**
  * Volta guardada para servir de referência de comparação.
  *
- * Guarda as séries já normalizadas por distância, porque é lida muito mais vezes
- * do que escrita.
+ * Guarda as séries da volta como foram gravadas — amostra bruta, com a posição
+ * medida de cada uma (ADR 0019). É com essas posições que o delta é calculado.
  */
 export interface ReferenceLap {
   readonly id: ReferenceLapId;

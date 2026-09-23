@@ -36,8 +36,10 @@ por distância e o downsampling também estão de pé e conferidos contra arquiv
 real. A persistência local é SQLite de verdade, guardando a amostra exatamente
 como o arquivo entregou (ADR 0019). A primeira tela existe: sessões, voltas com a
 situação de cada uma e a volta em cinco painéis sobre o eixo de distância, com
-cursor sincronizado. O que ainda é stub são o **delta contra a referência** e o
-**narrador**. Ver `docs/pendencias.md` e `docs/roadmap.md`.
+cursor sincronizado. O delta contra a referência existe no domínio e chega ao
+renderer pelo IPC `laps:compare`, mas ainda não é desenhado; a segmentação em
+trechos espera os setores da pista. O que ainda é stub é o **narrador**. Ver
+`docs/pendencias.md` e `docs/roadmap.md`.
 
 ## Comandos
 

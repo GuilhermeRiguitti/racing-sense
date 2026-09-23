@@ -49,10 +49,13 @@ sessão com reset para os boxes.
 
 ## Etapa 3 — Referência e delta
 
-- [ ] Importar `.ibt` e promover uma volta a referência
-- [ ] Recusar comparação entre pista/carro diferentes
-- [ ] Delta acumulado por distância
-- [ ] Segmentação dos trechos de ganho e perda
+- [x] Importar `.ibt` e promover uma volta a referência (comando e IPC; o botão
+      na tela é da etapa 4)
+- [x] Recusar comparação entre pista/carro diferentes
+- [x] Delta acumulado por distância — sem grade: avaliado nas posições que a
+      volta amostrou, tempo pela contagem de ticks
+- [ ] Segmentação dos trechos de ganho e perda — espera os setores da pista
+      (pendência 7); cortar por "mudança sustentada" do delta exigiria limiar
 
 **Pronto quando:** comparando uma volta contra ela mesma, o delta é ~0 em toda a
 extensão. É o teste que pega erro de alinhamento.

@@ -31,14 +31,6 @@ export const comparisonDto = z.object({
   lapNumber: z.int(),
   totalDeltaSeconds: z.number(),
   deltaSeries: seriesDto,
-  segments: z.array(
-    z.object({
-      startDistPct: z.number().min(0).max(1),
-      endDistPct: z.number().min(0).max(1),
-      deltaSeconds: z.number(),
-      label: z.string().nullable(),
-    }),
-  ),
 });
 export type ComparisonDto = z.infer<typeof comparisonDto>;
 
@@ -70,7 +62,6 @@ export function toComparisonDto(comparison: LapComparison): ComparisonDto {
     lapNumber: comparison.lapNumber,
     totalDeltaSeconds: comparison.totalDeltaSeconds,
     deltaSeries: toSeriesDto(comparison.deltaSeries),
-    segments: comparison.segments.map((segment) => ({ ...segment })),
   };
 }
 
