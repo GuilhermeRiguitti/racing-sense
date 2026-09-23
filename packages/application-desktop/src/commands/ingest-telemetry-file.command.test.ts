@@ -11,7 +11,7 @@ import type { PublicationQueuePort } from '../ports/publication.port.js';
 import type { SessionWriterPort } from '../ports/session-store.port.js';
 import type { DecodedMetadata, TelemetryDecoderPort } from '../ports/telemetry-decoder.port.js';
 import type { TelemetryFilePort, TelemetryFileRef } from '../ports/telemetry-file.port.js';
-import { MissingChannelError } from '../shared/errors.js';
+import { MissingChannelError, RepeatedLapNumberError } from '../shared/errors.js';
 import { createIngestTelemetryFileHandler } from './ingest-telemetry-file.command.js';
 
 const ref: TelemetryFileRef = { locator: '/telemetry/sessao.ibt', sizeBytes: 1024 };
@@ -124,6 +124,53 @@ describe('IngestTelemetryFile', () => {
     expect(files.close).toHaveBeenCalledWith(ref);
     // Ingestão que falhou não anuncia sessão nova: evento é fato consumado.
     expect(events.publish).not.toHaveBeenCalled();
+  });
+});
+
+describe('IngestTelemetryFile, contador de voltas que reinicia', () => {
+  it('recusa gravar duas voltas com o mesmo número e diz as sessões do sim', async () => {
+    // Voltas 1, 2, 1, 2: o contador reiniciou no meio do arquivo, na sessão 2.
+    const trechos: [number, number][] = [
+      [1, 30],
+      [2, 30],
+      [1, 30],
+      [2, 30],
+    ];
+    const lap: number[] = [];
+    const pct: number[] = [];
+    const sessao: number[] = [];
+    trechos.forEach(([numero, amostras], indice) => {
+      for (let i = 0; i < amostras; i += 1) {
+        lap.push(numero);
+        pct.push(i / amostras);
+        sessao.push(indice < 2 ? 0 : 2);
+      }
+    });
+    const canais: Record<string, number[]> = { Lap: lap, LapDistPct: pct, SessionNum: sessao };
+
+    const files = filePort();
+    const save = vi.fn();
+    const handle = createIngestTelemetryFileHandler({
+      files,
+      decoder: {
+        readMetadata: async () => metadataWith(['Lap', 'LapDistPct', 'SessionNum']),
+        readChannel: async function* (_ref, nome) {
+          yield* canais[nome] ?? [];
+        },
+      },
+      sessions: { save, delete: vi.fn() },
+      ids,
+      publicationQueue: publicationQueue(),
+      events: eventos(),
+      ingestedFiles: registroDeArquivos(),
+    });
+
+    const falha = handle({ locator: ref.locator });
+
+    await expect(falha).rejects.toThrow(RepeatedLapNumberError);
+    await expect(handle({ locator: ref.locator })).rejects.toThrow(/SessionNum\): 0, 2/);
+    expect(save).not.toHaveBeenCalled();
+    expect(files.close).toHaveBeenCalled();
   });
 });
 

@@ -2,9 +2,13 @@ packages:
   - "packages/*"
   - "apps/*"
 
-# Scripts de build liberados. better-sqlite3 fica de fora de propósito: ele já
-# traz binário pronto em prebuilds/ (N-API, serve para Node e Electron), e
-# liberar o script faz o pnpm chamar node-gyp, que exige Python e falha.
+# Pacotes autorizados a rodar script de instalação. O pnpm 10 bloqueia por
+# padrão; sem o `electron` aqui, o binário não baixa e `pnpm dev:desktop` falha
+# com "Electron uninstall".
+#
+# better-sqlite3 fica de fora de propósito: ele já traz binário pronto em
+# prebuilds/ (N-API, serve para Node e Electron), e liberar o script faz o pnpm
+# chamar node-gyp, que exige Python e falha.
 onlyBuiltDependencies:
   - "@biomejs/biome"
   - "electron"

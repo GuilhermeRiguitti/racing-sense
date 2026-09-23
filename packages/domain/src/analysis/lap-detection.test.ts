@@ -46,18 +46,55 @@ describe('detectLaps', () => {
     expect(voltas[0]?.isComplete).toBe(false);
   });
 
-  it('não corta quando o número da volta sobe longe da linha', () => {
-    // O caso real: a primeira amostra do arquivo sai zerada e o número pula
-    // para o da volta em curso. Sem histerese, isso viraria uma volta de uma
-    // amostra só e deslocaria todas as seguintes.
+  it('número que muda longe da linha não produz volta completa', () => {
+    // A primeira amostra do arquivo sai zerada e o número pula para o da volta
+    // em curso. Sem o sinal de "fora do mundo" para cortá-la, ela vira um
+    // trecho de uma amostra — incompleto, nunca contado como volta.
     const base = pista([120, 120], 6);
     const lapNumber = [0, ...base.lapNumber.slice(1)];
     const lapDistPct = [0, ...base.lapDistPct.slice(1)];
 
     const voltas = detectLaps({ ...base, lapNumber, lapDistPct });
 
-    expect(voltas).toHaveLength(2);
-    expect(voltas[0]?.number).toBe(6);
+    expect(voltas.filter((v) => v.isComplete)).toEqual([]);
+    expect(voltas.map((v) => v.number)).toEqual([0, 6, 7]);
+  });
+
+  it('contador que reinicia no meio do arquivo não cola duas voltas', () => {
+    // O bug real, visto em arquivos do piloto: o sim volta a contar do 1
+    // (sessão nova, reset). A versão anterior juntava o fim da volta 3 com o
+    // começo da nova volta 1 e marcava como completa, com o dobro do tempo.
+    const trechos = [
+      [1, 60],
+      [2, 60],
+      [3, 60],
+      [1, 60],
+      [2, 60],
+      [3, 60],
+    ] as const;
+    const lapNumber: number[] = [];
+    const lapDistPct: number[] = [];
+    for (const [numero, amostras] of trechos) {
+      for (let i = 0; i < amostras; i += 1) {
+        lapNumber.push(numero);
+        lapDistPct.push(i / amostras);
+      }
+    }
+
+    const voltas = detectLaps({ tickRate: 60, lapNumber, lapDistPct });
+
+    expect(voltas.map((v) => `${v.number}:${v.isComplete ? 'c' : 'i'}`)).toEqual([
+      '1:i',
+      '2:c',
+      '3:i',
+      '1:i',
+      '2:c',
+      '3:i',
+    ]);
+    // Nenhuma volta com o dobro da duração: toda completa tem um segundo.
+    for (const volta of voltas.filter((v) => v.isComplete)) {
+      expect(volta.lapTimeSeconds).toBe(1);
+    }
   });
 
   it('não corta quando a distância cruza a linha mas o número não sobe', () => {

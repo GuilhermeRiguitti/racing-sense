@@ -95,27 +95,37 @@ export function detectLaps(signals: LapSignals): Lap[] {
   const total = fim + 1;
   if (inicio > fim) return [];
 
+  // Uma volta é um trecho em que o sim reporta o mesmo número de volta. Toda
+  // mudança de número começa um trecho novo — não só o cruzamento da linha.
+  //
+  // A versão anterior só cortava no cruzamento e ignorava qualquer outra
+  // mudança. Quando o contador do sim reinicia no meio do arquivo (sessão nova,
+  // reset), isso colava o fim de uma volta com o começo de outra e marcava o
+  // resultado como completo, com o dobro do tempo — uma volta que não existiu.
   const starts: number[] = [inicio];
   for (let i = inicio + 1; i < total; i += 1) {
-    const cruzou =
-      (lapNumber[i] ?? 0) > (lapNumber[i - 1] ?? 0) &&
-      (lapDistPct[i] ?? 0) < (lapDistPct[i - 1] ?? 0);
-    if (cruzou) starts.push(i);
+    if (lapNumber[i] !== lapNumber[i - 1]) starts.push(i);
   }
+
+  // O trecho começou num cruzamento da linha de chegada? É a coincidência de
+  // dois fatos: o número subiu e a distância voltou do fim para o começo.
+  const comecaNaLinha = (start: number): boolean =>
+    start > inicio &&
+    (lapNumber[start] ?? 0) > (lapNumber[start - 1] ?? 0) &&
+    (lapDistPct[start] ?? 0) < (lapDistPct[start - 1] ?? 0);
 
   return starts.map((start, indice) => {
     const proximo = starts[indice + 1];
     const end = (proximo ?? total) - 1;
-    // A gravação corta a primeira e a última volta. Uma volta só, sem nenhum
-    // cruzamento, é incompleta pelos dois lados.
-    const complete = indice > 0 && proximo !== undefined;
+    // Completa só quando começa **e** termina na linha. Isso cobre a primeira e
+    // a última da gravação (cortadas por ela) e a volta interrompida por uma
+    // mudança de número que não foi cruzamento.
+    const complete = comecaNaLinha(start) && proximo !== undefined && comecaNaLinha(proximo);
     const flags = flagsOf(signals, start, end, complete);
 
     return {
-      // O número vem do meio da volta, não das pontas: na virada o sim pode
-      // publicar número e distância com um tick de diferença, e a primeira
-      // amostra do arquivo às vezes sai zerada (ver docs/formato-ibt.md).
-      number: lapNumber[Math.floor((start + end) / 2)] ?? 0,
+      // Constante dentro do trecho, por construção.
+      number: lapNumber[start] ?? 0,
       startSample: start,
       endSample: end,
       lapTimeSeconds: complete ? (end - start + 1) / tickRate : null,
