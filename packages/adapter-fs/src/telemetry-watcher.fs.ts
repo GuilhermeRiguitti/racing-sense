@@ -99,9 +99,35 @@ export function createFileTelemetryWatcher(options: FileWatcherOptions): Telemet
         depth: 0,
         // Os arquivos que já estão lá também interessam: é o histórico do piloto.
         ignoreInitial: false,
+        // Polling, não `fs.watch`. No Windows o `fs.watch` abre cada arquivo, e
+        // o que o sim está gravando responde EBUSY: o chokidar desiste dele sem
+        // anunciar `add` — justo a sessão que o piloto acabou de rodar. O
+        // polling só pergunta o tamanho, e não segura handle no arquivo do sim.
+        usePolling: true,
+        interval: readiness.pollIntervalMs,
+        binaryInterval: readiness.pollIntervalMs,
       });
       watcher.on('add', (path) => {
         void handleCandidate(path);
+      });
+      // Arquivo recusado por tempo (sessão longa, sim segurando a trava) volta a
+      // ser candidato quando o sim torna a escrever nele — e a última escrita
+      // vem antes de soltar a trava. `inFlight` impede duas esperas simultâneas,
+      // e a ingestão é idempotente por arquivo.
+      watcher.on('change', (path) => {
+        void handleCandidate(path);
+      });
+      // Sem ouvinte, o `error` do chokidar vira exceção solta no processo.
+      watcher.on('error', (error) => {
+        const file: DiscoveredTelemetryFile = {
+          locator: (error as { path?: string }).path ?? options.directory,
+          sizeBytes: 0,
+          discoveredAt: new Date(),
+        };
+        const reason = `falha ao observar a pasta: ${error instanceof Error ? error.message : String(error)}`;
+        for (const listener of rejectedListeners) {
+          listener(file, reason);
+        }
       });
     },
 
