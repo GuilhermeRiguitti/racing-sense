@@ -30,6 +30,17 @@ function createWindow(): BrowserWindow {
   });
 
   window.once('ready-to-show', () => window.show());
+
+  // Sem página carregada, `ready-to-show` nunca dispara e a janela, criada com
+  // `show: false`, fica invisível para sempre. Em desenvolvimento o
+  // electron-vite serve o renderer e passa o endereço por variável de ambiente;
+  // no build, a página está ao lado do processo principal.
+  const devServerUrl = process.env.ELECTRON_RENDERER_URL;
+  if (devServerUrl !== undefined) {
+    void window.loadURL(devServerUrl);
+  } else {
+    void window.loadFile(join(import.meta.dirname, '../renderer/index.html'));
+  }
   return window;
 }
 
