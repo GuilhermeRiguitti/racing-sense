@@ -17,7 +17,7 @@ export function createLlmNarrator(_config: LlmConfig): NarratorPort {
     narrate() {
       return Promise.reject(
         new NotImplementedError(
-          'Narrador ainda não implementado: depende do delta calculado (etapa 3 do roadmap)',
+          'Narrador ainda não implementado: o delta já chega calculado; falta a redação (etapa 5 do roadmap)',
         ),
       );
     },

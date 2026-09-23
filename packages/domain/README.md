@@ -17,9 +17,10 @@ onde os dados vieram, ela é daqui.
 
 ## Estado
 
-Invariantes e regras de compatibilidade implementadas e testadas. Os algoritmos
-(`detectLaps`, `toDistanceSeries`, `downsample`, `compareToReference`) são stubs
-que lançam `NotImplementedError` — etapas 2 e 3 do `docs/roadmap.md`.
+Invariantes, regras de compatibilidade e os algoritmos (`detectLaps`,
+`toDistanceSeries`, `downsample`, `compareToReference`) implementados e testados —
+os três primeiros conferidos contra arquivo real. Falta a segmentação do delta em
+trechos, que espera os setores da pista (pendência 7 em `docs/pendencias.md`).
 
 ## Por que ids são tipados
 
