@@ -14,6 +14,26 @@ import { defineConfig } from 'electron-vite';
 export default defineConfig({
   main: {
     build: {
+      /**
+       * Os pacotes do workspace são publicados como `.ts` cru (`exports` aponta
+       * para `src/index.ts`). Deixados externos, o Node do Electron tenta
+       * carregá-los do disco e não resolve `./x.js` para `./x.ts` — então eles
+       * **precisam** entrar no bundle. Só o que é de `node_modules` fica de fora.
+       */
+      externalizeDeps: {
+        exclude: [
+          '@telemetry/adapter-fs',
+          '@telemetry/adapter-http',
+          '@telemetry/adapter-ibt',
+          '@telemetry/adapter-llm',
+          '@telemetry/adapter-memory',
+          '@telemetry/adapter-sqlite',
+          '@telemetry/application',
+          '@telemetry/application-desktop',
+          '@telemetry/contracts',
+          '@telemetry/domain',
+        ],
+      },
       rollupOptions: {
         // Módulo nativo não pode ser empacotado: é carregado do disco.
         external: ['better-sqlite3'],

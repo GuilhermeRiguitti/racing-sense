@@ -2,10 +2,20 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# Scripts de build liberados. better-sqlite3 fica de fora de propósito: ele já
+# traz binário pronto em prebuilds/ (N-API, serve para Node e Electron), e
+# liberar o script faz o pnpm chamar node-gyp, que exige Python e falha.
 onlyBuiltDependencies:
   - "@biomejs/biome"
+  - "electron"
   - "esbuild"
   - "sharp"
+
+# better-sqlite3 é módulo nativo: o bundle do processo principal do desktop o
+# deixa externo e o carrega do disco em runtime. Quem o declara é só o
+# adapter-sqlite (regra 3), então sem hoist o `out/main` do desktop não o
+# enxerga. Içar para a raiz resolve o runtime sem dar a lib ao composition root.
+publicHoistPattern:
   - "better-sqlite3"
 
 # Catálogo de versões compartilhadas.
