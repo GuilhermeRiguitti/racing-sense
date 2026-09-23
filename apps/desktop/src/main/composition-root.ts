@@ -17,10 +17,7 @@ import {
   createUnavailableNarrator,
   loadLlmConfigFromEnv,
 } from '@telemetry/adapter-llm';
-import {
-  createInMemoryAnalysisReportStore,
-  createSequentialIdGenerator,
-} from '@telemetry/adapter-memory';
+import { createInMemoryAnalysisReportStore } from '@telemetry/adapter-memory';
 import {
   createSqliteIngestedFileLog,
   createSqlitePublicationQueue,
@@ -28,6 +25,7 @@ import {
   createSqliteSessionStore,
   openDatabase,
 } from '@telemetry/adapter-sqlite';
+import type { IdGeneratorPort } from '@telemetry/application';
 import {
   createCompareLapToReferenceQuery,
   createFlushPublicationQueueHandler,
@@ -42,6 +40,7 @@ import {
   type EventPublisherPort,
   type NarratorPort,
 } from '@telemetry/application-desktop';
+import { toAnalysisReportId, toReferenceLapId, toSessionId } from '@telemetry/domain';
 
 /**
  * Composition root do aplicativo do Windows.
@@ -83,6 +82,21 @@ export interface DesktopEnvironment {
   readonly events: EventPublisherPort;
 }
 
+/**
+ * Ids que não se repetem entre uma abertura e outra do app.
+ *
+ * O banco é persistente e a gravação da sessão é upsert: um id que se repete
+ * não falha, **sobrescreve** a sessão antiga e apaga as voltas dela. Por isso
+ * nada de contador — ele recomeça do 1 a cada abertura.
+ */
+function createRandomIdGenerator(): IdGeneratorPort {
+  return {
+    nextSessionId: () => toSessionId(crypto.randomUUID()),
+    nextReferenceLapId: () => toReferenceLapId(crypto.randomUUID()),
+    nextAnalysisReportId: () => toAnalysisReportId(crypto.randomUUID()),
+  };
+}
+
 function resolveNarrator(env: Record<string, string | undefined>): NarratorPort {
   try {
     return createLlmNarrator(loadLlmConfigFromEnv(env));
@@ -106,7 +120,7 @@ export function buildDesktop(environment: DesktopEnvironment) {
   const publicationQueue = createSqlitePublicationQueue(db);
   const ingestedFiles = createSqliteIngestedFileLog(db);
   const reports = createInMemoryAnalysisReportStore();
-  const ids = createSequentialIdGenerator();
+  const ids = createRandomIdGenerator();
   const clock = { now: () => new Date() };
   const narrator = resolveNarrator(environment.env);
   const events = environment.events;
