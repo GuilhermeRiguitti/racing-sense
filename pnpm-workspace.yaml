@@ -1,0 +1,38 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# Pacotes autorizados a rodar script de instalação. O pnpm 10 bloqueia por
+# padrão; sem o `electron` aqui, o binário não baixa e `pnpm dev:desktop` falha
+# com "Electron uninstall".
+#
+# better-sqlite3 fica de fora de propósito: ele já traz binário pronto em
+# prebuilds/ (N-API, serve para Node e Electron), e liberar o script faz o pnpm
+# chamar node-gyp, que exige Python e falha.
+onlyBuiltDependencies:
+  - "@biomejs/biome"
+  - "electron"
+  - "esbuild"
+  - "sharp"
+
+# better-sqlite3 é módulo nativo: o bundle do processo principal do desktop o
+# deixa externo e o carrega do disco em runtime. Quem o declara é só o
+# adapter-sqlite (regra 3), então sem hoist o `out/main` do desktop não o
+# enxerga. Içar para a raiz resolve o runtime sem dar a lib ao composition root.
+publicHoistPattern:
+  - "better-sqlite3"
+
+# Catálogo de versões compartilhadas.
+# Regra: toda dependência usada por mais de um workspace vive aqui e é
+# referenciada como "catalog:". Bump acontece em um lugar só.
+catalog:
+  "@types/node": "^22.19.0"
+  typescript: "^7.0.2"
+  tsx: "^4.23.13"
+  vitest: "^5.0.1"
+  zod: "^4.6.5"
+  ai: "^7.0.105"
+  "@ai-sdk/google": "^4.0.74"
+  "@ai-sdk/openai-compatible": "^3.0.51"
+  chokidar: "^5.0.0"
+  hono: "^4.13.8"

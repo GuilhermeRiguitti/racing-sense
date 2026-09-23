@@ -1,0 +1,24 @@
+{
+  "name": "@telemetry/adapter-llm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Adapter: implementa a porta do narrador usando o AI SDK. Único dono de ai/@ai-sdk.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:",
+    "@ai-sdk/openai-compatible": "catalog:",
+    "@telemetry/application-desktop": "workspace:*",
+    "@telemetry/domain": "workspace:*",
+    "ai": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

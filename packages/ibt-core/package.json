@@ -1,0 +1,17 @@
+{
+  "name": "@telemetry/ibt-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Decoder puro do formato .ibt do iRacing. Sem I/O, sem dependências.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

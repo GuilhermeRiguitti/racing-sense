@@ -1,0 +1,24 @@
+{
+  "name": "@telemetry/adapter-fs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Adapter: arquivo, watcher e repositórios em disco. Único dono de node:fs.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telemetry/application-desktop": "workspace:*",
+    "@telemetry/domain": "workspace:*",
+    "@telemetry/ibt-core": "workspace:*",
+    "chokidar": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/node": "catalog:"
+  }
+}
