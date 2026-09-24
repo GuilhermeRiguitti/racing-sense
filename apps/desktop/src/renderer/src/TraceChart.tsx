@@ -1,10 +1,11 @@
 import { type KeyboardEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { downsample } from '../../main/domain/distance-series.js';
-import type { LapStretchDto, SeriesDto } from '../../shared/dto.js';
+import type { LapStretchDto, SectorComparisonDto, SeriesDto } from '../../shared/dto.js';
 import { type ChannelView, type PanelView, seriesFor } from './channels.js';
 import {
   formatDelta,
   formatDistance,
+  formatSectorTime,
   niceCeil,
   niceTicks,
   seriesPath,
@@ -15,6 +16,9 @@ const MARGEM_ESQUERDA = 52;
 const MARGEM_DIREITA = 16;
 const ALTURA_EIXO_X = 28;
 const ALTURA_DELTA = 120;
+const ALTURA_FAIXA_SETORES = 22;
+/** Abaixo desta largura, o setor mostra só o nome; o número fica na dica. */
+const LARGURA_MINIMA_ROTULO_SETOR = 72;
 
 interface Props {
   readonly panels: readonly PanelView[];
@@ -26,6 +30,10 @@ interface Props {
   readonly delta: SeriesDto | null;
   /** Onde a volta saiu da pista. `null` quando não se sabe. */
   readonly offTrack: readonly LapStretchDto[] | null;
+  /** Onde cada setor da pista começa. `null` quando a sessão não tem setores. */
+  readonly sectorStartPcts: readonly number[] | null;
+  /** Ganho ou perda por setor contra a referência, quando há. */
+  readonly sectors: readonly SectorComparisonDto[] | null;
   /** Com o comprimento, o eixo fala em metros; sem ele, em fração da volta. */
   readonly trackLengthMeters: number | null;
   /** Esmaece enquanto a próxima volta carrega, sem apagar a atual. */
@@ -64,6 +72,8 @@ export function TraceChart({
   reference,
   delta,
   offTrack,
+  sectorStartPcts,
+  sectors,
   trackLengthMeters,
   stale,
   cursor,
@@ -127,6 +137,7 @@ export function TraceChart({
 
   const distancia = (fracao: number) => formatDistance(fracao, trackLengthMeters);
   const trechos = offTrack ?? [];
+  const divisas = sectorStartPcts?.slice(1) ?? [];
 
   return (
     <section
@@ -172,6 +183,8 @@ export function TraceChart({
             px={px}
             cursor={cursor}
             trechos={trechos}
+            divisas={divisas}
+            setores={sectors}
           />
         )}
         {largura > 0 &&
@@ -183,6 +196,7 @@ export function TraceChart({
               px={px}
               cursor={cursor}
               trechos={trechos}
+              divisas={divisas}
             />
           ))}
         {largura > 0 && paineis.length === 0 && (
@@ -301,18 +315,49 @@ function FaixasForaDaPista({
   );
 }
 
+/**
+ * Onde um setor termina e o outro começa. Recessivas como a grade: situam o
+ * piloto na pista sem competir com a linha que ele está lendo.
+ */
+function DivisasDeSetor({
+  divisas,
+  px,
+  altura,
+}: {
+  divisas: readonly number[];
+  px: (fracao: number) => number;
+  altura: number;
+}) {
+  return (
+    <>
+      {divisas.map((divisa) => (
+        <line
+          key={divisa}
+          x1={px(divisa)}
+          x2={px(divisa)}
+          y1={0}
+          y2={altura}
+          className="sector-divider"
+        />
+      ))}
+    </>
+  );
+}
+
 function Painel({
   painel,
   largura,
   px,
   cursor,
   trechos,
+  divisas,
 }: {
   painel: PainelMontado;
   largura: number;
   px: (fracao: number) => number;
   cursor: number | null;
   trechos: readonly LapStretchDto[];
+  divisas: readonly number[];
 }) {
   const { view, linhas, dominio } = painel;
   const [baixo, alto] = dominio;
@@ -372,6 +417,7 @@ function Painel({
           </clipPath>
         </defs>
         <FaixasForaDaPista trechos={trechos} px={px} altura={view.height} />
+        <DivisasDeSetor divisas={divisas} px={px} altura={view.height} />
         {ticks.map((tick) => (
           <g key={tick}>
             <line x1={px(0)} x2={px(1)} y1={py(tick)} y2={py(tick)} className="grid" />
@@ -421,7 +467,9 @@ function Painel({
  * texto "perdendo" ou "ganhando", então a cor nunca carrega o sentido sozinha.
  *
  * O que importa é a **inclinação**: onde a curva sobe, a volta está perdendo
- * tempo naquele trecho, mesmo que o acumulado ainda seja negativo.
+ * tempo naquele trecho, mesmo que o acumulado ainda seja negativo. Por isso,
+ * quando a sessão tem setores, a faixa acima do gráfico já diz a inclinação de
+ * cada setor em número: quanto se ganhou ou perdeu só ali.
  */
 function PainelDelta({
   completo,
@@ -430,6 +478,8 @@ function PainelDelta({
   px,
   cursor,
   trechos,
+  divisas,
+  setores,
 }: {
   completo: SeriesDto;
   reduzido: SeriesDto | null;
@@ -437,6 +487,8 @@ function PainelDelta({
   px: (fracao: number) => number;
   cursor: number | null;
   trechos: readonly LapStretchDto[];
+  divisas: readonly number[];
+  setores: readonly SectorComparisonDto[] | null;
 }) {
   const altura = ALTURA_DELTA;
   const pontos = reduzido ?? completo;
@@ -457,12 +509,25 @@ function PainelDelta({
     pontos.x.length > 0 ? `${linha}L${ultimoX.toFixed(1)},${zero}L${primeiroX.toFixed(1)},${zero}Z` : '';
 
   const agora = valueAtCursor(completo, cursor);
+  const setorNoCursor =
+    cursor === null || setores === null
+      ? undefined
+      : setores.find((setor) => cursor >= setor.startPct && cursor < setor.endPct);
 
   return (
     <div className="panel panel--delta">
       <div className="panel__header">
         <span className="panel__title">Delta para a referência</span>
         <span className="panel__values">
+          {setorNoCursor !== undefined && (
+            <span className="panel__value">
+              <span className="panel__label">S{setorNoCursor.index + 1}</span>
+              <strong>
+                {setorNoCursor.deltaSeconds === null ? '—' : formatDelta(setorNoCursor.deltaSeconds)}
+              </strong>
+              <span className="panel__unit">s no setor</span>
+            </span>
+          )}
           <span className="panel__value">
             <strong>{agora === undefined ? '—' : formatDelta(agora)}</strong>
             <span className="panel__unit">s</span>
@@ -472,6 +537,9 @@ function PainelDelta({
           </span>
         </span>
       </div>
+      {setores !== null && setores.length > 1 && (
+        <FaixaDeSetores setores={setores} largura={largura} px={px} />
+      )}
       <svg width={largura} height={altura} className="panel__plot" aria-hidden="true">
         <defs>
           <clipPath id="delta-perda">
@@ -482,6 +550,7 @@ function PainelDelta({
           </clipPath>
         </defs>
         <FaixasForaDaPista trechos={trechos} px={px} altura={altura} />
+        <DivisasDeSetor divisas={divisas} px={px} altura={altura} />
         {ticks.map((tick) => (
           <g key={tick}>
             <line
@@ -504,6 +573,70 @@ function PainelDelta({
         )}
       </svg>
     </div>
+  );
+}
+
+/**
+ * Quanto a volta ganhou ou perdeu em cada setor, sobre o trecho do setor.
+ *
+ * O número fica na cor do texto; quem carrega a polaridade é o sinal e o
+ * marcador ao lado (azul ganhou, vermelho perdeu — o mesmo par do delta). Setor
+ * estreito demais para o número mostra só o nome, e o número vai na dica.
+ */
+function FaixaDeSetores({
+  setores,
+  largura,
+  px,
+}: {
+  setores: readonly SectorComparisonDto[];
+  largura: number;
+  px: (fracao: number) => number;
+}) {
+  const meio = ALTURA_FAIXA_SETORES / 2;
+  return (
+    <svg width={largura} height={ALTURA_FAIXA_SETORES} className="sector-strip" aria-hidden="true">
+      {setores.map((setor) => {
+        const inicio = px(setor.startPct);
+        const fim = px(setor.endPct);
+        const centro = (inicio + fim) / 2;
+        const nome = `S${setor.index + 1}`;
+        const delta = setor.deltaSeconds;
+        const cabeNumero = fim - inicio >= LARGURA_MINIMA_ROTULO_SETOR;
+        const sentido =
+          delta === null || delta === 0 ? null : delta > 0 ? 'loss' : 'gain';
+        const dica =
+          delta === null
+            ? `Setor ${setor.index + 1}: sem tempo em uma das voltas`
+            : `Setor ${setor.index + 1}: ${formatSectorTime(setor.lapSeconds)} s contra ` +
+              `${formatSectorTime(setor.referenceSeconds)} s da referência — ` +
+              (delta === 0
+                ? 'igual'
+                : `${delta > 0 ? 'perdeu' : 'ganhou'} ${formatDelta(Math.abs(delta)).replace('+', '')} s`);
+        return (
+          <g key={setor.index} className="sector-strip__cell">
+            <title>{dica}</title>
+            {/* Alvo da dica do tamanho do setor inteiro, não só do texto. */}
+            <rect x={inicio} y={0} width={Math.max(0, fim - inicio)} height={ALTURA_FAIXA_SETORES} className="sector-strip__hit" />
+            {setor.index > 0 && (
+              <line x1={inicio} x2={inicio} y1={0} y2={ALTURA_FAIXA_SETORES} className="sector-divider" />
+            )}
+            <text x={centro} y={meio} className="sector-strip__label">
+              {sentido !== null && cabeNumero && (
+                <tspan className={`sector-strip__mark sector-strip__mark--${sentido}`} dx={0}>
+                  {'■ '}
+                </tspan>
+              )}
+              <tspan className="sector-strip__name">{nome}</tspan>
+              {cabeNumero && (
+                <tspan className="sector-strip__delta" dx={6}>
+                  {delta === null ? '—' : formatDelta(delta)}
+                </tspan>
+              )}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 

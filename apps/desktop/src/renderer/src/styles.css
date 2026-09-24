@@ -260,7 +260,6 @@ kbd {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  max-width: 640px;
 }
 
 .laps-box {
@@ -604,6 +603,58 @@ kbd {
   fill: var(--off-track);
 }
 
+/* --- setores da pista ---------------------------------------------------- */
+
+/* Divisa de setor: recessiva como a grade, tracejada para não virar régua. */
+.sector-divider {
+  stroke: var(--baseline);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  shape-rendering: crispEdges;
+  pointer-events: none;
+}
+
+.sector-strip {
+  display: block;
+}
+
+.sector-strip__hit {
+  fill: transparent;
+}
+
+.sector-strip__cell:hover .sector-strip__hit {
+  fill: var(--border);
+}
+
+.sector-strip__label {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.sector-strip__name {
+  fill: var(--text-muted);
+}
+
+.sector-strip__delta {
+  fill: var(--text-primary);
+  font-weight: 600;
+}
+
+.sector-strip__mark {
+  font-size: 12px;
+}
+
+.sector-strip__mark--loss {
+  fill: var(--delta-loss);
+}
+
+.sector-strip__mark--gain {
+  fill: var(--delta-gain);
+}
+
 .rule {
   stroke: var(--text-muted);
   stroke-width: 1;
@@ -640,13 +691,36 @@ kbd {
 
 .session-overview {
   display: grid;
-  grid-template-columns: minmax(300px, 440px) minmax(0, 1fr);
+  /* A tabela cresce com as colunas de setor; os gráficos ficam com o resto. */
+  grid-template-columns: minmax(300px, max-content) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
 .laps__delta {
   color: var(--text-secondary);
+}
+
+/* Colunas de setor: mais estreitas, para caber ao lado dos gráficos da sessão. */
+.laps th.laps__sector,
+.laps td.laps__sector {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.laps__sector strong {
+  font-weight: 700;
+}
+
+.laps__ideal {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.laps__ideal strong {
+  color: var(--text-primary);
 }
 
 .stint {

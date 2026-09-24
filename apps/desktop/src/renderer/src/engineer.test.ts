@@ -27,6 +27,7 @@ const volta = (overrides: Partial<LapDto> = {}): LapDto => ({
   flags: [],
   offTrackStretches: [],
   incidents: 0,
+  sectorTimes: null,
   ...overrides,
 });
 

@@ -40,8 +40,9 @@ distância, com o delta contra a referência no topo, os trechos fora da pista
 marcados, cursor sincronizado e o painel do engenheiro ao lado. A ingestão grava
 também pneu, suspensão, motor, combustível e os ajustes `dc*` do carro, e guarda
 a ficha de acerto da session info — nomes ainda não conferidos contra arquivo
-real (`docs/pendencias.md`, item 12). A segmentação em trechos espera os
-setores da pista. O que ainda é stub é o **narrador**. A api tem schema Prisma e
+real (`docs/pendencias.md`, item 12). A segmentação em trechos sai dos
+setores que o sim declara (`SplitTimeInfo`): tempo de setor por volta, ganho ou
+perda por setor contra a referência e a volta ideal. O que ainda é stub é o **narrador**. A api tem schema Prisma e
 rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
 `docs/roadmap.md`.
 

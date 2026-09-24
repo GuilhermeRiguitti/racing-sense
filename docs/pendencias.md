@@ -12,18 +12,6 @@ Default atual é `gemini-2.5-flash`, escolhido por ser barato e estável — nã
 medição. O SDK instalado também tipa `gemini-3.5-flash` e `gemini-3-flash-preview`.
 Falta: medir custo por análise, comparar qualidade e definir teto de gasto.
 
-## 7. Detecção de setor
-
-Comparação por setor é mais legível que delta contínuo, mas exige saber onde estão os
-setores da pista. Verificar se a session info traz isso ou se precisa ser derivado.
-
-É também o que destrava a segmentação de ganho e perda da etapa 3. O delta já
-existe (`compareToReference`), mas cortá-lo em trechos pela derivada exigiria
-dizer o que é mudança "sustentada" — limiar escolhido, que a regra 18c recusa. O
-setor declarado pelo sim é o corte sem número arbitrado. A expectativa é o bloco
-`SplitTimeInfo.Sectors[].SectorStartPct` da session info, **ainda não conferido
-contra arquivo real**.
-
 ## 8. api contra Postgres de verdade
 
 A api tem schema Prisma, migration inicial (`apps/api/prisma/migrations`),

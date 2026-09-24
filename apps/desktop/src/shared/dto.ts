@@ -67,6 +67,11 @@ export interface SessionDto {
   /** A ficha de acerto como o sim declarou; `null` quando o arquivo não traz. */
   readonly setup: readonly SetupNodeDto[] | null;
   readonly carLimits: CarLimitsDto;
+  /**
+   * Onde cada setor da pista começa, em fração da volta, como o sim declarou.
+   * `null` quando o arquivo não traz ou a sessão foi gravada antes de o app ler.
+   */
+  readonly sectorStartPcts: readonly number[] | null;
 }
 
 export interface LapStretchDto {
@@ -91,6 +96,12 @@ export interface LapDto {
   readonly offTrackStretches: readonly LapStretchDto[] | null;
   /** Incidentes da volta, o "Inc." do sim. `null` quando não se sabe — não é zero. */
   readonly incidents: number | null;
+  /**
+   * Tempo de cada setor, em segundos, na ordem dos setores da sessão. `null`
+   * quando a volta não tem (sem tempo cronometrado, sessão sem setores ou
+   * gravada antes de o app ler). Um setor sem divisa amostrada vem `null`.
+   */
+  readonly sectorTimes: readonly (number | null)[] | null;
 }
 
 /** Um canal resumido numa volta. Ver `ChannelSummary` no domínio. */
@@ -128,6 +139,20 @@ export interface ComparisonDto {
   readonly lapNumber: number;
   readonly totalDeltaSeconds: number;
   readonly deltaSeries: SeriesDto;
+  /** Ganho ou perda setor a setor. `null` quando a sessão não tem setores. */
+  readonly sectors: readonly SectorComparisonDto[] | null;
+}
+
+/** Um setor da pista na comparação. Ver `SectorComparison` no domínio. */
+export interface SectorComparisonDto {
+  /** A partir de 0, como o sim numera. */
+  readonly index: number;
+  readonly startPct: number;
+  readonly endPct: number;
+  readonly lapSeconds: number | null;
+  readonly referenceSeconds: number | null;
+  /** Negativo = ganhou tempo neste setor. */
+  readonly deltaSeconds: number | null;
 }
 
 export interface ReferenceLapDto {

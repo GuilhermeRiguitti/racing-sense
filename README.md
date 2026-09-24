@@ -9,7 +9,7 @@ para explicar onde o tempo foi perdido.
 > pista, carro, condições, catálogo de canais e amostras em streaming, com os offsets
 > conferidos contra oito arquivos. Recorte de voltas, persistência em SQLite, a
 > primeira tela e o delta contra a referência estão de pé (etapas 1 a 3 do
-> [roadmap](docs/roadmap.md), menos a segmentação por setor); o que ainda é stub é o
+> [roadmap](docs/roadmap.md), com a segmentação por setor); o que ainda é stub é o
 > narrador.
 
 ## Começando

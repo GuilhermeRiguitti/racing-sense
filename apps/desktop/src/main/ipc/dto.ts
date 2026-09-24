@@ -50,6 +50,7 @@ export function toSessionDto(session: TelemetrySession): SessionDto {
     // A árvore do acerto já é só dado (texto e listas): atravessa como está.
     setup: session.setup,
     carLimits: { ...session.carLimits },
+    sectorStartPcts: session.sectorStartPcts === null ? null : [...session.sectorStartPcts],
   };
 }
 
@@ -66,6 +67,7 @@ export function toLapDto(lap: Lap): LapDto {
         ? null
         : lap.offTrackStretches.map((trecho) => ({ ...trecho })),
     incidents: lap.incidents ?? null,
+    sectorTimes: lap.sectorTimes === undefined ? null : [...lap.sectorTimes],
   };
 }
 
@@ -86,6 +88,7 @@ export function toComparisonDto(comparison: LapComparison): ComparisonDto {
     lapNumber: comparison.lapNumber,
     totalDeltaSeconds: comparison.totalDeltaSeconds,
     deltaSeries: toSeriesDto(comparison.deltaSeries),
+    sectors: comparison.sectors === null ? null : comparison.sectors.map((setor) => ({ ...setor })),
   };
 }
 

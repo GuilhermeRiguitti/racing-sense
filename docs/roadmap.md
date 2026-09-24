@@ -54,8 +54,9 @@ sessão com reset para os boxes.
 - [x] Recusar comparação entre pista/carro diferentes
 - [x] Delta acumulado por distância — sem grade: avaliado nas posições que a
       volta amostrou, tempo pela contagem de ticks
-- [ ] Segmentação dos trechos de ganho e perda — espera os setores da pista
-      (pendência 7); cortar por "mudança sustentada" do delta exigiria limiar
+- [x] Segmentação dos trechos de ganho e perda — pelos setores que o sim declara
+      (`SplitTimeInfo`), conferidos contra arquivo real; cortar por "mudança
+      sustentada" do delta exigiria limiar
 
 **Pronto quando:** comparando uma volta contra ela mesma, o delta é ~0 em toda a
 extensão. É o teste que pega erro de alinhamento.
