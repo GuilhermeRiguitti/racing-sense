@@ -3,7 +3,7 @@
 ## Regra
 
 **Nenhum arquivo `.ibt` entra no repositório.** São binários grandes e contêm nome de
-piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e qualquer pasta `fixtures/real/`.
+piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt`.
 
 ## Como obter um arquivo para desenvolvimento
 
@@ -12,17 +12,37 @@ piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e qualquer pasta `fix
 2. Entre no carro e rode algumas voltas — 3 ou 4 já bastam para exercitar detecção de
    volta, out lap e in lap.
 3. Saia da sessão. O arquivo fica em `Documentos\iRacing\telemetry\`.
-4. Copie para `apps/desktop/fixtures/real/` na sua máquina (ignorado pelo git).
+
+Não precisa copiar para dentro do repositório: o teste lê o arquivo onde ele está.
 
 Para os testes de detecção de volta, um arquivo com **reset para os boxes** no meio
 vale mais que um limpo: é o caso que quebra implementação ingênua.
 
 ## Rodando os testes de integração
 
-Ponha um arquivo em **`apps/desktop/fixtures/real/sample.ibt`** (ou aponte a variável
-`TELEMETRY_FIXTURE` para um caminho). O teste
-`apps/desktop/src/main/ibt/ibt-real-file.test.ts` roda sozinho quando encontra, e
-**pula** quando não encontra — nunca falha por ausência.
+O caminho do arquivo vem de `TELEMETRY_FIXTURE`, em **`apps/desktop/.env.testing`**
+(não versionado). Na primeira execução dos testes, `apps/desktop/scripts/testing-env.ts`
+cria esse arquivo a partir de `.env.testing.example` e preenche a variável com o `.ibt`
+mais recente de `Documentos\iRacing\telemetry`. Se não achar, ou se o arquivo
+escolhido for curto demais, preencha à mão:
+
+```
+TELEMETRY_FIXTURE=C:/Users/<você>/Documents/iRacing/telemetry/<arquivo>.ibt
+```
+
+O teste `apps/desktop/src/main/ibt/ibt-real-file.test.ts` roda quando a variável tem
+valor e **pula** quando está vazia — nunca falha por ausência. Caminho preenchido e
+arquivo que não abre falha alto, com o caminho na mensagem.
+
+O arquivo exige ao menos duas voltas, uma delas completa: sessão de poucos segundos
+não serve.
+
+Para rodar contra um arquivo sem mexer no `.env.testing`, a variável do terminal
+vence a do arquivo:
+
+```bash
+TELEMETRY_FIXTURE="C:/Users/<você>/Documents/iRacing/telemetry/<arquivo>.ibt" pnpm --dir apps/desktop test
+```
 
 É esse teste que sustenta a validação dos offsets do formato: ele confere que a
 contagem de amostras lidas bate com a declarada e que `LapDistPct` fica em
@@ -34,8 +54,8 @@ Teste que depende de arquivo real não roda em CI. Por isso:
 
 - **Unitário**: constrói os bytes na mão, como em
   `apps/desktop/src/main/ibt/decoder.test.ts`. Roda em qualquer lugar.
-- **Integração**: lê de `apps/desktop/fixtures/real/`. Deve ser marcado para pular quando o arquivo
-  não existir, nunca falhar por ausência.
+- **Integração**: lê o caminho de `TELEMETRY_FIXTURE`. Deve pular quando a variável
+  estiver vazia, nunca falhar por ausência.
 
 Quando o decoder estiver validado (etapa 1 do roadmap), vale gerar um `.ibt` sintético
 pequeno e versionável — poucos canais, poucas amostras — para ter cobertura de

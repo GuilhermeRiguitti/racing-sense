@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { openLocalStore } from '../db/local-store.js';
 import { createChannelSeries } from '../domain/channel.js';
@@ -10,34 +9,28 @@ import { type IbtFile, openIbtFile } from './ibt-file.js';
 /**
  * Teste contra um `.ibt` de verdade.
  *
- * **Pula quando o arquivo não existe** — é a regra do projeto: teste não pode
- * falhar por ausência de fixture, porque `.ibt` não entra no repositório (são
- * grandes e têm nome de piloto dentro).
+ * **Pula quando `TELEMETRY_FIXTURE` está vazia** — é a regra do projeto: teste
+ * não pode falhar por ausência de fixture, porque `.ibt` não entra no
+ * repositório (são grandes e têm nome de piloto dentro).
  *
- * Para rodar: ponha um arquivo em `apps/desktop/fixtures/real/sample.ibt`, ou aponte
- * `TELEMETRY_FIXTURE` para um. Ver `docs/fixtures.md`.
+ * Para rodar: `TELEMETRY_FIXTURE`, em `apps/desktop/.env.testing`, aponta para
+ * um `.ibt` real — `scripts/testing-env.ts` tenta preencher sozinho na primeira
+ * execução. Caminho preenchido e arquivo que não abre falha
+ * alto, com o caminho na mensagem — pular aí esconderia o erro de digitação.
+ * Ver `docs/fixtures.md`.
  *
  * O que ele prova, e nenhum teste sintético provaria: que os offsets do formato
  * estão certos. Um offset errado não dá exceção — dá número plausível e sem
  * sentido. `LapDistPct` fora de [0, 1] é o detector: se o offset escorregar um
  * byte, aquilo vira lixo imediatamente.
  */
-const fixture =
-  process.env.TELEMETRY_FIXTURE ??
-  fileURLToPath(new URL('../../../fixtures/real/sample.ibt', import.meta.url));
+const fixture = process.env.TELEMETRY_FIXTURE;
 
-const abrir = async (): Promise<IbtFile | null> => {
-  try {
-    return await openIbtFile(fixture);
-  } catch {
-    return null;
-  }
-};
-
-const arquivo = await abrir();
+const arquivo = fixture ? await openIbtFile(fixture) : null;
 
 describe.skipIf(arquivo === null)('decodificação de um .ibt real', () => {
   const decoder = arquivo as IbtFile;
+  const caminho = fixture as string;
 
   it('lê pista, carro e piloto da session info', async () => {
     const meta = await decoder.readMetadata();
@@ -241,7 +234,7 @@ describe.skipIf(arquivo === null)('decodificação de um .ibt real', () => {
     // volta do banco tem que ser exatamente o que o arquivo tem — sem grade,
     // sem interpolação, sem arredondamento.
     const store = openLocalStore(':memory:');
-    const sessionId = await ingestTelemetryFile({ store, emit: () => {} }, fixture);
+    const sessionId = await ingestTelemetryFile({ store, emit: () => {} }, caminho);
     const voltas = store.listLaps(sessionId);
     const bruto = async (canal: string): Promise<number[]> => {
       const valores: number[] = [];

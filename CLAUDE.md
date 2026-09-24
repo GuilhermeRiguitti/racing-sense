@@ -166,12 +166,26 @@ De domínio:
 20. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
 21. **Chave de API e segredo só por variável de ambiente.** Nunca em código,
-    teste, log ou commit.
+    teste, log ou commit. No desktop, `apps/desktop/.env` e
+    `apps/desktop/.env.testing` **não** são versionados — é neles que moram os
+    valores de verdade. **`apps/desktop/.env.testing.example` É versionado no
+    git: NUNCA insira nele chave de API, token, senha ou qualquer valor
+    sensível** — nem caminho de arquivo (tem o nome de usuário do Windows, regra
+    12). Ele só declara as variáveis, vazias.
 22. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
 23. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
 24. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
+
+Da relação com o iRacing (ADR 0022):
+
+25. **O app só lê do iRacing; nunca age sobre o sim.** Lê o `.ibt` e, na fase 2,
+    o arquivo mapeado oficial do SDK. Nunca manda broadcast, simula tecla ou
+    volante, lê a memória do processo do sim, injeta DLL ou captura rede. É a
+    conta do piloto que está em jogo: o Termo de Uso do iRacing bane bot e
+    programa que modifica o sim. Antes de mexer em SDK ao vivo, overlay, dado de
+    outro piloto ou monetização, use a skill **`politica-iracing`**.
 
 ## Forma do código no desktop
 
@@ -205,9 +219,10 @@ um valor vier absurdo. As constantes estão em
 Os offsets vêm da spec pública e da engenharia reversa da comunidade e **foram
 validados contra arquivos reais em 2026-09-19** — ver `docs/formato-ibt.md`. O
 teste que sustenta isso é `apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que
-pula quando não há fixture em `apps/desktop/fixtures/real/` (nenhum `.ibt` entra
-no repositório, regra 22). Se você mexer no decoder, ponha um arquivo lá antes de
-confiar no verde: sem fixture, os testes provam só consistência interna.
+pula quando `TELEMETRY_FIXTURE` está vazia em `apps/desktop/.env.testing`
+(nenhum `.ibt` entra no repositório, regra 22). Se você mexer no decoder, aponte
+a variável para um `.ibt` real antes de confiar no verde: sem fixture, os testes
+provam só consistência interna.
 
 ## Ao mexer na interface do desktop
 
@@ -253,8 +268,13 @@ que o supera.
 - Domínio e decoder: chamada direta, sem mock.
 - Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados
   por parâmetro. Nada de mock de framework.
-- Teste que precisa de `.ibt` real lê de `apps/desktop/fixtures/real/` e
-  **pula** quando o arquivo não existe. Nunca falha por ausência de fixture.
+- Teste que precisa de `.ibt` real lê o caminho de `TELEMETRY_FIXTURE`
+  (`apps/desktop/.env.testing`) e **pula** quando ela está vazia. Nunca falha
+  por ausência de fixture.
+- O vitest do desktop carrega só `.env.testing`, nunca o `.env` do aplicativo.
+  Na primeira execução, `apps/desktop/scripts/testing-env.ts` cria o
+  `.env.testing` a partir do `.env.testing.example` e tenta preencher
+  `TELEMETRY_FIXTURE` com o `.ibt` mais recente da pasta do iRacing.
 - Api: regras puras testadas direto; services contra Postgres ainda pendentes
   (`docs/pendencias.md`).
 - Antes de dizer que terminou: `pnpm check` verde. Se algo falhou, diga o que
@@ -281,6 +301,7 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
+| `docs/adr/0022-o-app-so-le-do-iracing.md` | por que o app nunca manda comando para o sim, e o que o EULA diz |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -294,9 +315,12 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 **MVP:** ler `.ibt` em disco, recortar voltas, comparar com referência, gráficos
 e relatório do agente.
 
-**Fora do MVP:** telemetria ao vivo via memória compartilhada, overlay em tempo
-real, broadcast de comandos para o sim. Não implemente — quando entrar, é outra
-fonte de bytes para o decoder (`ByteSource`) e nada mais muda.
+**Fora do MVP:** telemetria ao vivo via memória compartilhada e overlay em tempo
+real. Não implemente — quando entrar, é outra fonte de bytes para o decoder
+(`ByteSource`) e nada mais muda.
+
+**Fora do produto:** qualquer comando para o sim — broadcast, tecla simulada,
+ajuste automático (regra 25, ADR 0022).
 
 **Escopo da nuvem hoje:** a api tem cadastro, login, publicação, visibilidade e
 links sobre Prisma, sem ter rodado contra Postgres real ainda. O desktop funciona

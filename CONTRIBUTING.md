@@ -37,6 +37,12 @@ Cada aplicação também roda sozinha: `cd apps/<app> && pnpm install && pnpm te
 | desktop | `TELEMETRY_API_URL` | endereço da api (padrão `http://localhost:4000`) |
 | desktop | `TELEMETRY_DIRECTORY` | sobrescreve a pasta observada |
 | desktop | `TELEMETRY_LLM_PROVIDER`, `GOOGLE_GENERATIVE_AI_API_KEY`, `NVIDIA_API_KEY`, `TELEMETRY_LLM_MODEL` | narrador (ver `docs/agente.md`) |
+| desktop (testes) | `TELEMETRY_FIXTURE` | caminho de um `.ibt` real, em `apps/desktop/.env.testing` |
+
+No desktop, as variáveis do aplicativo ficam em `apps/desktop/.env` (lido só em
+desenvolvimento) e as dos testes em `apps/desktop/.env.testing`. Nenhum dos dois
+é versionado; o que vai para o git é o modelo `apps/desktop/.env.testing.example`,
+sem valor nenhum (ver o README do desktop).
 
 ## Idioma
 
@@ -65,8 +71,10 @@ justificativa no ADR 0020.
 - Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados por
   parâmetro. Nada de mock de framework.
 - Teste unitário de formato binário constrói os bytes na mão e roda em qualquer máquina.
-- Teste que precisa de `.ibt` real lê de `apps/desktop/fixtures/real/` e **pula**
-  quando o arquivo não existe. Nunca falha por ausência de fixture.
+- Teste que precisa de `.ibt` real lê o caminho de `TELEMETRY_FIXTURE`, em
+  `apps/desktop/.env.testing`, e **pula** quando ela está vazia. Nunca falha por
+  ausência de fixture. O arquivo é criado sozinho na primeira execução dos
+  testes, a partir do `.env.testing.example` (ver o README do desktop).
 - Stub declarado lança `NotImplementedError` com mensagem dizendo o que falta. Stub que
   devolve valor falso vira bug silencioso e some do radar.
 

@@ -100,5 +100,6 @@ recorta volta descarta a amostra 0; quem decodifica devolve ela como está.
 
 Detalhes e fontes: `docs/formato-ibt.md`. Os offsets acima foram conferidos contra
 arquivos reais em 2026-09-19; o teste que sustenta isso é
-`apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que **pula** quando não há fixture em
-`apps/desktop/fixtures/real/` — sem arquivo lá, o verde prova só consistência interna.
+`apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que **pula** quando `TELEMETRY_FIXTURE`
+está vazia em `apps/desktop/.env.testing` — sem arquivo apontado, o verde prova só
+consistência interna.

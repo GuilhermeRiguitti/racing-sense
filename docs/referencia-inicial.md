@@ -5,7 +5,8 @@
 
   Divergências já conhecidas em relação a este documento:
    - ingestão: watcher local (ADR 0004), não upload manual;
-   - escopo: a camada agêntica entra no MVP (ADR 0005), não na fase 2.
+   - escopo: a camada agêntica entra no MVP (ADR 0005), não na fase 2;
+   - broadcast de comandos para o sim não entra nunca (ADR 0022): o app só lê.
 -->
 
 # iRacing — Telemetria (stack Node.js)
