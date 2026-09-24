@@ -178,6 +178,15 @@ De domínio:
 24. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
 
+Da relação com o iRacing (ADR 0022):
+
+25. **O app só lê do iRacing; nunca age sobre o sim.** Lê o `.ibt` e, na fase 2,
+    o arquivo mapeado oficial do SDK. Nunca manda broadcast, simula tecla ou
+    volante, lê a memória do processo do sim, injeta DLL ou captura rede. É a
+    conta do piloto que está em jogo: o Termo de Uso do iRacing bane bot e
+    programa que modifica o sim. Antes de mexer em SDK ao vivo, overlay, dado de
+    outro piloto ou monetização, use a skill **`politica-iracing`**.
+
 ## Forma do código no desktop
 
 Função que recebe o que precisa e faz. Sem classe, sem container de DI:
@@ -292,6 +301,7 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
+| `docs/adr/0022-o-app-so-le-do-iracing.md` | por que o app nunca manda comando para o sim, e o que o EULA diz |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -305,9 +315,12 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 **MVP:** ler `.ibt` em disco, recortar voltas, comparar com referência, gráficos
 e relatório do agente.
 
-**Fora do MVP:** telemetria ao vivo via memória compartilhada, overlay em tempo
-real, broadcast de comandos para o sim. Não implemente — quando entrar, é outra
-fonte de bytes para o decoder (`ByteSource`) e nada mais muda.
+**Fora do MVP:** telemetria ao vivo via memória compartilhada e overlay em tempo
+real. Não implemente — quando entrar, é outra fonte de bytes para o decoder
+(`ByteSource`) e nada mais muda.
+
+**Fora do produto:** qualquer comando para o sim — broadcast, tecla simulada,
+ajuste automático (regra 25, ADR 0022).
 
 **Escopo da nuvem hoje:** a api tem cadastro, login, publicação, visibilidade e
 links sobre Prisma, sem ter rodado contra Postgres real ainda. O desktop funciona

@@ -42,3 +42,4 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0019](0019-grava-a-amostra-como-o-arquivo-entregou.md) | Grava a amostra como o arquivo entregou | Aceito |
 | [0020](0020-aplicacoes-independentes.md) | Três aplicações independentes, sem código compartilhado | Aceito |
 | [0021](0021-saida-de-pista-sem-punicao-conta-na-sessao.md) | Saída de pista sem punição conta na sessão; a referência continua limpa | Aceito |
+| [0022](0022-o-app-so-le-do-iracing.md) | O app só lê do iRacing; nunca manda comando para o sim | Aceito |

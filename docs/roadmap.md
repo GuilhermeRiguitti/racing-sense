@@ -107,3 +107,6 @@ Fora do escopo atual. O que já está preparado: o decoder é puro e a origem do
 injetada, então entra uma `ByteSource` nova sobre a memória compartilhada e o resto
 não muda. Custo real dessa fase: addon nativo, node-gyp, VS Build Tools, Windows x64 e
 CI que não testa essa parte. Ver `docs/formato-ibt.md`.
+
+A fase 2 continua só de leitura: o arquivo mapeado oficial do SDK, nada de
+comando para o sim (ADR 0022).
