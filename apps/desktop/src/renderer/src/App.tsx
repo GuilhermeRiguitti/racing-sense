@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LapDto } from '../../shared/dto.js';
 import { bridge } from './bridge.js';
-import { LapTable } from './LapTable.js';
+import { LapTable, lapStanding } from './LapTable.js';
 import { LapView } from './LapView.js';
 import { SessionHeader } from './SessionHeader.js';
 import { SessionList } from './SessionList.js';
@@ -30,6 +30,8 @@ export function App() {
     undefined,
   );
   const [versaoReferencias, setVersaoReferencias] = useState(0);
+  /** Out lap, in lap e slow down ficam escondidos até o piloto pedir (ADR 0021). */
+  const [mostrarInvalidas, setMostrarInvalidas] = useState(false);
 
   // Sessão nova ingerida vira a escolhida: é a que o piloto acabou de rodar.
   useEffect(() => {
@@ -50,11 +52,22 @@ export function App() {
     bridge().listReferenceLaps(),
   );
 
+  const visivel = (lap: LapDto) => mostrarInvalidas || lapStanding(lap) !== 'invalid';
+  const voltasVisiveis = useMemo(
+    () =>
+      laps.data?.filter((lap) => mostrarInvalidas || lapStanding(lap) !== 'invalid') ?? null,
+    [laps.data, mostrarInvalidas],
+  );
+  const escondidas = laps.data?.filter((lap) => lapStanding(lap) === 'invalid').length ?? 0;
+  const stintVisivel = stint.data?.filter((s) => visivel(s.lap)) ?? null;
+
+  // A volta aberta tem que estar na lista: esconder as inválidas com uma delas
+  // aberta troca para a melhor visível, em vez de mostrar uma volta que sumiu.
   useEffect(() => {
-    if (laps.data === null) return;
-    if (lapNumber !== null && laps.data.some((lap) => lap.number === lapNumber)) return;
-    setLapNumber(voltaInicial(laps.data)?.number ?? null);
-  }, [laps.data, lapNumber]);
+    if (voltasVisiveis === null) return;
+    if (lapNumber !== null && voltasVisiveis.some((lap) => lap.number === lapNumber)) return;
+    setLapNumber(voltaInicial(voltasVisiveis)?.number ?? null);
+  }, [voltasVisiveis, lapNumber]);
 
   const session = sessions.find((s) => s.id === sessionId) ?? null;
   const lap = laps.data?.find((l) => l.number === lapNumber) ?? null;
@@ -120,12 +133,20 @@ export function App() {
             {laps.data !== null && laps.data.length === 0 && (
               <p className="muted">Nenhuma volta nesta gravação.</p>
             )}
-            {laps.data !== null && laps.data.length > 0 && (
+            {laps.data !== null && laps.data.length > 0 && voltasVisiveis !== null && (
               <div className="session-overview">
-                <LapTable laps={laps.data} selected={lapNumber} onSelect={setLapNumber} />
-                {stint.data !== null && (
+                <LapTable
+                  laps={voltasVisiveis}
+                  selected={lapNumber}
+                  onSelect={setLapNumber}
+                  hiddenCount={escondidas}
+                  showingInvalid={mostrarInvalidas}
+                  onToggleInvalid={() => setMostrarInvalidas((m) => !m)}
+                />
+                {stint.data !== null && stintVisivel !== null && (
                   <StintCharts
-                    stint={stint.data}
+                    stint={stintVisivel}
+                    fullStint={stint.data}
                     channels={session.channels}
                     selected={lapNumber}
                     onSelect={setLapNumber}
@@ -157,12 +178,13 @@ export function App() {
 }
 
 /**
- * A volta que abre selecionada: a melhor válida; sem válida, a primeira
- * completa; sem completa, a primeira. Nunca uma volta cortada quando existe
- * uma inteira.
+ * A volta que abre selecionada: a melhor válida; sem válida, a melhor que conta
+ * na sessão; sem nenhuma, a primeira completa. Nunca uma volta cortada quando
+ * existe uma inteira.
  */
 function voltaInicial(laps: readonly LapDto[]): LapDto | undefined {
-  const validas = laps.filter((lap) => lap.flags.length === 0 && lap.lapTimeSeconds !== null);
+  const limpas = laps.filter((lap) => lapStanding(lap) === 'valid');
+  const validas = limpas.length > 0 ? limpas : laps.filter((lap) => lapStanding(lap) === 'session');
   if (validas.length > 0) {
     return validas.reduce((melhor, lap) =>
       (lap.lapTimeSeconds ?? Infinity) < (melhor.lapTimeSeconds ?? Infinity) ? lap : melhor,

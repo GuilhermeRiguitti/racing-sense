@@ -17,7 +17,7 @@ import {
 } from 'class-validator';
 import { VISIBILITIES, type Visibility } from '../auth/auth.dto.js';
 
-const LAP_FLAGS = ['incomplete', 'pit', 'off-track'] as const;
+const LAP_FLAGS = ['incomplete', 'pit', 'off-track', 'slowdown'] as const;
 const CHANNEL_TYPES = ['number', 'integer', 'boolean', 'text', 'bitfield'] as const;
 const AXES = ['time', 'lapDistPct'] as const;
 const finite = { allowNaN: false, allowInfinity: false };

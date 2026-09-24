@@ -65,6 +65,7 @@ export function toLapDto(lap: Lap): LapDto {
       lap.offTrackStretches === undefined
         ? null
         : lap.offTrackStretches.map((trecho) => ({ ...trecho })),
+    incidents: lap.incidents ?? null,
   };
 }
 
