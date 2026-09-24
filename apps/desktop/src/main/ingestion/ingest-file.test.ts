@@ -160,6 +160,36 @@ describe('ingestTelemetryFile, o que o engenheiro olha', () => {
   });
 });
 
+describe('ingestTelemetryFile, slow down', () => {
+  it('marca a volta em que a bandeira de advertência do sim acendeu', async () => {
+    const { Lap, LapDistPct } = voltas([1, 2, 3], 10);
+    // 0x80000 é irsdk_furled; 0x40000 fica aceso a sessão toda e não é punição.
+    const flags = LapDistPct.map((_, i) => (i === 15 ? 0x80000 | 0x40000 : 0x40000));
+    const ctx = contexto(arquivoFalso({ Lap, LapDistPct, SessionFlags: flags }));
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    const flagsPorVolta = ctx.store.listLaps(sessionId).map((lap) => lap.flags);
+    expect(flagsPorVolta[1]).toContain('slowdown');
+    expect(flagsPorVolta[0]).not.toContain('slowdown');
+  });
+});
+
+describe('ingestTelemetryFile, incidentes', () => {
+  it('guarda com cada volta os incidentes que ela somou', async () => {
+    const { Lap, LapDistPct } = voltas([1, 2, 3], 10);
+    // Chega em 5 vindo de antes; sobe 2 na volta 2.
+    const contador = LapDistPct.map((_, i) => (i < 14 ? 5 : 7));
+    const ctx = contexto(
+      arquivoFalso({ Lap, LapDistPct, PlayerCarMyIncidentCount: contador }),
+    );
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    expect(ctx.store.listLaps(sessionId).map((lap) => lap.incidents)).toEqual([0, 2, 0]);
+  });
+});
+
 describe('channelsToRecord', () => {
   const descritor = (name: string, type: ChannelType = 'number') => ({
     name,

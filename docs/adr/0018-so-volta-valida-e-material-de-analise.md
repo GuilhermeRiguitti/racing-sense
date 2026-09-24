@@ -1,6 +1,6 @@
 # ADR 0018 — Só volta válida é material de análise
 
-**Status:** Aceito · 2026-09-19
+**Status:** Aceito · 2026-09-19 · Superado em parte por ADR 0021 (saída de pista sem punição conta na sessão)
 
 ## Contexto
 

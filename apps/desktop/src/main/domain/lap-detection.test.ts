@@ -125,6 +125,44 @@ describe('detectLaps', () => {
     expect(voltas[1]?.lapTimeSeconds).toBe(2);
   });
 
+  it('marca slow down na volta em que a advertência do sim acendeu', () => {
+    const base = pista([60, 120, 60]);
+    const offTrack = base.lapNumber.map((_, i) => i === 100);
+    // Acesa de 170 a 189: atravessa a linha entre a volta 2 (60–179) e a 3.
+    const penalized = base.lapNumber.map((_, i) => i >= 170 && i < 190);
+
+    const voltas = detectLaps({ ...base, offTrack, penalized });
+
+    expect(voltas[1]?.flags).toEqual(['off-track', 'slowdown']);
+    // A advertência que atravessa a linha marca as duas voltas em que esteve acesa.
+    expect(voltas[2]?.flags).toContain('slowdown');
+  });
+
+  it('conta os incidentes de cada volta pelas subidas do contador acumulado', () => {
+    const base = pista([60, 120, 60]);
+    // O contador chega em 17, vindo de arquivos anteriores da mesma sessão do
+    // sim: isso não é da primeira volta. Na volta 2 sobe 1 (saída de pista) e
+    // depois 4 (batida); na virada para a volta 3, mais 2.
+    const incidentCount = base.lapNumber.map((_, i) =>
+      i < 100 ? 17 : i < 150 ? 18 : i < 180 ? 22 : 24,
+    );
+
+    const voltas = detectLaps({ ...base, incidentCount });
+
+    expect(voltas.map((volta) => volta.incidents)).toEqual([0, 5, 2]);
+  });
+
+  it('contador que zera no meio do arquivo não vira incidente negativo', () => {
+    const base = pista([60, 120, 60]);
+    const incidentCount = base.lapNumber.map((_, i) => (i < 100 ? 9 : i < 150 ? 0 : 2));
+
+    expect(detectLaps({ ...base, incidentCount })[1]?.incidents).toBe(2);
+  });
+
+  it('sem o contador no arquivo, a volta fica sem incidentes, não com zero', () => {
+    expect(detectLaps(pista([60, 120, 60]))[1]).not.toHaveProperty('incidents');
+  });
+
   it('amostra fora do mundo nas pontas não entra em volta nenhuma', () => {
     // A amostra fantasma real: posição 0, número 0, carro fora do mundo.
     const base = pista([120, 120], 6);

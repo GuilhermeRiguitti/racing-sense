@@ -14,7 +14,13 @@ export type LapFlag =
   /** Passou pelo pit lane: out lap ou in lap. Tempo não representa ritmo. */
   | 'pit'
   /** Saiu da pista em algum ponto. É o que o sim usa para invalidar volta. */
-  | 'off-track';
+  | 'off-track'
+  /**
+   * O sim puniu a volta: acendeu a bandeira preta de advertência (`irsdk_furled`
+   * em `SessionFlags`), a que acompanha o slow down por corte de pista. Ver ADR
+   * 0021 para o que foi medido e o que esta marcação não pega.
+   */
+  | 'slowdown';
 
 /**
  * A definição de volta válida é do piloto, e é esta: **completa, sem box e sem
@@ -78,6 +84,13 @@ export interface Lap {
    * sem o canal de superfície. Ausente não é "não saiu": `flags` é quem diz.
    */
   readonly offTrackStretches?: readonly LapStretch[];
+  /**
+   * Incidentes que o sim deu ao piloto nesta volta — o "Inc." do iRacing.
+   *
+   * Ausente em volta gravada antes de o app contar incidentes, ou de arquivo
+   * sem o contador. Ausente não é zero.
+   */
+  readonly incidents?: number;
 }
 
 /** Um trecho da volta, de uma posição medida a outra, em `lapDistPct`. */
@@ -149,4 +162,22 @@ export function lapDurationSeconds(lap: Lap, tickRate: number): number {
  */
 export function isValidLap(lap: Lap): boolean {
   return lap.flags.length === 0 && lap.lapTimeSeconds !== null;
+}
+
+/**
+ * Volta que entra na evolução da sessão (ADR 0021): completa, sem box e sem
+ * slow down. Saída de pista **sem** punição do sim conta.
+ *
+ * É mais larga que `isValidLap` de propósito. A régua de comparação continua
+ * tendo que ser limpa — uma referência com corte desloca todo delta seguinte.
+ * Mas para ver como pressão, temperatura e combustível evoluíram ao longo do
+ * stint, a volta com um toque de zebra que o sim não puniu é uma volta como as
+ * outras; tirá-la deixava a sessão sem volta nenhuma para mostrar.
+ *
+ * Recebe só os campos que usa, para a tela aplicar a mesma regra ao DTO.
+ */
+export function countsForSession(lap: Pick<Lap, 'isComplete' | 'lapTimeSeconds' | 'flags'>): boolean {
+  return (
+    lap.isComplete && lap.lapTimeSeconds !== null && lap.flags.every((flag) => flag === 'off-track')
+  );
 }

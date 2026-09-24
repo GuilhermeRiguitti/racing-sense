@@ -143,13 +143,16 @@ De domínio:
 15. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
 16. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
-17. **Só volta válida é material de análise** (ADR 0018). Válida é **completa,
-    sem box e sem corte de pista** — definição do piloto, e nada além dela: carro
-    parado, tempo de volta e incidente dentro da pista não invalidam. `isValidLap`
-    é a única regra: qualquer marcação invalida, saída de pista inclusive, sem
-    limiar de duração. Analisar, comparar ou eleger referência sobre volta inválida falha
-    nomeando o motivo. A volta inválida continua gravada e listada — ela é o
-    registro do que o piloto rodou, só não é entrada de análise.
+17. **Só volta válida é material de análise** (ADR 0018 e 0021). Válida é
+    **completa, sem box e sem corte de pista** — definição do piloto, e nada além
+    dela: carro parado, tempo de volta e incidente dentro da pista não invalidam.
+    `isValidLap` é a regra da comparação e da referência: qualquer marcação
+    invalida, saída de pista inclusive, sem limiar de duração. Comparar ou eleger
+    referência sobre volta inválida falha nomeando o motivo. A **sessão** (gráficos
+    volta a volta) usa `countsForSession`, mais larga: saída de pista que o sim
+    não puniu com slow down conta; box, gravação cortada e slow down não. A volta
+    inválida continua gravada — é o registro do que o piloto rodou — e fica
+    escondida na tela até o piloto pedir.
 18. **Nenhum número arbitrado na análise.** Limiar, janela, grade, "valor
     típico" — se o número foi escolhido e não medido, ele não entra. Pior ainda
     se o efeito dele depende do que o piloto fez (onde freou, quão devagar

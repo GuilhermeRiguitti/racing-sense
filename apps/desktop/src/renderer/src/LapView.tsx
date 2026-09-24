@@ -4,6 +4,7 @@ import { bridge } from './bridge.js';
 import { tabsFor } from './channels.js';
 import { formatDelta, formatLapTime } from './chart-math.js';
 import { EngineerPanel } from './EngineerPanel.js';
+import { lapStanding, MOTIVO } from './LapTable.js';
 import { TraceChart } from './TraceChart.js';
 import { useBridgeQuery } from './useBridgeQuery.js';
 
@@ -18,12 +19,6 @@ interface Props {
   /** Promoveu a volta a referência: quem guarda a lista consulta de novo. */
   readonly onReferenceCreated: (referenceLapId: string) => void;
 }
-
-const MOTIVO: Record<LapDto['flags'][number], string> = {
-  incomplete: 'gravação cortada',
-  pit: 'passou pelo box',
-  'off-track': 'saiu da pista',
-};
 
 /**
  * Uma volta, do jeito que o engenheiro a abre: contra a referência, canal a
@@ -46,7 +41,8 @@ export function LapView({
   const [promovendo, setPromovendo] = useState(false);
   const [erroPromover, setErroPromover] = useState<string | null>(null);
 
-  const valida = lap.flags.length === 0 && lap.lapTimeSeconds !== null;
+  const situacao = lapStanding(lap);
+  const valida = situacao === 'valid';
   const comparar = valida && referenceId !== null;
   const referencia = references.find((r) => r.id === referenceId) ?? null;
 
@@ -142,10 +138,19 @@ export function LapView({
         </div>
       </div>
 
-      {!valida && (
+      {situacao === 'session' && (
+        <p className="notice">
+          <strong>Saiu da pista</strong>, sem slow down: conta na evolução da sessão, mas não é
+          comparada nem vira referência — a régua tem que ser limpa.
+          {lap.offTrackStretches !== null &&
+            lap.offTrackStretches.length > 0 &&
+            ' Os trechos fora da pista estão marcados no gráfico.'}
+        </p>
+      )}
+      {situacao === 'invalid' && (
         <p className="notice">
           <strong>Volta inválida</strong> ({lap.flags.map((f) => MOTIVO[f]).join(', ') || 'sem tempo'}
-          ): aparece inteira, mas não é comparada nem vira referência.
+          ): aparece inteira, mas fica fora da sessão, da comparação e da referência.
           {lap.offTrackStretches !== null &&
             lap.offTrackStretches.length > 0 &&
             ' Os trechos fora da pista estão marcados no gráfico.'}

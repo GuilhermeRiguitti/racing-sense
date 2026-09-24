@@ -263,12 +263,46 @@ kbd {
   max-width: 640px;
 }
 
+.laps-box {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .laps__caption {
-  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-  padding-bottom: 6px;
+}
+
+.laps__empty {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.link-button {
+  font: inherit;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--text-primary);
+}
+
+.link-button:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
 }
 
 .laps th {
@@ -333,9 +367,11 @@ kbd {
   fill: var(--status-good);
 }
 
-.status--critical .status__icon circle {
+.status--invalid .status__icon circle {
   fill: var(--status-critical);
 }
+
+
 
 .status__mark {
   fill: none;

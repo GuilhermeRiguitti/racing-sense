@@ -220,7 +220,7 @@ export interface components {
          * @description Por que a volta não serve de referência. Vazio = serve.
          * @enum {string}
          */
-        LapFlag: "incomplete" | "pit" | "off-track";
+        LapFlag: "incomplete" | "pit" | "off-track" | "slowdown";
         /**
          * @description Contínuo se liga com reta; discreto (marcha, booleano) se desenha em degrau.
          * @enum {string}

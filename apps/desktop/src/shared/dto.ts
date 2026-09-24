@@ -74,7 +74,7 @@ export interface LapStretchDto {
   readonly endPct: number;
 }
 
-export type LapFlagDto = 'incomplete' | 'pit' | 'off-track';
+export type LapFlagDto = 'incomplete' | 'pit' | 'off-track' | 'slowdown';
 
 export interface LapDto {
   readonly number: number;
@@ -89,6 +89,8 @@ export interface LapDto {
    * de o app registrar os trechos) — o que é diferente de lista vazia.
    */
   readonly offTrackStretches: readonly LapStretchDto[] | null;
+  /** Incidentes da volta, o "Inc." do sim. `null` quando não se sabe — não é zero. */
+  readonly incidents: number | null;
 }
 
 /** Um canal resumido numa volta. Ver `ChannelSummary` no domínio. */

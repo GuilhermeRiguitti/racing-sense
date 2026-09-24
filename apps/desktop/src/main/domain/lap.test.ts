@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InvariantError } from './errors.js';
-import { isValidLap, lapDurationSeconds, stretchesWhere } from './lap.js';
+import { countsForSession, isValidLap, lapDurationSeconds, stretchesWhere } from './lap.js';
 import { aLap } from './testing.js';
 
 describe('lapDurationSeconds', () => {
@@ -56,5 +56,24 @@ describe('stretchesWhere', () => {
 
   it('recusa sinal de tamanho diferente das posições', () => {
     expect(() => stretchesWhere(posicoes, [true])).toThrow(InvariantError);
+  });
+});
+
+describe('countsForSession', () => {
+  it('saída de pista sem punição conta na sessão, mas não serve de referência', () => {
+    const volta = aLap({ flags: ['off-track'] });
+
+    expect(countsForSession(volta)).toBe(true);
+    expect(isValidLap(volta)).toBe(false);
+  });
+
+  it('slow down, box e volta cortada ficam fora da sessão', () => {
+    expect(countsForSession(aLap({ flags: ['off-track', 'slowdown'] }))).toBe(false);
+    expect(countsForSession(aLap({ flags: ['pit'] }))).toBe(false);
+    expect(countsForSession(aLap({ flags: ['incomplete'], isComplete: false }))).toBe(false);
+  });
+
+  it('volta sem tempo cronometrado não conta', () => {
+    expect(countsForSession(aLap({ lapTimeSeconds: null }))).toBe(false);
   });
 });

@@ -19,12 +19,20 @@ export interface LapSignals {
   readonly onPitRoad?: readonly boolean[];
   /** Verdadeiro quando o carro está fora dos limites da pista. */
   readonly offTrack?: readonly boolean[];
+  /** Verdadeiro enquanto o sim mostra a advertência que acompanha o slow down. */
+  readonly penalized?: readonly boolean[];
   /**
    * Falso quando o carro não estava no mundo do sim — não tinha posição. É o
    * caso da primeira amostra de muitos arquivos, gravada antes de o sim
    * preencher o buffer (ver `docs/formato-ibt.md`).
    */
   readonly inWorld?: readonly boolean[];
+  /**
+   * Contador de incidentes do piloto, por amostra. É acumulado na sessão do sim
+   * — atravessa voltas e até arquivos —, e por isso a volta não o lê direto:
+   * soma o quanto ele subiu dentro dela.
+   */
+  readonly incidentCount?: readonly number[];
 }
 
 /**
@@ -46,7 +54,7 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
   const flags: LapFlag[] = [];
   if (!complete) flags.push('incomplete');
 
-  const { onPitRoad, offTrack } = signals;
+  const { onPitRoad, offTrack, penalized } = signals;
   if (onPitRoad !== undefined) {
     for (let i = start; i <= end; i += 1) {
       if (onPitRoad[i] === true) {
@@ -59,6 +67,18 @@ function flagsOf(signals: LapSignals, start: number, end: number, complete: bool
     for (let i = start; i <= end; i += 1) {
       if (offTrack[i] === true) {
         flags.push('off-track');
+        break;
+      }
+    }
+  }
+  // Marca a volta em que a advertência esteve acesa, sem ligar de volta à saída
+  // de pista que a causou: "a saída mais recente" não é sempre a causa (num
+  // arquivo real ela acendeu 537 s depois da última), e decidir o que é
+  // recente o bastante seria um limiar escolhido (ADR 0021).
+  if (penalized !== undefined) {
+    for (let i = start; i <= end; i += 1) {
+      if (penalized[i] === true) {
+        flags.push('slowdown');
         break;
       }
     }
@@ -131,6 +151,27 @@ export function detectLaps(signals: LapSignals): Lap[] {
       lapTimeSeconds: complete ? (end - start + 1) / tickRate : null,
       isComplete: complete,
       flags,
+      ...(signals.incidentCount !== undefined
+        ? { incidents: incidentsIn(signals.incidentCount, start, end, inicio) }
+        : {}),
     };
   });
+}
+
+/**
+ * Quantos incidentes a volta somou: cada subida do contador, da amostra
+ * anterior ao início da volta até a última dela.
+ *
+ * Soma as subidas em vez de fazer "fim menos começo" porque o contador pode
+ * zerar no meio do arquivo (sessão nova do sim); a diferença daria negativo, e
+ * a soma das subidas continua certa. A subida entre a última amostra de uma
+ * volta e a primeira da seguinte é da seguinte — é quando ela foi registrada.
+ */
+function incidentsIn(contador: readonly number[], start: number, end: number, inicio: number): number {
+  let total = 0;
+  for (let i = Math.max(start, inicio + 1); i <= end; i += 1) {
+    const subida = (contador[i] ?? 0) - (contador[i - 1] ?? 0);
+    if (subida > 0) total += subida;
+  }
+  return total;
 }

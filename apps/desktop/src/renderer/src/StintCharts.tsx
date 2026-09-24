@@ -5,7 +5,14 @@ import { formatLapTime, niceTicks } from './chart-math.js';
 import { adjustmentTimeline, perLap } from './engineer.js';
 
 interface Props {
+  /** As voltas que aparecem nos gráficos — sem as inválidas, a não ser que o piloto peça. */
   readonly stint: readonly StintLapDto[];
+  /**
+   * A sessão inteira, só para a linha do tempo dos ajustes: mexer no balanço de
+   * freio numa in lap continua sendo uma mudança, e escondê-la faria o ajuste
+   * parecer ter mudado sozinho na volta seguinte.
+   */
+  readonly fullStint: readonly StintLapDto[];
   readonly channels: readonly ChannelDto[];
   readonly selected: number | null;
   readonly onSelect: (lapNumber: number) => void;
@@ -26,7 +33,7 @@ interface Serie {
  * volta a abre embaixo. A tabela de voltas ao lado é a versão em texto destes
  * gráficos, então nenhum valor depende só do passar do mouse.
  */
-export function StintCharts({ stint, channels, selected, onSelect }: Props) {
+export function StintCharts({ stint, fullStint, channels, selected, onSelect }: Props) {
   const [foco, setFoco] = useState<number | null>(null);
   const laps = stint.map((s) => s.lap);
 
@@ -78,7 +85,7 @@ export function StintCharts({ stint, channels, selected, onSelect }: Props) {
     },
   ].filter((g) => g.series.some((s) => s.values.some((v) => v !== null)));
 
-  const mudancas = adjustmentTimeline(stint, channels);
+  const mudancas = adjustmentTimeline(fullStint, channels);
 
   if (stint.length === 0) return null;
 
@@ -288,13 +295,13 @@ function Tendencia({
             <svg width="10" height="10" aria-hidden="true">
               <circle cx="5" cy="5" r="4" className="fill-1" />
             </svg>
-            válida
+            limpa
           </span>
           <span>
             <svg width="10" height="10" aria-hidden="true">
-              <circle cx="5" cy="5" r="3.5" className="dot--hollow stroke-1" />
+              <circle cx="5" cy="5" r="3.5" className="dot dot--hollow stroke-1" />
             </svg>
-            inválida
+            saiu da pista ou inválida
           </span>
         </div>
       )}

@@ -598,7 +598,8 @@
         "enum": [
           "incomplete",
           "pit",
-          "off-track"
+          "off-track",
+          "slowdown"
         ],
         "description": "Por que a volta não serve de referência. Vazio = serve."
       },

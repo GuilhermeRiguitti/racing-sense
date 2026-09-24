@@ -38,6 +38,7 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0015](0015-dois-bancos.md) | SQLite local e Postgres na nuvem | Aceito |
 | [0016](0016-so-o-desktop-gera-telemetria.md) | Só o desktop gera telemetria | Superado em parte por 0020 |
 | [0017](0017-desktop-e-o-produto.md) | O desktop é o produto; a nuvem é acessório | Aceito |
-| [0018](0018-so-volta-valida-e-material-de-analise.md) | Só volta válida é material de análise | Aceito |
+| [0018](0018-so-volta-valida-e-material-de-analise.md) | Só volta válida é material de análise | Superado em parte por 0021 |
 | [0019](0019-grava-a-amostra-como-o-arquivo-entregou.md) | Grava a amostra como o arquivo entregou | Aceito |
 | [0020](0020-aplicacoes-independentes.md) | Três aplicações independentes, sem código compartilhado | Aceito |
+| [0021](0021-saida-de-pista-sem-punicao-conta-na-sessao.md) | Saída de pista sem punição conta na sessão; a referência continua limpa | Aceito |

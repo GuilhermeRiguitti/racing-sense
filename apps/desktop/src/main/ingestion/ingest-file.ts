@@ -30,7 +30,21 @@ export const REQUIRED_LAP_CHANNELS = ['Lap', 'LapDistPct'] as const;
  * só não dá para dizer se ela passou pela box ou saiu da pista. Exigi-los seria
  * recusar arquivo por causa de informação acessória.
  */
-export const OPTIONAL_LAP_CHANNELS = ['OnPitRoad', 'PlayerTrackSurface'] as const;
+export const OPTIONAL_LAP_CHANNELS = [
+  'OnPitRoad',
+  'PlayerTrackSurface',
+  'SessionFlags',
+  'PlayerCarMyIncidentCount',
+] as const;
+
+/**
+ * Bit de `SessionFlags` da bandeira preta enrolada (`irsdk_furled`), a
+ * advertência que o sim mostra com o slow down por corte de pista.
+ *
+ * Nos 83 arquivos do piloto (2026-09-24) ela acendeu 33 vezes: 30 na mesma
+ * volta de uma saída de pista, em média 1,4 s depois dela. Ver ADR 0021.
+ */
+const FLAG_FURLED = 0x80000;
 
 /**
  * Código do iRacing para "fora dos limites da pista" em `PlayerTrackSurface`.
@@ -197,12 +211,16 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
     const opcional = async (name: string): Promise<number[] | undefined> =>
       available.has(name) ? collect(file.readChannel(name)) : undefined;
 
-    const [lapNumber, lapDistPct, onPitRoad, trackSurface] = await Promise.all([
-      collect(file.readChannel('Lap')),
-      collect(file.readChannel('LapDistPct')),
-      opcional('OnPitRoad'),
-      opcional('PlayerTrackSurface'),
-    ]);
+    const [lapNumber, lapDistPct, onPitRoad, trackSurface, sessionFlags, incidentCount] =
+      await Promise.all([
+        collect(file.readChannel('Lap')),
+        collect(file.readChannel('LapDistPct')),
+        opcional('OnPitRoad'),
+        opcional('PlayerTrackSurface'),
+        opcional('SessionFlags'),
+        // Os do próprio piloto: é o número que o sim mostra como "Inc.".
+        opcional('PlayerCarMyIncidentCount'),
+      ]);
 
     const foraDaPista = trackSurface?.map((v) => v === SURFACE_OFF_TRACK);
     const recortadas: readonly Lap[] = detectLaps({
@@ -210,6 +228,10 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
       lapNumber,
       lapDistPct,
       ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
+      ...(incidentCount !== undefined ? { incidentCount } : {}),
+      ...(sessionFlags !== undefined
+        ? { penalized: sessionFlags.map((v) => (v & FLAG_FURLED) !== 0) }
+        : {}),
       ...(trackSurface !== undefined && foraDaPista !== undefined
         ? {
             offTrack: foraDaPista,
