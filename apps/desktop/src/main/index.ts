@@ -1,9 +1,11 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, session } from 'electron';
-import { buildDesktop } from './composition-root.js';
-import { createIpcEventPublisher } from './event-bridge.js';
-import { registerIpcHandlers } from './ipc-handlers.js';
-import { createIngestionService } from './telemetry-ingestion.js';
+import { flushPublicationQueue } from './cloud/publication.js';
+import { buildDesktop } from './desktop.js';
+import { ingestTelemetryFile } from './ingestion/ingest-file.js';
+import { createIngestionService } from './ingestion/ingestion-service.js';
+import { createEventEmitter } from './ipc/events.js';
+import { registerIpcHandlers } from './ipc/handlers.js';
 
 /**
  * Processo principal: Node, com estado e vida longa.
@@ -12,7 +14,7 @@ import { createIngestionService } from './telemetry-ingestion.js';
  * — o addon nativo do SDK do iRacing. Foi exatamente isso que decidiu Electron
  * em vez de Tauri (ADR 0012).
  */
-const CLOUD_BASE_URL = process.env.TELEMETRY_CLOUD_URL ?? 'https://api.telemetria.local';
+const API_BASE_URL = process.env.TELEMETRY_API_URL ?? 'http://localhost:4000';
 const PUBLICATION_FLUSH_INTERVAL_MS = 60_000;
 
 function createWindow(): BrowserWindow {
@@ -48,7 +50,7 @@ app.whenReady().then(() => {
   const desktop = buildDesktop({
     // Empurra para todas as janelas vivas. Se não houver nenhuma, o evento
     // simplesmente não acontece — quando a janela abrir, ela consulta o estado.
-    events: createIpcEventPublisher(
+    emit: createEventEmitter(
       (channel, payload) => {
         for (const window of BrowserWindow.getAllWindows()) {
           if (!window.isDestroyed()) {
@@ -59,15 +61,15 @@ app.whenReady().then(() => {
       (error) => console.error('falha ao anunciar evento', error),
     ),
     userDataDir: app.getPath('userData'),
-    cloudBaseUrl: CLOUD_BASE_URL,
+    apiBaseUrl: API_BASE_URL,
     // `app.getPath('documents')` resolve a pasta real do Windows, inclusive
     // quando ela está redirecionada para o OneDrive — adivinhar o caminho
     // erraria em boa parte das máquinas.
     documentsDirectory: app.getPath('documents'),
     telemetryDirectoryOverride: process.env.TELEMETRY_DIRECTORY,
     // `fetch` da sessão do Chromium: é ele que guarda e reenvia o cookie selado
-    // do login, então o adapter HTTP nunca toca em `Set-Cookie`.
-    fetch: (input, init) => session.defaultSession.fetch(input, init),
+    // do login, então o cliente da api nunca toca em `Set-Cookie`.
+    fetch: (request) => session.defaultSession.fetch(request),
     env: process.env,
   });
 
@@ -79,7 +81,7 @@ app.whenReady().then(() => {
   // aplicativo aberto. É o circuito que o piloto espera ao sair do carro.
   const ingestion = createIngestionService({
     watcher: desktop.watcher,
-    ingestTelemetryFile: desktop.useCases.ingestTelemetryFile,
+    ingest: (path) => ingestTelemetryFile(desktop, path),
     onProblem: (file, reason) => console.warn(`telemetria ignorada: ${file.locator} — ${reason}`),
   });
   void ingestion.start().catch((error) => console.error('watcher não iniciou', error));
@@ -87,14 +89,14 @@ app.whenReady().then(() => {
   // Publicação roda em segundo plano e nunca bloqueia o piloto. Falha de rede
   // deixa a sessão na fila para a próxima rodada (ADR 0013).
   const flush = setInterval(() => {
-    void desktop.useCases.flushPublicationQueue().catch(() => {
-      // já tratado dentro do caso de uso; aqui só evitamos rejeição não capturada
+    void flushPublicationQueue(desktop).catch(() => {
+      // já tratado dentro da função; aqui só evitamos rejeição não capturada
     });
   }, PUBLICATION_FLUSH_INTERVAL_MS);
 
   app.on('will-quit', () => {
     clearInterval(flush);
-    void ingestion.stop().finally(() => desktop.db.close());
+    void ingestion.stop().finally(() => desktop.store.close());
   });
 
   createWindow();

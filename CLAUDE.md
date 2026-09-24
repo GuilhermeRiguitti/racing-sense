@@ -5,197 +5,182 @@ qualquer linha.
 
 ## O projeto
 
-Análise agêntica de telemetria do iRacing, em três aplicações:
+Análise agêntica de telemetria do iRacing, em três aplicações **independentes**:
 
 | App | Framework | Onde roda | Papel |
 |---|---|---|---|
-| `apps/desktop` | Electron | Windows do piloto | ingestão, análise, LLM. **Offline-first** |
-| `apps/cloud-api` | NestJS + Postgres | servidor | a ponte entre desktop e web |
-| `apps/web` | Next.js | navegador | rede social: perfil, feed, voltas de outros |
+| `apps/desktop` | Electron + SQLite | Windows do piloto | ingestão, análise, LLM. **Offline-first** |
+| `apps/api` | NestJS + Prisma + Postgres | servidor | rede social: login, sessões publicadas, links |
+| `apps/web` | Next.js | navegador | perfil, feed, voltas de outros. Fala só com a api |
 
 **O desktop é o produto.** É o coach que o piloto deixa aberto enquanto treina:
-dados sempre disponíveis, sempre atuais, bem apresentados. A web e a cloud-api
-são funcionalidade extra — compartilhar volta, comparar com um amigo, perfil.
+dados sempre disponíveis, sempre atuais, bem apresentados. A web e a api são
+funcionalidade extra — compartilhar volta, comparar com um amigo, perfil.
 
 Critério para priorizar, sempre: *o piloto acabou de sair do carro e quer ver
 onde perdeu tempo*. Entre melhorar o gráfico de delta e melhorar a consistência
 da nuvem, **o gráfico ganha** (ADR 0017).
 
 **E o desktop é a única origem de telemetria.** Ele lê o `.ibt` (e, na fase 2, o
-SDK do iRacing). A cloud-api recebe dado **já processado**, guarda, devolve e
-autentica. Isso não é convenção — é barreira de compilação: a cloud-api não
-declara `@telemetry/application-desktop`, então o import nem resolve, e não tem
-`node:fs` nos builtins, então não abre arquivo. Ver ADR 0011 e **ADR 0016**.
+SDK do iRacing). A api recebe dado **já processado**, guarda, devolve e
+autentica. Ela não tem o código do decoder nem da LLM — esse código só existe
+dentro de `apps/desktop` (ADR 0016 e **ADR 0020**).
 
-**Estado: o decoder lê arquivo real.** Arquitetura, regras e casos de uso estão de
-pé. Desde 2026-09-19 o decoder abre um `.ibt` de verdade de ponta a ponta: header,
-session info, catálogo de canais montado em runtime e amostras em streaming, com
-os offsets conferidos contra oito arquivos em dois carros e duas pistas (Ferrari
-296 GT3 / Road Atlanta e Mercedes-AMG GT3 / Suzuka). O recorte de voltas, a reamostragem
-por distância e o downsampling também estão de pé e conferidos contra arquivo
-real. A persistência local é SQLite de verdade, guardando a amostra exatamente
-como o arquivo entregou (ADR 0019). A primeira tela existe: sessões, voltas com a
-situação de cada uma e a volta em cinco painéis sobre o eixo de distância, com
-cursor sincronizado. O delta contra a referência existe no domínio e chega ao
-renderer pelo IPC `laps:compare`, mas ainda não é desenhado; a segmentação em
-trechos espera os setores da pista. O que ainda é stub é o **narrador**. Ver
-`docs/pendencias.md` e `docs/roadmap.md`.
+**Estado: o decoder lê arquivo real.** Desde 2026-09-19 o decoder abre um `.ibt`
+de verdade de ponta a ponta: header, session info, catálogo de canais montado em
+runtime e amostras em streaming, com os offsets conferidos contra oito arquivos
+em dois carros e duas pistas (Ferrari 296 GT3 / Road Atlanta e Mercedes-AMG GT3 /
+Suzuka). O recorte de voltas, a reamostragem por distância e o downsampling
+também estão de pé e conferidos contra arquivo real. A persistência local é
+SQLite de verdade, guardando a amostra exatamente como o arquivo entregou (ADR
+0019). A primeira tela existe: sessões, voltas com a situação de cada uma e a
+volta em cinco painéis sobre o eixo de distância, com cursor sincronizado. O
+delta contra a referência existe no domínio e chega ao renderer pelo IPC
+`laps:compare`, mas ainda não é desenhado; a segmentação em trechos espera os
+setores da pista. O que ainda é stub é o **narrador**. A api tem schema Prisma e
+rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
+`docs/roadmap.md`.
 
 ## Comandos
 
+Na raiz (atalhos que delegam para cada app):
+
 ```bash
-pnpm install
-pnpm check              # lint + arch + typecheck + testes — rode antes de dizer que terminou
-pnpm arch               # só as fronteiras de arquitetura
-pnpm test               # testes
-pnpm typecheck          # tsc --noEmit em todos os workspaces
-pnpm lint / lint:fix    # Biome
+pnpm install            # instala as três, cada uma com o próprio lockfile
+pnpm check              # lint + typecheck + testes das três — rode antes de dizer que terminou
+pnpm typecheck / test   # tsc --noEmit / testes, em cada app
+pnpm lint / lint:fix    # ESLint, em cada app
 pnpm dev:desktop        # aplicativo do piloto (Electron)
-pnpm dev:cloud          # cloud-api (NestJS), porta 4000
+pnpm dev:api            # api (NestJS), porta 4000, Swagger em /docs
 pnpm dev:web            # rede social (Next.js), porta 3000
+pnpm api:types          # exporta o openapi.json da api e regenera os tipos no desktop e na web
 ```
 
-Node 22+, pnpm 10+.
+Em cada app, os scripts de sempre: `dev`, `build`, `test`, `typecheck`. A api
+tem também `openapi`, `db:migrate`, `db:deploy` e `db:studio`.
 
-## A arquitetura (leia isto antes de criar qualquer arquivo)
+Node 22+, pnpm 10.33.
 
-Ports & adapters, dependência apontando para dentro. ADR 0009 e ADR 0010.
+## A estrutura (leia isto antes de criar qualquer arquivo)
 
-```
-domain ◀── application (portas) ◀── adapters ◀── composition root (desktop | cloud-api)
-```
+**Cada aplicação é independente** (ADR 0020): o próprio `package.json`, o
+próprio `pnpm-lock.yaml`, o próprio `node_modules`, o próprio `tsconfig`.
+Nenhuma importa código da outra, e não existe `packages/`. Dependência nova entra
+no `package.json` da app que a usa — nunca na raiz (a raiz não tem dependência
+nenhuma). Cada app tem o próprio `eslint.config.js`.
 
-| Camada | Pacote | Pode depender de |
-|---|---|---|
-| Domínio | `packages/domain` | **nada** |
-| Núcleo da aplicação | `packages/application` | `domain` |
-| Aplicação do desktop | `packages/application-desktop` | `application`, `domain` |
-| Aplicação da nuvem | `packages/application-cloud` | `application`, `domain` |
-| Borda (DTO + validação) | `packages/contracts` | `domain`, `zod` |
-| Lib técnica | `packages/ibt-core` | **nada** |
-| Adapters do desktop | `adapter-{ibt,fs,sqlite,http,llm}` | `application-desktop`, `domain` + a lib que possui |
-| Adapter da nuvem | `adapter-postgres` | `application-cloud`, `domain`, `pg` |
-| Composition roots | `apps/desktop`, `apps/cloud-api` | os adapters de **seu lado** |
-| Interface web | `apps/web` | `contracts` |
-
-**A separação `application-desktop` / `application-cloud` é a invariante central:**
-ingestão, decodificação e análise só existem no lado do desktop. Um caso de uso
-novo que toque em telemetria vai em `application-desktop`, sempre.
-
-Cada adapter é dono de **uma** dependência: `better-sqlite3` em `adapter-sqlite`,
-`pg` em `adapter-postgres`, `ai` em `adapter-llm`, `node:fs` em `adapter-fs`,
-`zod` em `contracts`.
-
-**`pnpm arch` reprova quem furar isso.** O mapa vive em
-`scripts/architecture.config.mjs`; mudá-lo é mudar a arquitetura e pede ADR novo.
+**O contrato entre elas é o OpenAPI da api.** A api gera `apps/api/openapi.json`
+a partir dos próprios DTOs (`@nestjs/swagger`). Desktop e web geram os tipos a
+partir dele (`api-schema.d.ts`, não edite à mão) e chamam com `openapi-fetch`.
+Mudou rota ou DTO na api: rode `pnpm api:types` e confira o typecheck das três.
 
 ### Onde colocar código novo
 
 | O que você está escrevendo | Onde vai |
 |---|---|
-| Regra de corrida (volta, delta, compatibilidade) | `domain` |
-| Orquestração que toca em telemetria ("ingerir arquivo", "listar voltas", "comparar") | `application-desktop/commands` ou `/queries` |
-| Orquestração da nuvem ("mudar visibilidade", "compartilhar", "listar públicas") | `application-cloud/commands` ou `/queries` |
-| Relógio, id, erro que vale para os dois lados | `application` (núcleo) |
-| "Preciso de algo que faça X" | uma porta no `application-*` do lado certo |
-| Uso de lib externa ou API de plataforma | um adapter |
-| Formato que sai na API | `contracts` |
-| Escolha de qual implementação usar | `apps/desktop/src/main/composition-root.ts` ou `apps/cloud-api/src/composition-root.ts`, e só ali |
-| Rota da cloud-api | `apps/cloud-api/src/modules/` — controller fino, módulo liga e não pensa |
-| Canal novo entre front do desktop e o sistema | `apps/desktop/src/main/ipc-contract.ts` + handler |
-
-Na dúvida, use a skill **`novo-caso-de-uso`**.
+| Regra de corrida (volta, delta, compatibilidade) | `apps/desktop/src/main/domain/` — sem I/O |
+| Leitura de bytes do `.ibt` | `apps/desktop/src/main/ibt/` |
+| Tabela ou consulta do banco local | `apps/desktop/src/main/db/local-store.ts` (+ `schema.ts`) |
+| Algo que o coach faz (ingerir, comparar, analisar) | `apps/desktop/src/main/{ingestion,analysis}/` — função que recebe o `LocalStore` |
+| Chamada à api a partir do desktop | `apps/desktop/src/main/cloud/` |
+| Canal novo entre a tela do desktop e o processo principal | `apps/desktop/src/shared/ipc.ts` + `src/main/ipc/handlers.ts` + preload |
+| Rota da api | `apps/api/src/<módulo>/` — controller, service, DTO com `@ApiProperty` e `class-validator` |
+| Tabela da api | `apps/api/prisma/schema.prisma` + `pnpm --dir apps/api db:migrate` |
+| Página da web | `apps/web/src/app/`; chamada à api em `apps/web/src/lib/api.ts` |
 
 ## Regras que não se quebram
 
-Arquiteturais (as cinco primeiras são verificadas por `pnpm arch`):
+Da estrutura:
 
-1. **`domain` e `ibt-core` são puros.** Nada de `node:*`, nada de lib, nada de I/O.
-2. **A aplicação não conhece implementação.** Caso de uso importa porta, nunca
-   adapter. Quem escolhe é o composition root.
-3. **Cada adapter é dono de uma dependência.** `zod` só em `contracts` (e a
-   validação passa por `validate()` de lá), `ai` só em `adapter-llm`, `node:fs`
-   só em `adapter-fs`, `better-sqlite3` só em `adapter-sqlite`, `pg` só em
-   `adapter-postgres`.
-4. **Sem import profundo.** `@telemetry/x` sim, `@telemetry/x/src/...` não.
-5. **CQS.** Comando muda estado e devolve no máximo um id; query lê e não escreve.
-   Query recebe só `...ReaderPort`. Gerar análise é comando (`RequestLapAnalysis`),
-   ler o resultado é query (`GetLapAnalysis`).
-6. **Porta estreita.** Uma capacidade por interface; leitura separada de escrita.
-7. **Tipo de lib não atravessa porta.** Se `Buffer`, `Request` ou `LanguageModel`
-   aparece numa assinatura de `application`, a lib vazou.
-8. **Toda implementação de porta roda a suíte de contrato** do lado dela
-   (`@telemetry/application-desktop/testing` ou `@telemetry/application-cloud/testing`).
-   Adapter novo sem contrato verde não entra.
+1. **Nenhuma aplicação importa código de outra.** O que atravessa é HTTP, com os
+   tipos gerados do `openapi.json`. Se duas apps precisam da mesma regra, ela
+   mora em uma só (a que é dona do dado) — a outra pergunta por HTTP.
+2. **`domain` e `ibt` do desktop são puros.** Nada de `node:*`, nada de lib, nada
+   de I/O. O decoder recebe uma `ByteSource`; quem abre arquivo é `ibt-file.ts`.
+3. **Gerar e ler são separados.** Gerar análise (`requestLapAnalysis`) chama o
+   modelo e grava; ler (`getLapAnalysis`) só lê. Tela que abre nunca dispara
+   modelo.
+4. **Tipo de biblioteca não vaza para o domínio.** `Buffer`, `Request`,
+   `LanguageModel` e tipos do Prisma ficam na borda que usa a lib.
+5. **Arquivos gerados não se editam à mão**: `api-schema.d.ts`,
+   `apps/api/openapi.json`, `apps/api/src/generated/`.
 
-Da topologia (ADR 0011 e 0013):
+Da topologia (ADR 0011, 0013, 0016, 0020):
 
-9. **Só o desktop gera telemetria.** Ler `.ibt`, falar com o SDK do iRacing,
-   decodificar e recortar voltas acontece **exclusivamente** no desktop. A
-   cloud-api recebe dado já processado, guarda e devolve — ela não lê arquivo,
-   não decodifica e não tem `node:fs`. Ver ADR 0016.
-10. **O desktop nunca espera a nuvem.** Publicar é enfileirar; enviar é outro
-    caso de uso, em segundo plano. Falha de rede não vira erro na cara do piloto.
-11. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
-12. **A web só fala com a cloud-api**, nunca com a máquina do piloto.
-13. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
-    o único seguro. Acesso negado responde "não encontrada", nunca "sem
-    permissão" — distinguir os dois entrega que a sessão existe.
-14. **Nuvem desatualizada não é bug.** Divergência entre o banco local e o da
+6. **Só o desktop gera telemetria.** Ler `.ibt`, falar com o SDK do iRacing,
+   decodificar e recortar voltas acontece **exclusivamente** em `apps/desktop`.
+   A api recebe dado já processado, guarda e devolve — ela não lê arquivo, não
+   decodifica e não recalcula nada (a melhor volta, por exemplo, sobe pronta).
+7. **O desktop nunca espera a nuvem.** Tudo do coach — ingerir, comparar,
+   narrar — roda local, sem HTTP. Publicar é enfileirar; enviar é outra função,
+   em segundo plano. Falha de rede não vira erro na cara do piloto.
+8. **A LLM é só do desktop**, chamada direto do processo principal. Não entra na
+   api nem na web.
+9. **A web só fala com a api**, nunca com a máquina do piloto, e não tem banco.
+10. **Sessão nasce privada.** Como tudo sobe automaticamente, o default fechado é
+    o único seguro. Acesso negado responde "não encontrada" (404), nunca "sem
+    permissão" — distinguir os dois entrega que a sessão existe. A regra de
+    acesso é `canView`, em `apps/api/src/sessions/visibility.ts`, e só lá.
+11. **Nuvem desatualizada não é bug.** Divergência entre o banco local e o da
     nuvem é aceitável por design. **Não construa** reconciliação, versionamento
     de payload, resolução de conflito ou job de re-sincronização — se um dia
     fizer falta, é ADR novo. A única obrigação é apagar na nuvem o que o piloto
     apagou no desktop, e isso é privacidade, não sync (ADR 0017).
+12. **O caminho do `.ibt` nunca sai da máquina.** Ele tem o nome de usuário do
+    Windows dentro; o registro de arquivos ingeridos não é publicado.
 
 De domínio:
 
-15. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
-    runtime. Canal obrigatório é declarado no caso de uso e conferido contra o
+13. **Nunca mantenha catálogo fixo de canais.** Ele vem da tabela de variáveis em
+    runtime. Canal obrigatório é declarado na ingestão e conferido contra o
     catálogo real, falhando com o nome do canal.
-16. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
+14. **Session info é CP1252, não UTF-8.** UTF-8 corrompe nome com acento e passa
     despercebido até o primeiro acento aparecer.
-17. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
+15. **O modelo não calcula.** Delta, tempo de volta e recorte saem do domínio. O
     narrador recebe números prontos e redige.
-18. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
-18b. **Só volta válida é material de análise** (ADR 0018). Válida é **completa,
+16. **Comparação de volta é por distância (`lapDistPct`), nunca por tempo.**
+17. **Só volta válida é material de análise** (ADR 0018). Válida é **completa,
     sem box e sem corte de pista** — definição do piloto, e nada além dela: carro
     parado, tempo de volta e incidente dentro da pista não invalidam. `isValidLap`
     é a única regra: qualquer marcação invalida, saída de pista inclusive, sem
     limiar de duração. Analisar, comparar ou eleger referência sobre volta inválida falha
     nomeando o motivo. A volta inválida continua gravada e listada — ela é o
     registro do que o piloto rodou, só não é entrada de análise.
-18c. **Nenhum número arbitrado na análise.** Limiar, janela, grade, "valor
+18. **Nenhum número arbitrado na análise.** Limiar, janela, grade, "valor
     típico" — se o número foi escolhido e não medido, ele não entra. Pior ainda
     se o efeito dele depende do que o piloto fez (onde freou, quão devagar
     passou): aí a análise erra diferente a cada volta. Marcação de volta sai de
     **fato binário do arquivo**; tempo, de contagem de amostras; gravação, do
     dado sem alteração. Antes de escrever uma constante numérica no caminho da
     análise, pergunte: isto foi medido, ou eu escolhi? (ADR 0018 e 0019)
-18d. **Canal discreto não se interpola.** Um terço dos canais do iRacing é
+19. **Canal discreto não se interpola.** Um terço dos canais do iRacing é
     inteiro, booleano ou bitfield. Entre a 3ª e a 4ª marcha não existe 3,5ª:
     reamostragem segura o último valor. O tipo viaja com a série (`isContinuous`).
-19. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
+20. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
-20. **Chave de API só por variável de ambiente.** Nunca em código, teste, log ou
-    commit.
-21. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
-22. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
+21. **Chave de API e segredo só por variável de ambiente.** Nunca em código,
+    teste, log ou commit.
+22. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
+23. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
-23. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
+24. **Leitura curta falha alto.** Nunca devolva buffer parcial: o sintoma aparece
     longe da causa.
 
-## Forma de um caso de uso
+## Forma do código no desktop
+
+Função que recebe o que precisa e faz. Sem classe, sem container de DI:
 
 ```ts
-export interface XCommand { /* entrada */ }
-export interface XDeps { /* portas */ }
-export type XHandler = (command: XCommand) => Promise<Id | void>;
-
-export function createXHandler(deps: XDeps): XHandler { /* ... */ }
+export async function ingestTelemetryFile(ctx: IngestContext, path: string): Promise<SessionId>
+export function compareLapToReference(store: LocalStore, request: LapAgainstReference): LapComparison
 ```
 
-Fábrica que recebe portas e devolve o handler. Sem classe, sem container de DI,
-sem decorator — a injeção é o argumento da função.
+O que o teste precisa trocar entra como parâmetro opcional (`open` na ingestão,
+`narrate` na análise). O resto é concreto: o `LocalStore` é o SQLite de verdade,
+e o teste usa `openLocalStore(':memory:')`.
+
+Na api, o padrão do Nest: módulo, controller fino, service `@Injectable` com o
+`PrismaService` injetado.
 
 ## Idioma
 
@@ -207,15 +192,15 @@ Nunca misture dentro de um identificador.
 ## Ao trabalhar no decoder
 
 Use a skill **`ibt-format`**: offsets, tipos e roteiro de diagnóstico para quando
-um valor vier absurdo. As constantes estão em `packages/ibt-core/src/format.ts` —
-use-as, não redigite números.
+um valor vier absurdo. As constantes estão em
+`apps/desktop/src/main/ibt/format.ts` — use-as, não redigite números.
 
 Os offsets vêm da spec pública e da engenharia reversa da comunidade e **foram
 validados contra arquivos reais em 2026-09-19** — ver `docs/formato-ibt.md`. O
-teste que sustenta isso é `apps/desktop/src/main/ibt-real-file.test.ts`, que pula
-quando não há fixture em `fixtures/real/` (nenhum `.ibt` entra no repositório,
-regra 21). Se você mexer no decoder, ponha um arquivo lá antes de confiar no
-verde: sem fixture, os testes provam só consistência interna.
+teste que sustenta isso é `apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que
+pula quando não há fixture em `apps/desktop/fixtures/real/` (nenhum `.ibt` entra
+no repositório, regra 22). Se você mexer no decoder, ponha um arquivo lá antes de
+confiar no verde: sem fixture, os testes provam só consistência interna.
 
 ## Ao mexer na interface do desktop
 
@@ -223,14 +208,32 @@ verde: sem fixture, os testes provam só consistência interna.
 escrever a primeira linha de gráfico, painel ou paleta, use a skill **`dataviz`**.
 
 O renderer é um navegador sem Node: tudo que precisa de disco, rede ou chave
-passa por IPC (`apps/desktop/src/main/ipc-contract.ts`).
+passa por IPC (`apps/desktop/src/shared/ipc.ts`).
 
 **Evento é aviso, não dado.** O processo principal empurra `{ type, ids }` pelo
 canal `events:desktop`; quem recebe responde **consultando de novo**. Payload de
 evento nunca carrega série, volta ou relatório — senão passam a existir duas
 versões da mesma verdade, e a que está na tela some no primeiro evento perdido.
-Emitir evento nunca pode falhar um caso de uso: a porta é `void` e a ponte
-engole o próprio erro.
+Emitir evento nunca pode falhar uma operação: o emissor é `void` e engole o
+próprio erro.
+
+## Ao mexer na api
+
+- Rota nova: DTO com `@ApiProperty` (tipo explícito em campo anulável ou array) e
+  `class-validator`; resposta tipada com `@ApiOkResponse`. Depois,
+  `pnpm api:types` na raiz.
+- Tabela nova: `schema.prisma` e `pnpm --dir apps/api db:migrate` (precisa de
+  `DATABASE_URL`).
+- **Nunca use `import type` numa classe injetada ou num DTO de `@Body`/`@Query`.**
+  O import de tipo apaga o metadado de decorator: a injeção quebra, ou o
+  `ValidationPipe` para de validar sem avisar. `src/app.test.ts` monta a api
+  para pegar isso.
+
+## TypeScript
+
+As três apps usam **TypeScript 6**. O 7.0 ainda não expõe a API de compilador
+que o `typescript-eslint`, o Nest CLI e o `openapi-typescript` usam. Não suba
+para o 7 sem conferir os três.
 
 ## Ao tomar decisão estrutural
 
@@ -240,40 +243,37 @@ que o supera.
 
 ## Testes
 
-- Domínio: chamada direta, sem mock.
-- Caso de uso: fake de porta escrito à mão (ver
-  `packages/application-desktop/src/commands/*.test.ts`). Nada de mock de framework.
-- Adapter: roda a suíte de contrato da porta.
-- Teste que precisa de `.ibt` real lê de `fixtures/real/` e **pula** quando o
-  arquivo não existe. Nunca falha por ausência de fixture.
+- Domínio e decoder: chamada direta, sem mock.
+- Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados
+  por parâmetro. Nada de mock de framework.
+- Teste que precisa de `.ibt` real lê de `apps/desktop/fixtures/real/` e
+  **pula** quando o arquivo não existe. Nunca falha por ausência de fixture.
+- Api: regras puras testadas direto; services contra Postgres ainda pendentes
+  (`docs/pendencias.md`).
 - Antes de dizer que terminou: `pnpm check` verde. Se algo falhou, diga o que
   falhou.
 
 ## Commits
 
 Conventional Commits em português:
-`feat(domain): detecta voltas com histerese na linha de chegada`
+`feat(desktop): detecta voltas com histerese na linha de chegada`
 
-Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
-`contracts`, `ibt-core`, `adapter-ibt`, `adapter-fs`, `adapter-sqlite`,
-`adapter-http`, `adapter-postgres`, `adapter-llm`, `adapter-memory`, `desktop`,
-`cloud-api`, `web`, `docs`, `adr`, `infra`.
+Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 
 ## Onde ler mais
 
 | Documento | Para quê |
 |---|---|
-| `docs/arquitetura.md` | as camadas, o custo de trocar cada lib, como testar |
-| `docs/adr/0009-arquitetura-hexagonal.md` | por que ports & adapters, e o que se aceitou perder |
-| `docs/adr/0010-cqs-na-aplicacao.md` | a regra de comando vs. query |
+| `docs/arquitetura.md` | as três aplicações, o contrato OpenAPI, onde mora cada coisa |
+| `docs/adr/0020-aplicacoes-independentes.md` | por que não há código compartilhado, e o que se aceitou perder |
 | `docs/adr/0011-topologia-tres-aplicacoes.md` | as três aplicações e a fronteira de autonomia |
 | `docs/adr/0012-electron-no-desktop.md` | por que Electron, e o que custa |
 | `docs/adr/0013-sincronizacao-e-visibilidade.md` | publicação automática, visibilidade e links |
 | `docs/adr/0014-autenticacao-iron-session.md` | um login para desktop e web |
-| `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central e as quatro barreiras |
+| `docs/adr/0016-so-o-desktop-gera-telemetria.md` | a invariante central |
 | `docs/adr/0017-desktop-e-o-produto.md` | a prioridade: desktop primeiro, nuvem depois |
-| `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
+| `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -288,9 +288,9 @@ Escopos: `domain`, `application`, `application-desktop`, `application-cloud`,
 e relatório do agente.
 
 **Fora do MVP:** telemetria ao vivo via memória compartilhada, overlay em tempo
-real, broadcast de comandos para o sim. Não implemente — quando entrar, é um
-adapter novo de `TelemetryFilePort` e nada mais muda.
+real, broadcast de comandos para o sim. Não implemente — quando entrar, é outra
+fonte de bytes para o decoder (`ByteSource`) e nada mais muda.
 
-**Escopo da nuvem hoje:** esqueleto, e sem pressa. Postgres, migrations e
-autenticação estão em `docs/pendencias.md`. O desktop funciona inteiro sem nada
-disso, e é onde o esforço vai (ADR 0017).
+**Escopo da nuvem hoje:** a api tem cadastro, login, publicação, visibilidade e
+links sobre Prisma, sem ter rodado contra Postgres real ainda. O desktop funciona
+inteiro sem ela, e é onde o esforço vai (ADR 0017).

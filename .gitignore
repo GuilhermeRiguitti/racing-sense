@@ -34,5 +34,8 @@ next-env.d.ts
 # testes
 coverage/
 
-# pastas temporárias dos testes do adapter-fs
+# pastas temporárias de testes antigos
 .tmp-telemetria-*/
+
+# cliente do Prisma, gerado por `prisma generate` (postinstall da api)
+apps/api/src/generated/

@@ -1,106 +1,66 @@
 ---
 name: novo-caso-de-uso
-description: Roteiro para adicionar funcionalidade respeitando as camadas do projeto (hexagonal + CQS). Use ao criar um caso de uso, uma porta, um adapter, uma rota HTTP ou ao integrar qualquer biblioteca externa — e quando estiver em dúvida sobre em qual pacote um arquivo novo deve nascer ou por que o `pnpm arch` reprovou.
+description: Roteiro para adicionar funcionalidade em uma das três aplicações independentes (desktop, api, web). Use ao criar uma operação do coach no desktop, um canal de IPC, uma rota ou tabela na api, uma página na web, ou ao adicionar uma biblioteca — e quando estiver em dúvida sobre em qual aplicação ou pasta um arquivo novo deve nascer.
 ---
 
-# Caso de uso novo
+# Funcionalidade nova
 
 ## Antes de escrever: responda duas perguntas
 
-**1. Isso muda estado?**
+1. **Toca em telemetria, no `.ibt`, no banco local ou na LLM?** Então é do
+   **desktop**, e roda sem HTTP (regras 6, 7 e 8 do CLAUDE.md).
+2. **É social — conta, perfil, o que outros pilotos veem?** Então o dado mora na
+   **api**, e desktop e web chegam nele por HTTP.
 
-- Muda → `commands/`, devolve no máximo um id, vira `POST`.
-- Não muda → `queries/`, devolve dados, vira `GET`.
+A web nunca é dona de regra nem de dado: ela mostra o que a api devolve.
 
-Nunca os dois. Produzir texto com LLM **muda estado** (custa dinheiro e persiste):
-é comando. Ver `docs/adr/0010-cqs-na-aplicacao.md`.
+## No desktop
 
-**1b. De que lado ele vive?**
-
-| O caso de uso toca em... | Pacote |
+| Passo | Onde |
 |---|---|
-| arquivo `.ibt`, SDK do iRacing, voltas, séries, análise, publicação | `packages/application-desktop` |
-| visibilidade, compartilhamento, leitura do que já foi publicado | `packages/application-cloud` |
-| nada disso (relógio, id, erro comum) | `packages/application` |
+| Regra de corrida (pura, sem I/O) | `src/main/domain/` + teste com chamada direta |
+| Tabela ou consulta nova | `src/main/db/schema.ts` e `local-store.ts` |
+| A operação | `src/main/{ingestion,analysis}/` — função que recebe o `LocalStore` (e o que mais precisar) |
+| Canal para a tela | `src/shared/ipc.ts` (nome) → `src/main/ipc/handlers.ts` (handler) → `src/preload/index.ts` (exposição) → `src/renderer/src/bridge.ts` (tipo) |
+| DTO para a tela | tipo em `src/shared/dto.ts`, mapper em `src/main/ipc/dto.ts` |
 
-Telemetria **só** existe no lado do desktop. Se o caso de uso lê arquivo do sim
-ou decodifica qualquer coisa, ele não pode nascer na nuvem — o `pnpm arch` e o
-próprio TypeScript reprovam (ADR 0016).
-
-**2. Precisa de algo do mundo externo?**
-
-Disco, rede, relógio, id aleatório, LLM, banco — tudo isso entra por **porta**,
-nunca por import direto.
-
-## Ordem de trabalho
-
-1. **Regra de negócio → `domain`.** Se a lógica vale independente de onde os dados
-   vêm, ela é do domínio. Teste chamando direto, sem mock.
-
-2. **Porta → `ports/` do `application-*` daquele lado,** se faltar alguma. A porta é declarada por
-   quem a usa e fala o vocabulário do domínio. Se `Buffer`, `Request` ou
-   `LanguageModel` aparecer na assinatura, a lib vazou — refaça.
-
-3. **Caso de uso → `application/src/commands|queries/`:**
+Forma da operação:
 
 ```ts
-export interface ImportReferenceLapCommand { sessionId: SessionId; lapNumber: number }
-export interface ImportReferenceLapDeps { sessions: SessionReaderPort; referenceLaps: ReferenceLapWriterPort }
-export type ImportReferenceLapHandler = (c: ImportReferenceLapCommand) => Promise<ReferenceLapId>;
-
-export function createImportReferenceLapHandler(deps: ImportReferenceLapDeps): ImportReferenceLapHandler {
-  return async (command) => { /* orquestra: lê portas, chama domínio, escreve */ };
-}
+export function importReferenceLap(store: LocalStore, request: ImportReferenceLapRequest): ReferenceLapId
+export async function requestLapAnalysis(ctx: AnalysisContext, request: LapAgainstReference): Promise<void>
 ```
 
-Query recebe **só** `...ReaderPort` — é assim que o compilador garante que ela
-não escreve.
+- Sem classe e sem interface de "porta": o `LocalStore` é o SQLite de verdade.
+- O que o teste precisa trocar (arquivo, modelo, `fetch`) entra como parâmetro.
+- Gerar e ler são funções separadas: tela que abre não pode disparar modelo.
+- Teste: `openLocalStore(':memory:')`, sem mock de framework.
 
-4. **Adapter → `packages/adapter-*`,** se a porta for nova. Vai no adapter que já
-   é dono daquela dependência; lib nova pede adapter novo **e** uma linha no mapa
-   em `scripts/architecture.config.mjs` (com ADR, porque é mudança de arquitetura).
+Se a operação precisa avisar a tela, emita um evento **depois** de gravar, com
+só os ids (`{ type, ids }`); a tela consulta de novo.
 
-5. **Contrato do adapter → `testing/*.contract.ts` do mesmo pacote.** Toda porta
-   com mais de uma implementação possível tem suíte de contrato, e todo adapter
-   roda a mesma. É o que torna "substituível" um fato verificado.
+## Na api
 
-6. **Ligação → o composition root da aplicação que vai usar:**
-   `apps/desktop/src/main/composition-root.ts` (app do piloto) ou
-   `apps/cloud-api/src/composition-root.ts` (nuvem). São os únicos arquivos que
-   escolhem implementação. Repare no que **não** pode: `adapter-llm` na nuvem,
-   qualquer adapter na web.
+1. DTO em `src/<módulo>/<módulo>.dto.ts`: classe com `@ApiProperty` (tipo
+   explícito em campo anulável ou array) e `class-validator`.
+2. Service `@Injectable` com o `PrismaService`. Acesso negado → `NotFoundException`,
+   nunca 403 (regra 10). Visibilidade só por `canView`.
+3. Controller fino com `@ApiOkResponse`/`@ApiNoContentResponse`, e `PilotGuard` +
+   `@CurrentPilot()` quando exige login.
+4. Tabela nova: `prisma/schema.prisma` + `pnpm --dir apps/api db:migrate`.
+5. Na raiz: `pnpm api:types`, para desktop e web enxergarem o contrato novo.
 
-7. **Borda:**
-   - desktop → declare o canal em `apps/desktop/src/main/ipc-contract.ts`,
-     registre o handler em `ipc-handlers.ts` e exponha no `preload`;
-   - nuvem → controller em `apps/cloud-api/src/modules/`.
+## Na web
 
-   Nos dois casos a regra é a mesma: valida com o schema de
-   `@telemetry/contracts`, chama **um** caso de uso, devolve DTO. Regra de
-   negócio na borda é erro de camada.
+Chamada nova em `src/lib/api.ts` com o cliente gerado; a página só consome.
+Imports sem extensão (convenção do Next).
 
-8. **DTO → `packages/contracts`,** se o formato sai na API. Único lugar com `zod`.
+## Biblioteca nova
 
-9. `pnpm check`.
+Entra no `package.json` **da aplicação que usa**, e em nenhum outro lugar. Se ela
+roda script de instalação, acrescente o nome em `pnpm.onlyBuiltDependencies` do
+`package.json` da app **e** em `onlyBuiltDependencies` do `pnpm-workspace.yaml`.
 
-## Erros comuns (e o que o `pnpm arch` vai dizer)
+## Antes de dizer que terminou
 
-| Sintoma | Causa | Conserto |
-|---|---|---|
-| "importa o adapter X" | caso de uso ou rota escolhendo implementação | receba a porta; ligue no composition root |
-| "não pode tocar em API de plataforma" | `node:*` em pacote puro | mova para `adapter-fs` atrás de uma porta |
-| "declara a lib Y" | lib nova na camada errada | adapter que seja dono dela |
-| "import profundo" | `@telemetry/x/src/...` | importe o ponto de entrada |
-| Teste precisa de disco ou rede | dependência concreta vazou | injete porta e use o adapter em memória |
-| "declara a lib zod" fora de `contracts` | validação no lugar errado | use `validate()` de `@telemetry/contracts` |
-
-## Checklist
-
-- [ ] Comando ou query, nunca os dois
-- [ ] Query só com portas de leitura
-- [ ] Nenhum tipo de lib na assinatura da porta
-- [ ] Erro lançado é do domínio (`DomainError`), com código traduzido na borda
-- [ ] Stub lança `NotImplementedError` dizendo o que falta
-- [ ] Adapter novo roda a suíte de contrato
-- [ ] Se o caso de uso fala com a nuvem, ele **não** bloqueia o piloto (enfileira)
-- [ ] `pnpm check` verde
+`pnpm check` na raiz, verde.

@@ -1,6 +1,6 @@
 # O formato `.ibt`
 
-Referência de trabalho para quem for mexer em `@telemetry/ibt-core`.
+Referência de trabalho para quem for mexer no decoder (`apps/desktop/src/main/ibt/`).
 
 > A iRacing não publica a descrição do formato binário. O que está aqui vem do
 > `irsdk.h` do SDK oficial e da engenharia reversa da comunidade (crate `itelem`,
@@ -25,7 +25,7 @@ Tudo é little-endian.
 
 Enquanto a sessão roda, o arquivo está sendo escrito e fica **travado pelo Windows**.
 Ler cedo demais dá `EBUSY` ou arquivo truncado — por isso o watcher espera estabilizar
-(ver `packages/adapter-fs/src/telemetry-watcher.fs.ts`).
+(ver `apps/desktop/src/main/ingestion/watcher.ts`).
 
 ## Layout
 
@@ -130,8 +130,8 @@ bufOffset + (N * bufLen) + varHeader.offset
   Lista fixa no código quebra em silêncio.
 - **Streaming, não `readFile`.** Uma stint de 30 min a 60 Hz passa de 100 mil
   amostras por canal.
-- **Amostra não sabe de volta.** O agrupamento por volta é trabalho da
-  `@telemetry/domain`, usando `Lap`/`LapDistPct`.
+- **Amostra não sabe de volta.** O agrupamento por volta é trabalho do
+  domínio (`detectLaps`), usando `Lap`/`LapDistPct`.
 
 ## Memória compartilhada (fase 2, não implementar agora)
 

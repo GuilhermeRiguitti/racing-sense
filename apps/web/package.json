@@ -3,23 +3,39 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Interface de análise: gráficos de volta, comparação com referência e relatório do agente.",
+  "description": "Rede social: perfil do piloto, feed de sessões públicas e voltas compartilhadas. Fala só com a api.",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "api:types": "openapi-typescript ../api/openapi.json -o src/lib/api-schema.d.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "echo \"web: sem testes ainda\""
   },
   "dependencies": {
-    "@telemetry/contracts": "workspace:*",
     "next": "^16.3.5",
+    "openapi-fetch": "^0.17.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
+    "@types/node": "^22.19.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "typescript": "catalog:"
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.6",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^6.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
   }
 }

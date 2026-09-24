@@ -11,166 +11,136 @@ outros pilotos.
 
 ```
   ┌─ apps/desktop (Electron, Windows) ───────────────┐
-  │  watcher → .ibt → análise → LLM → interface      │  offline-first
+  │  watcher → .ibt → SQLite → análise → LLM → tela  │  offline-first, sem HTTP
   └──────────────┬───────────────────────────────────┘
-                 │ publica (fila + retry) · baixa voltas · autentica
+                 │ login · publica (fila + retry)        ← cliente gerado do OpenAPI
   ┌──────────────▼──────────────┐
-  │  apps/cloud-api (NestJS)    │ ── Postgres
+  │  apps/api (NestJS + Prisma) │ ── Postgres            → Swagger em /docs
   └──────────────▲──────────────┘
-                 │
+                 │                                       ← cliente gerado do OpenAPI
   ┌──────────────┴──────────────┐
-  │  apps/web (Next.js)         │  rede social, sem LLM
+  │  apps/web (Next.js)         │  rede social, sem banco, sem LLM
   └─────────────────────────────┘
 ```
 
-**O desktop é o core.** Ele é a única origem de telemetria do sistema: lê o
-`.ibt` que o iRacing grava e, na fase 2, falará com o SDK. A cloud-api recebe
-dado **já processado**, guarda e devolve. A web só lê da cloud-api.
+**As três são independentes** (ADR 0020): cada uma tem o próprio `package.json`,
+lockfile, `node_modules` e `tsconfig`, e nenhuma importa código da outra. O que
+as liga é o contrato HTTP da api, publicado como `apps/api/openapi.json`.
 
-Quatro fronteiras, verificadas por `pnpm arch` (ADR 0011 e 0016):
+**O desktop é o produto** (ADR 0017) e a única origem de telemetria (ADR 0016).
+Ingestão, banco local, comparação e LLM rodam nele, sem chamada HTTP. A api só
+entra no que é social: login e publicação, sempre em segundo plano.
 
-1. **Só o desktop gera telemetria.** A nuvem não declara
-   `@telemetry/application-desktop`, então não consegue nem nomear a ingestão; e
-   não tem `node:fs` nos builtins, então não abre arquivo.
-2. **O desktop nunca espera a nuvem.** Toda ida à cloud-api passa por porta e por
-   fila com retry. Sem internet, o aplicativo funciona inteiro.
-3. **A web nunca fala com a máquina do piloto.** Ela depende só de `contracts`.
-4. **A LLM é só do desktop.** `adapter-llm` não entra na cloud-api nem na web.
+**A api é a rede social.** Recebe dado **já processado**, guarda no Postgres,
+aplica quem pode ver o quê e devolve. Não tem o código do decoder nem da LLM —
+não por regra, mas porque esse código só existe dentro de `apps/desktop`.
 
-Dentro do desktop, o front conversa com o processo principal por **IPC** — não
-existe servidor HTTP em `localhost`.
+**A web só fala com a api.** Não tem banco, não fala com a máquina do piloto e
+não decide visibilidade: pede à api, que decide.
 
-## A forma
-
-Ports & adapters (hexagonal), com a dependência apontando **para dentro**.
-Decisão e justificativa em [ADR 0009](adr/0009-arquitetura-hexagonal.md).
+## O contrato entre as aplicações
 
 ```
-      ┌──────────────────────────────────────────────────────┐
-      │                       domain                         │  regras, zero deps
-      │  voltas · séries · delta · condições · visibilidade   │
-      └───────────────────────▲──────────────────────────────┘
-                              │
-      ┌───────────────────────┴──────────────────────────────┐
-      │        application  (relógio · id · erro comum)       │
-      └──────▲───────────────────────────────────▲───────────┘
-             │                                   │
-   ┌─────────┴──────────┐              ┌─────────┴──────────┐
-   │ application-desktop│              │ application-cloud  │  casos de uso + PORTAS
-   │ telemetria · voltas│              │ visibilidade       │  commands/ e queries/
-   │ análise · publicar │              │ compartilhar · ler │
-   └──▲────▲─────▲────▲─┘              └────▲──────────▲────┘
-      │    │     │    │                     │          │
-     ibt   fs  sqlite http · llm         postgres    memory
-      └────┴─────┴────┴──┐                  └────┬─────┘
-                         │                       │
-              apps/desktop                apps/cloud-api ── apps/web
-           (composition root)          (composition root)
+apps/api  ──  pnpm api:openapi  ──▶  apps/api/openapi.json
+                                          │
+                        pnpm api:types    ├──▶ apps/desktop/src/main/cloud/api-schema.d.ts
+                                          └──▶ apps/web/src/lib/api-schema.d.ts
 ```
 
-Os dois lados nunca se veem: o desktop não declara `application-cloud`, a nuvem
-não declara `application-desktop`. Cada um enxerga só o núcleo compartilhado —
-é assim que "só o desktop gera telemetria" deixa de ser combinado (ADR 0016).
+- Os DTOs da api são classes com `@ApiProperty` (Swagger) e `class-validator`
+  (validação). O documento sai do mesmo código que o servidor roda.
+- Desktop e web chamam com `openapi-fetch`, tipado pelo arquivo gerado. Rota ou
+  campo que mudou na api vira erro de compilação no cliente depois de
+  `pnpm api:types`.
+- Os `.d.ts` gerados e o `openapi.json` são versionados: cada app builda sozinha,
+  sem precisar da api por perto.
 
-**A porta é declarada por quem a usa.** `application` diz "preciso de algo que
-leia bytes"; `adapter-fs` obedece. É isso que inverte a dependência e faz trocar
-biblioteca ser troca de arquivo, não refatoração.
+## apps/desktop
 
-## Onde cada coisa mora
+```
+src/
+  main/                 processo principal (Node)
+    domain/             regras de corrida: voltas, séries, delta, condições. Sem I/O.
+    ibt/                decoder do .ibt (offsets, session info CP1252) e openIbtFile
+    db/                 LocalStore: o SQLite do piloto
+    ingestion/          watcher da pasta do sim → ingestTelemetryFile
+    analysis/           comparar com referência, promover referência, narrador (LLM)
+    cloud/              cliente da api: login e fila de publicação
+    ipc/                handlers dos canais, DTOs, ponte de eventos
+    desktop.ts          monta store, watcher, cliente da api e narrador
+    index.ts            Electron: janela, IPC, esteira de ingestão, flush da fila
+  preload/              expõe só os canais declarados
+  renderer/             React, navegador sem Node
+  shared/               tipos que main, preload e renderer compartilham (IPC, DTOs)
+```
 
-| Pacote | Responsabilidade | Dependência externa que possui |
-|---|---|---|
-| `packages/domain` | modelo e regras de corrida | **nenhuma** |
-| `packages/application` | núcleo: relógio, id, erro comum | **nenhuma** |
-| `packages/application-desktop` | casos de uso de telemetria e análise | **nenhuma** |
-| `packages/application-cloud` | casos de uso de publicação e acesso | **nenhuma** |
-| `packages/contracts` | DTOs e validação da borda | `zod` |
-| `packages/ibt-core` | decoder binário puro | **nenhuma** |
-| `packages/adapter-ibt` | porta de decodificação | — (usa `ibt-core`) |
-| `packages/adapter-fs` | arquivo e watcher | `node:fs`, `chokidar` |
-| `packages/adapter-sqlite` | banco local do piloto | `better-sqlite3` |
-| `packages/adapter-http` | cliente da cloud-api | — |
-| `packages/adapter-postgres` | sessões publicadas | `pg` |
-| `packages/adapter-llm` | porta do narrador | `ai`, `@ai-sdk/*` |
-| `packages/adapter-memory` | portas em memória | **nenhuma** |
-| `apps/desktop` | composition root + IPC + interface | `electron` |
-| `apps/cloud-api` | composition root + HTTP | `@nestjs/*`, `iron-session` |
-| `apps/web` | interface pública | `next`, `react` |
+Não há portas nem adapters: as funções recebem o `LocalStore` e chamam SQLite,
+disco e modelo direto. Onde o teste precisa trocar algo, a função aceita a
+alternativa como parâmetro — `ingestTelemetryFile` aceita `open` para receber um
+`.ibt` falso; `requestLapAnalysis` recebe `narrate`.
 
-Cada adapter é **dono de uma dependência externa**. O AI SDK só existe dentro de
-`adapter-llm`; `node:fs` só dentro de `adapter-fs`; `zod` só em `contracts`.
+Ler e gerar continuam separados por nome e por efeito: `getLapAnalysis` só lê o
+relatório gravado, `requestLapAnalysis` chama o modelo e grava. Abrir a tela
+nunca paga uma chamada de modelo.
+
+O front conversa com o processo principal por **IPC** — não existe servidor HTTP
+em `localhost`. Evento é aviso, não dado: o processo principal empurra
+`{ type, ids }` e a tela consulta de novo.
+
+## apps/api
+
+NestJS padrão, ESM, compilado pelo Nest CLI com SWC.
+
+```
+src/
+  prisma/       PrismaService (cliente gerado em src/generated, fora do git)
+  auth/         cadastro, login, cookie selado (iron-session), @Viewer / @CurrentPilot
+  sessions/     publicar, listar, abrir, visibilidade, links, apagar; canView
+  app.ts        monta a aplicação (usado pelo servidor e pela exportação do OpenAPI)
+  main.ts       sobe a porta e o Swagger em /docs
+  openapi.ts    escreve openapi.json
+prisma/
+  schema.prisma, migrations/
+```
+
+A regra de acesso está em um lugar só: `canView`, em `sessions/visibility.ts`.
+Sem permissão responde 404, nunca 403 — distinguir entregaria que a sessão existe.
+
+## apps/web
+
+Next.js com renderização no servidor. `src/lib/api.ts` concentra as chamadas à
+api; as páginas só consomem.
+
+## Testes
+
+| App | Como se testa |
+|---|---|
+| desktop — domínio, decoder | chamada direta, sem mock |
+| desktop — ingestão, análise, banco | SQLite `:memory:` real; `.ibt` e narrador falsos passados por parâmetro |
+| desktop — IPC | handlers com barramento falso e banco real |
+| desktop — nuvem | `openapi-fetch` real com `fetch` falso |
+| desktop — `.ibt` real | lê `apps/desktop/fixtures/real/`, **pula** sem arquivo |
+| api | regras puras (`canView`, senha); services contra Postgres ainda pendentes |
 
 ## O custo de trocar uma lib
 
-É o teste real da arquitetura:
-
-| Trocar | Muda | Não muda |
-|---|---|---|
-| decoder de `.ibt` | `adapter-ibt` | domínio, casos de uso, apps |
-| Gemini → outro provedor | variável de ambiente | nada |
-| AI SDK → Mastra | `adapter-llm` | tudo o mais |
-| SQLite → outro banco local | `adapter-sqlite` | tudo o mais |
-| Postgres → outro banco | `adapter-postgres` | tudo o mais |
-| NestJS → outro framework | `apps/cloud-api/src/modules/` | domínio, casos de uso, adapters |
-| Electron → Tauri | processo principal do desktop | domínio, casos de uso, adapters, renderer |
-| zod → outra validação | `contracts` | todo o resto |
-| iron-session → outro esquema | `adapter-http` + cloud-api | as portas e os casos de uso |
-| arquivo → memória compartilhada (fase 2) | novo adapter de `TelemetryFilePort` | tudo o mais |
-
-## CQS
-
-Todo caso de uso é comando **ou** query. Ver [ADR 0010](adr/0010-cqs-na-aplicacao.md).
-
-```
-packages/application-{desktop,cloud}/src/
-  commands/   mudam estado, devolvem no máximo um id     → POST
-  queries/    não mudam nada, devolvem dados             → GET
-  ports/      o que aquele lado exige do mundo externo
-```
-
-A separação é verificada pelo compilador, não por revisão: `SessionReaderPort` e
-`SessionWriterPort` são interfaces diferentes, e uma query que só recebe o leitor
-não tem como escrever.
-
-## Testes como consequência da forma
-
-| Camada | Como se testa | Precisa de |
-|---|---|---|
-| `domain` | chamada direta | nada |
-| `application` | fake de porta escrito à mão | nada |
-| adapters | **a suíte de contrato da porta** | nada (ou a lib do adapter) |
-| `apps/desktop` | handlers de IPC com barramento falso | nada |
-
-A suíte de contrato (`@telemetry/application-desktop/testing` e
-`@telemetry/application-cloud/testing`) é o que dá sentido a
-"substituível": toda implementação de uma porta roda os mesmos testes. O adapter
-em memória passa hoje; o de disco terá que passar amanhã, sem que nenhum caso de
-uso mude.
-
-## Fronteiras verificadas por máquina
-
-`pnpm arch` roda dentro do `pnpm check` e reprova:
-
-1. dependência declarada fora do mapa de camadas;
-2. import de pacote que o mapa não dá àquela camada — é o que impede a nuvem de
-   tocar em `application-desktop`;
-3. módulo `node:*` fora da lista daquele pacote — a cloud-api tem `node:crypto` e
-   `node:http`, e **não** tem `node:fs`;
-4. import de adapter fora do composition root — com uma exceção: arquivo `.test.ts`,
-   porque teste de integração monta adapter real de propósito, e o mapa de camadas já
-   impede que qualquer `application-*` sequer nomeie um adapter;
-5. import profundo (`@telemetry/x/src/...`) ou relativo saindo do pacote.
-
-O mapa está em `scripts/architecture.config.mjs`. Mudar aquele arquivo é mudar a
-arquitetura e pede ADR.
+| Trocar | Muda |
+|---|---|
+| Gemini → outro provedor | variável de ambiente |
+| AI SDK → outra lib | `apps/desktop/src/main/analysis/` |
+| SQLite → outro banco local | `apps/desktop/src/main/db/` e quem usa `LocalStore` |
+| arquivo → memória compartilhada (fase 2) | outra implementação de `IbtFile` |
+| Prisma/Postgres → outro | `apps/api/src/**/*.service.ts` |
+| NestJS → outro framework | `apps/api` inteira; desktop e web só regeneram tipos se o contrato mudar |
+| iron-session → outro esquema | `apps/api/src/auth/`; os clientes não tocam no cookie |
 
 ## Três decisões que sustentam o resto
 
 ### 1. O decoder é puro e a origem dos bytes é injetada
 
-`ibt-core` não abre arquivo: recebe uma `ByteSource`. O `.ibt` e o stream ao vivo
+O decoder não abre arquivo: recebe uma `ByteSource`. O `.ibt` e o stream ao vivo
 usam o mesmo header e a mesma tabela de variáveis — muda só de onde vêm os bytes.
-Na fase 2, isso é um adapter novo (ADR 0002).
+Na fase 2, é outra fonte de bytes (ADR 0002).
 
 ### 2. A análise é determinística; o modelo só redige
 
@@ -181,7 +151,7 @@ trecho e uns canais (ADR 0005, `docs/agente.md`).
 ### 3. O que roda local fica local por padrão
 
 O watcher (ADR 0004) implica que a ingestão e a análise rodam na mesma máquina do
-sim. O arquivo `.ibt` **nunca** sai dela.
+sim. O arquivo `.ibt` **nunca** sai dela, nem o caminho dele.
 
 O que sobe é o derivado — metadados, condições, voltas e séries — e sobe
 automaticamente, mas **nasce privado**: aparecer para outra pessoa exige ação do
@@ -195,6 +165,6 @@ variáveis do arquivo, porque o conjunto muda entre carros e builds do sim.
 
 A exceção é explícita e verificada: os poucos canais **obrigatórios** para
 recortar voltas (`Lap`, `LapDistPct`) estão declarados em
-`packages/application-desktop/src/commands/ingest-telemetry-file.command.ts` e são
-conferidos contra o catálogo real do arquivo — ausência falha nomeando o canal,
-em vez de produzir volta errada em silêncio.
+`apps/desktop/src/main/ingestion/ingest-file.ts` e são conferidos contra o
+catálogo real do arquivo — ausência falha nomeando o canal, em vez de produzir
+volta errada em silêncio.

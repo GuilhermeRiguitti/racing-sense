@@ -1,6 +1,6 @@
-import type { DesktopEventDto } from '@telemetry/contracts';
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron';
-import { IPC } from '../main/ipc-contract.js';
+import type { DesktopEvent } from '../shared/ipc.js';
+import { IPC } from '../shared/ipc.js';
 
 /**
  * A ponte entre o renderer e o processo principal.
@@ -38,8 +38,8 @@ const api = {
    * O `IpcRendererEvent` fica deste lado da ponte — o renderer recebe só o
    * evento, sem nada do Electron junto.
    */
-  onEvent: (listener: (event: DesktopEventDto) => void): (() => void) => {
-    const handler = (_event: IpcRendererEvent, payload: DesktopEventDto): void => {
+  onEvent: (listener: (event: DesktopEvent) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, payload: DesktopEvent): void => {
       listener(payload);
     };
     ipcRenderer.on(IPC.events, handler);

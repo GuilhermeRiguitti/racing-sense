@@ -38,4 +38,4 @@ referências escritas:
 - [Next.js](https://nextjs.org)
 - [iron-session](https://github.com/vvo/iron-session)
 - [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
-- [Biome](https://biomejs.dev)
+- [ESLint](https://eslint.org) e [typescript-eslint](https://typescript-eslint.io)

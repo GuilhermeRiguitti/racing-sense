@@ -1,4 +1,4 @@
-import type { SessionDto } from '@telemetry/contracts';
+import type { SessionDto } from '../../shared/dto.js';
 
 interface Props {
   readonly sessions: readonly SessionDto[];

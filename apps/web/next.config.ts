@@ -1,14 +1,14 @@
 import type { NextConfig } from 'next';
 
+/**
+ * A web depende só da api: lê e escreve por HTTP, com os tipos gerados do
+ * OpenAPI (`src/lib/api-schema.d.ts`). Não importa código de nenhuma outra
+ * aplicação do repositório.
+ */
 const config: NextConfig = {
-  /**
-   * Os pacotes internos são publicados como TypeScript (sem build step).
-   * O Next precisa transpilá-los — ver docs/adr/0001-monorepo-pnpm.md.
-   *
-   * A web depende só de `contracts`: ela lê a cloud-api e nunca monta caso de
-   * uso nem fala com a máquina do piloto (ADR 0011).
-   */
-  transpilePackages: ['@telemetry/contracts'],
+  // A raiz do build é esta pasta, não a do repositório: cada aplicação tem o
+  // próprio lockfile e o próprio node_modules, e a web builda sozinha.
+  turbopack: { root: import.meta.dirname },
 };
 
 export default config;

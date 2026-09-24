@@ -1,0 +1,91 @@
+// Banco da rede social: contas, sessões publicadas pelo desktop e links.
+//
+// Nada aqui é telemetria bruta. O desktop recorta as voltas, calcula o que for
+// preciso e publica o resultado; esta base só guarda e devolve (regra 9).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Quem pode ver uma sessão. Conta nova publica tudo como `private` (regra 13).
+enum Visibility {
+  private
+  unlisted
+  public
+}
+
+model Pilot {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  displayName       String
+  passwordHash      String
+  defaultVisibility Visibility         @default(private)
+  createdAt         DateTime           @default(now())
+  sessions          PublishedSession[]
+}
+
+/// Uma sessão como o desktop publicou. O `id` é o mesmo que ela tem na máquina
+/// do piloto: publicar de novo substitui, não duplica.
+model PublishedSession {
+  id                 String         @id
+  ownerId            String
+  owner              Pilot          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  trackId            String
+  trackName          String
+  trackConfig        String?
+  trackLengthMeters  Float?
+  carId              String
+  carName            String
+  driverName         String?
+  sessionType        String?
+  recordedAt         DateTime?
+  tickRate           Int
+  sampleCount        Int
+  /// Temperatura, horário e céu viajam com a sessão: sem isso a comparação mente.
+  conditions         Json
+  /// Melhor volta válida, calculada no desktop. `null` se nenhuma volta é válida.
+  bestLapTimeSeconds Float?
+  lapCount           Int
+  visibility         Visibility
+  publishedAt        DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  laps               PublishedLap[]
+  shareLinks         ShareLink[]
+
+  @@index([visibility, trackId, carId])
+  @@index([ownerId])
+}
+
+model PublishedLap {
+  sessionId      String
+  session        PublishedSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  number         Int
+  startSample    Int
+  endSample      Int
+  lapTimeSeconds Float?
+  isComplete     Boolean
+  /// Por que a volta não serve de referência. Vazio = serve.
+  flags          String[]
+  /// Séries por distância, como o desktop gravou. Lidas inteiras, nunca por ponto.
+  series         Json
+
+  @@id([sessionId, number])
+}
+
+/// Link de compartilhamento. Revogável; só abre sessão `unlisted`.
+model ShareLink {
+  token     String           @id
+  sessionId String
+  session   PublishedSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  revokedAt DateTime?
+
+  @@index([sessionId])
+}

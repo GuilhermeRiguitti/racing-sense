@@ -1,4 +1,4 @@
-import type { LapDto } from '@telemetry/contracts';
+import type { LapDto } from '../../shared/dto.js';
 import { formatLapTime } from './chart-math.js';
 
 /** O que cada marcação quer dizer, na língua de quem pilota. */

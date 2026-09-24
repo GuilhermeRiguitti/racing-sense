@@ -1,4 +1,4 @@
-import type { SeriesDto } from '@telemetry/contracts';
+import type { SeriesDto } from '../../shared/dto.js';
 
 /**
  * Como cada canal aparece na tela.

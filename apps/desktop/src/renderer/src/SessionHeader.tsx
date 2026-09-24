@@ -1,4 +1,4 @@
-import type { SessionDto } from '@telemetry/contracts';
+import type { SessionDto } from '../../shared/dto.js';
 
 const TIPO: Record<string, string> = {
   Practice: 'Treino',

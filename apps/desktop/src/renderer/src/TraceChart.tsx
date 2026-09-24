@@ -1,6 +1,6 @@
-import type { SeriesDto } from '@telemetry/contracts';
-import { downsample } from '@telemetry/domain';
 import { type KeyboardEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { downsample } from '../../main/domain/distance-series.js';
+import type { SeriesDto } from '../../shared/dto.js';
 import { type ChannelView, PANELS, type PanelView, seriesFor } from './channels.js';
 import { nearestIndex, niceCeil, niceTicks, seriesPath } from './chart-math.js';
 

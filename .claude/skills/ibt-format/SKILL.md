@@ -5,7 +5,7 @@ description: Referência do formato binário .ibt do iRacing para trabalho de de
 
 # Formato `.ibt`
 
-Tudo little-endian. As constantes vivem em `packages/ibt-core/src/format.ts` — **use-as, não redigite números**.
+Tudo little-endian. As constantes vivem em `apps/desktop/src/main/ibt/format.ts` — **use-as, não redigite números**.
 
 ## Ordem dos blocos
 
@@ -54,10 +54,10 @@ bufOffset + (índiceDaAmostra * bufLen) + varHeader.offset
    não funcionar.
 3. **Leitura curta falha alto.** Nunca devolva buffer parcial: vira amostra corrompida
    longe da causa.
-4. **`ibt-core` não faz I/O.** Bytes entram por `ByteSource`, e quem a implementa é
-   `@telemetry/adapter-fs`. O adapter que liga o decoder ao sistema é
-   `@telemetry/adapter-ibt` — ele traduz `VarHeader` em `ChannelDescriptor`, para o
-   vocabulário do formato não subir para os casos de uso.
+4. **O decoder não faz I/O.** Bytes entram por `ByteSource`; quem abre o arquivo é
+   `openIbtFile` (`ibt/ibt-file.ts`). `channel-mapping.ts` e `session-mapping.ts`
+   traduzem `VarHeader` e session info para o vocabulário do domínio, para o
+   formato não vazar para a ingestão e a análise.
 
 ## Duas contas que provam que os offsets estão certos
 
@@ -95,10 +95,10 @@ recorta volta descarta a amostra 0; quem decodifica devolve ela como está.
 | Session info vem binário/ilegível | `sessionInfoOffset` e `sessionInfoLength` trocados (são int32 adjacentes) |
 | Nome de piloto com caractere estranho | decodificado como UTF-8 em vez de CP1252 |
 | Canal certo, valor sem sentido | tipo lido errado (float × int) ou `offset` do canal aplicado no arquivo em vez de na amostra |
-| Últimas amostras com lixo | arquivo truncado: sessão ainda estava gravando. Ver o watcher em `@telemetry/adapter-fs` |
+| Últimas amostras com lixo | arquivo truncado: sessão ainda estava gravando. Ver o watcher em `apps/desktop/src/main/ingestion/watcher.ts` |
 | Canais misturados no tempo (fase 2) | buffer não congelado antes da leitura do tick |
 
 Detalhes e fontes: `docs/formato-ibt.md`. Os offsets acima foram conferidos contra
 arquivos reais em 2026-09-19; o teste que sustenta isso é
-`apps/desktop/src/main/ibt-real-file.test.ts`, que **pula** quando não há fixture em
-`fixtures/real/` — sem arquivo lá, o verde prova só consistência interna.
+`apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que **pula** quando não há fixture em
+`apps/desktop/fixtures/real/` — sem arquivo lá, o verde prova só consistência interna.

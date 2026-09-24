@@ -5,7 +5,7 @@
 Um engenheiro de pista que lê números já calculados e explica o que eles significam.
 
 O que ele **não** é: um calculador de delta, um parser, nem um sistema que "olha a
-telemetria bruta". Todo número que ele cita saiu de `@telemetry/domain`.
+telemetria bruta". Todo número que ele cita saiu do domínio do desktop (`apps/desktop/src/main/domain/`).
 
 ## Por que assim
 
@@ -21,8 +21,9 @@ qualidade: a parte difícil não é raciocínio numérico, é redação técnica
 
 ## Stack
 
-**AI SDK da Vercel (`ai` v7)**, dentro de `packages/adapter-llm` — único pacote
-do sistema que importa `ai` ou `@ai-sdk/*`. Ver
+**AI SDK da Vercel (`ai` v7)**, dentro de `apps/desktop/src/main/analysis/` — o único lugar
+do sistema que importa `ai` ou `@ai-sdk/*`. Roda no processo principal do
+desktop, direto contra o provedor: sem passar pela api. Ver
 `docs/adr/0005-camada-agentica-ai-sdk.md` para a comparação com Mastra e o critério
 de quando migrar.
 
@@ -35,22 +36,22 @@ Providers no MVP:
 
 Troca de provider é variável de ambiente (`TELEMETRY_LLM_PROVIDER`), não mudança de
 código. O único arquivo que sabe qual provider está em uso é
-`packages/adapter-llm/src/provider.ts`.
+`apps/desktop/src/main/analysis/llm-provider.ts`.
 
-## A porta
+## A função
 
-A aplicação conhece uma interface só, `NarratorPort`:
+O resto do desktop conhece uma assinatura só, `Narrate` (`analysis/narrator.ts`):
 
 ```ts
 narrate(request: { comparison: LapComparison; evidence: ReadonlyMap<string, readonly number[]> }): Promise<Narration>
 ```
 
 Entra delta já calculado mais trechos de canal já reduzidos; sai resumo e
-achados. Nenhum tipo do AI SDK aparece na assinatura — é isso que permite trocar
-a biblioteca sem tocar em caso de uso (ADR 0009).
+achados. Nenhum tipo do AI SDK aparece na assinatura — trocar a biblioteca fica
+restrito a `analysis/`.
 
 Se um dia o narrador precisar buscar dados por conta própria (tool calling), ele
-recebe **portas de leitura** — nunca escrita, e nunca acesso a arquivo. O teto de
+recebe **funções de leitura** — nunca escrita, e nunca acesso a arquivo. O teto de
 pontos por trecho continua valendo: nenhuma série crua vai para o modelo.
 
 ## O que o agente não pode fazer
@@ -61,7 +62,7 @@ pontos por trecho continua valendo: nenhuma série crua vai para o modelo.
 
 ## Saída
 
-Estruturada, validada contra `agentReportSchema` (`@telemetry/contracts`). Cada achado
+Estruturada, no formato de `AnalysisReport` (`domain/insight.ts`). Cada achado
 carrega o trecho (`startDistPct`/`endDistPct`), os canais que o sustentam e uma
 confiança declarada. Achado sem canal de evidência é recusado na validação — é assim
 que se evita conselho genérico de coach.

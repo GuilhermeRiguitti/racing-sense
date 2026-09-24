@@ -1,6 +1,6 @@
 # ADR 0016 — Só o desktop gera telemetria
 
-**Status:** Aceito · 2026-09-17
+**Status:** Aceito · 2026-09-17 · **Superado em parte por ADR 0020** (a decisão continua; as quatro barreiras viraram uma: a api não tem o código)
 **Refina:** ADR 0011 (topologia das três aplicações)
 **Refinado por:** ADR 0017 — a decisão continua valendo; o que muda é o peso do
 custo listado abaixo: reprocessar no servidor não faz falta, porque a nuvem pode
