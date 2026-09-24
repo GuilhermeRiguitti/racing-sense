@@ -70,6 +70,7 @@ export const aSession = (overrides: Partial<TelemetrySession> = {}): TelemetrySe
   conditions: someConditions(),
   setup: null,
   carLimits: UNKNOWN_CAR_LIMITS,
+  sectorStartPcts: null,
   channels: [
     {
       name: 'Speed',

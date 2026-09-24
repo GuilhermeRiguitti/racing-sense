@@ -190,6 +190,42 @@ describe('ingestTelemetryFile, incidentes', () => {
   });
 });
 
+describe('ingestTelemetryFile, setores', () => {
+  it('guarda a sessão com os setores e cada volta cronometrada com o tempo deles', async () => {
+    const { Lap, LapDistPct } = voltas([1, 2, 3], 10);
+    const arquivo = arquivoFalso({ Lap, LapDistPct });
+    const metadata = metadataWith(['Lap', 'LapDistPct']);
+    arquivo.readMetadata = async () => ({
+      ...metadata,
+      session: { ...metadata.session, sectorStartPcts: [0, 0.25, 0.5] },
+    });
+    const ctx = contexto(arquivo);
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    expect(ctx.store.findSession(sessionId)?.sectorStartPcts).toEqual([0, 0.25, 0.5]);
+    const [volta1, volta2, volta3] = ctx.store.listLaps(sessionId);
+    // Volta 2: 10 ticks, um a cada 0,1. A divisa em 0,25 cai entre o 2º e o 3º.
+    const tempos = volta2?.sectorTimes ?? [];
+    expect(tempos).toHaveLength(3);
+    expect(tempos[0]).toBeCloseTo(2.5 / 60, 12);
+    expect(tempos[1]).toBeCloseTo(2.5 / 60, 12);
+    expect(tempos[2]).toBeCloseTo(5 / 60, 12);
+    // As pontas, cortadas pela gravação, não têm tempo de volta nem de setor.
+    expect(volta1?.sectorTimes).toBeUndefined();
+    expect(volta3?.sectorTimes).toBeUndefined();
+  });
+
+  it('arquivo sem setores declarados: nem a sessão nem as voltas ganham setores', async () => {
+    const ctx = contexto(arquivoFalso(voltas([1, 2, 3], 10)));
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    expect(ctx.store.findSession(sessionId)?.sectorStartPcts).toBeNull();
+    expect(ctx.store.listLaps(sessionId).every((lap) => lap.sectorTimes === undefined)).toBe(true);
+  });
+});
+
 describe('channelsToRecord', () => {
   const descritor = (name: string, type: ChannelType = 'number') => ({
     name,

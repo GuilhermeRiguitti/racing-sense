@@ -12,11 +12,13 @@ import type { TelemetrySession } from '../domain/session.js';
  * string. Deixar isso implícito é como um `recordedAt` vira texto no meio do
  * domínio e ninguém percebe até quebrar uma comparação.
  */
-interface StoredSession extends Omit<TelemetrySession, 'recordedAt' | 'setup' | 'carLimits'> {
+interface StoredSession
+  extends Omit<TelemetrySession, 'recordedAt' | 'setup' | 'carLimits' | 'sectorStartPcts'> {
   readonly recordedAt: string | null;
-  /** Ausentes em sessão gravada antes de o app ler acerto e limites do carro. */
+  /** Ausentes em sessão gravada antes de o app ler acerto, limites e setores. */
   readonly setup?: TelemetrySession['setup'];
   readonly carLimits?: TelemetrySession['carLimits'];
+  readonly sectorStartPcts?: TelemetrySession['sectorStartPcts'];
 }
 
 export function encodeSession(session: TelemetrySession): string {
@@ -35,6 +37,7 @@ export function decodeSession(payload: string): TelemetrySession {
     // Sessão antiga não tem os campos: "não sei", nunca um acerto inventado.
     setup: stored.setup ?? null,
     carLimits: stored.carLimits ?? UNKNOWN_CAR_LIMITS,
+    sectorStartPcts: stored.sectorStartPcts ?? null,
   };
 }
 

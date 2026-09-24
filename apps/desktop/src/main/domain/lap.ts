@@ -91,6 +91,14 @@ export interface Lap {
    * sem o contador. Ausente não é zero.
    */
   readonly incidents?: number;
+  /**
+   * Tempo de cada setor da pista nesta volta, em segundos (`sectorTimes`). Um
+   * setor cuja divisa a volta não amostrou fica `null`.
+   *
+   * Ausente em volta sem tempo cronometrado, em sessão sem setores declarados e
+   * em volta gravada antes de o app ler os setores.
+   */
+  readonly sectorTimes?: readonly (number | null)[];
 }
 
 /** Um trecho da volta, de uma posição medida a outra, em `lapDistPct`. */

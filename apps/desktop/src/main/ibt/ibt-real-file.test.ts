@@ -51,6 +51,16 @@ describe.skipIf(arquivo === null)('decodificação de um .ibt real', () => {
     expect(conditions.timeOfDaySeconds).not.toBeNull();
   });
 
+  it('declara os setores da pista, começando na linha', async () => {
+    const { sectorStartPcts } = (await decoder.readMetadata()).session;
+
+    // Se vier null, ou o bloco `SplitTimeInfo` mudou de forma, ou este arquivo
+    // não o tem — nos dois casos a análise por setor some da tela.
+    expect(sectorStartPcts).not.toBeNull();
+    expect(sectorStartPcts?.[0]).toBe(0);
+    expect(sectorStartPcts?.length).toBeGreaterThan(1);
+  });
+
   it('monta o catálogo com os canais que o recorte de voltas exige', async () => {
     const nomes = (await decoder.readMetadata()).channels.map((c) => c.name);
 
@@ -256,6 +266,24 @@ describe.skipIf(arquivo === null)('decodificação de um .ibt real', () => {
       expect(gear?.x).toEqual(trecho(distancia));
       expect(gear?.y).toEqual(trecho(marcha));
       expect(series.find((serie) => serie.channel === 'Speed')?.y).toEqual(trecho(velocidade));
+    }
+    store.close();
+  });
+
+  it('em toda volta cronometrada, a soma dos setores é o tempo de volta', async () => {
+    const store = openLocalStore(':memory:');
+    const sessionId = await ingestTelemetryFile({ store, emit: () => {} }, caminho);
+    const setores = store.findSession(sessionId)?.sectorStartPcts;
+    const cronometradas = store.listLaps(sessionId).filter((volta) => volta.lapTimeSeconds !== null);
+
+    expect(cronometradas.length).toBeGreaterThan(0);
+    for (const volta of cronometradas) {
+      const tempos = volta.sectorTimes ?? [];
+      expect(tempos).toHaveLength(setores?.length ?? -1);
+      // Volta que passou pela linha nas duas pontas amostrou todas as divisas.
+      expect(tempos.every((tempo) => tempo !== null && tempo > 0)).toBe(true);
+      const soma = tempos.reduce((total, tempo) => (total ?? 0) + (tempo ?? 0), 0);
+      expect(soma).toBeCloseTo(volta.lapTimeSeconds as number, 9);
     }
     store.close();
   });

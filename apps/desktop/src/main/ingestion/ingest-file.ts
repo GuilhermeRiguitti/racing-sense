@@ -9,7 +9,9 @@ import { MissingChannelError, RepeatedLapNumberError } from '../domain/errors.js
 import type { SessionId } from '../domain/id.js';
 import { toSessionId } from '../domain/id.js';
 import { type Lap, stretchesWhere } from '../domain/lap.js';
+import { firstArrivals } from '../domain/arrivals.js';
 import { detectLaps } from '../domain/lap-detection.js';
+import { sectorTimes } from '../domain/sectors.js';
 import type { TelemetrySession } from '../domain/session.js';
 import { type IbtFile, openIbtFile } from '../ibt/ibt-file.js';
 
@@ -242,7 +244,7 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
 
     // O "onde" da saída de pista viaja com a volta: a marcação diz que saiu, o
     // trecho diz em que ponto — que é o que o piloto procura no gráfico.
-    const laps: readonly Lap[] =
+    const comTrechos: readonly Lap[] =
       foraDaPista === undefined
         ? recortadas
         : recortadas.map((lap) => ({
@@ -252,6 +254,25 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
               foraDaPista.slice(lap.startSample, lap.endSample + 1),
             ),
           }));
+
+    // O tempo de cada setor também viaja com a volta: é o que a tabela de
+    // voltas mostra, e ela não abre a série de cada volta para isso. Só volta
+    // cronometrada tem — sem linha no começo e no fim, não há de onde contar.
+    const setores = metadata.session.sectorStartPcts;
+    const laps: readonly Lap[] =
+      setores === null
+        ? comTrechos
+        : comTrechos.map((lap) =>
+            lap.lapTimeSeconds === null
+              ? lap
+              : {
+                  ...lap,
+                  sectorTimes: sectorTimes(
+                    firstArrivals(lap, lapDistPct.slice(lap.startSample, lap.endSample + 1)),
+                    setores,
+                  ),
+                },
+          );
 
     const repetidos = [
       ...new Set(laps.map((lap) => lap.number).filter((n, i, todos) => todos.indexOf(n) !== i)),

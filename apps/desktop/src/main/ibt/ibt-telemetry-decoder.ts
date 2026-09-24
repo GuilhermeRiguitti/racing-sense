@@ -17,6 +17,7 @@ import {
   toCarRef,
   toCarSetup,
   toConditions,
+  toSectorStarts,
   toDriverName,
   toRecordedAt,
   toSessionType,
@@ -98,6 +99,7 @@ export async function readMetadata(source: ByteSource): Promise<DecodedMetadata>
       conditions: toConditions(info),
       setup: toCarSetup(info),
       carLimits: toCarLimits(info),
+      sectorStartPcts: toSectorStarts(info),
     },
   };
 }

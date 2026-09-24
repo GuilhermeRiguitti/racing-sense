@@ -2,6 +2,7 @@ import type { CarLimits, SetupNode } from './car-setup.js';
 import type { ChannelDescriptor } from './channel.js';
 import type { SessionConditions } from './conditions.js';
 import type { SessionId } from './id.js';
+import type { SectorStarts } from './sectors.js';
 
 /** Pista mais layout. Layouts diferentes da mesma pista são pistas diferentes. */
 export interface TrackRef {
@@ -53,6 +54,12 @@ export interface TelemetrySession {
    */
   readonly setup: readonly SetupNode[] | null;
   readonly carLimits: CarLimits;
+  /**
+   * Onde cada setor da pista começa, como o sim declarou (`SectorStarts`).
+   * `null` quando o arquivo não traz o bloco, ou a sessão foi gravada antes de
+   * o app lê-lo — nunca setores inventados.
+   */
+  readonly sectorStartPcts: SectorStarts | null;
 }
 
 /** Duração da gravação em segundos. */
