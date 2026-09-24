@@ -13,11 +13,13 @@ out/
 .env
 .env.*
 !.env.example
+# modelo do ambiente dos testes: versionado, sem nenhum valor (ver CLAUDE.md, regra 21).
+# O .env.testing preenchido continua ignorado pela regra .env.* acima.
+!.env.testing.example
 
 # telemetria: arquivos .ibt são binários grandes e podem conter dados de pilotos.
 # Nunca versionar. Ver docs/fixtures.md para como obter/gerar fixtures.
 *.ibt
-fixtures/real/
 .cache/
 data/
 

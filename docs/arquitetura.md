@@ -119,7 +119,7 @@ api; as páginas só consomem.
 | desktop — ingestão, análise, banco | SQLite `:memory:` real; `.ibt` e narrador falsos passados por parâmetro |
 | desktop — IPC | handlers com barramento falso e banco real |
 | desktop — nuvem | `openapi-fetch` real com `fetch` falso |
-| desktop — `.ibt` real | lê `apps/desktop/fixtures/real/`, **pula** sem arquivo |
+| desktop — `.ibt` real | lê `TELEMETRY_FIXTURE` de `apps/desktop/.env.testing` (criado de `.env.testing.example`), **pula** quando vazia |
 | api | regras puras (`canView`, senha); services contra Postgres ainda pendentes |
 
 ## O custo de trocar uma lib

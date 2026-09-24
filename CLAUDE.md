@@ -166,7 +166,12 @@ De domínio:
 20. **Condições da sessão viajam com a volta.** Comparar tempo sem temperatura de
     pista produz número honesto e conclusão errada.
 21. **Chave de API e segredo só por variável de ambiente.** Nunca em código,
-    teste, log ou commit.
+    teste, log ou commit. No desktop, `apps/desktop/.env` e
+    `apps/desktop/.env.testing` **não** são versionados — é neles que moram os
+    valores de verdade. **`apps/desktop/.env.testing.example` É versionado no
+    git: NUNCA insira nele chave de API, token, senha ou qualquer valor
+    sensível** — nem caminho de arquivo (tem o nome de usuário do Windows, regra
+    12). Ele só declara as variáveis, vazias.
 22. **Nenhum `.ibt` no repositório.** São grandes e contêm dados de piloto.
 23. **Stub lança `NotImplementedError`** dizendo o que falta. Stub que devolve
     valor falso vira bug silencioso.
@@ -205,9 +210,10 @@ um valor vier absurdo. As constantes estão em
 Os offsets vêm da spec pública e da engenharia reversa da comunidade e **foram
 validados contra arquivos reais em 2026-09-19** — ver `docs/formato-ibt.md`. O
 teste que sustenta isso é `apps/desktop/src/main/ibt/ibt-real-file.test.ts`, que
-pula quando não há fixture em `apps/desktop/fixtures/real/` (nenhum `.ibt` entra
-no repositório, regra 22). Se você mexer no decoder, ponha um arquivo lá antes de
-confiar no verde: sem fixture, os testes provam só consistência interna.
+pula quando `TELEMETRY_FIXTURE` está vazia em `apps/desktop/.env.testing`
+(nenhum `.ibt` entra no repositório, regra 22). Se você mexer no decoder, aponte
+a variável para um `.ibt` real antes de confiar no verde: sem fixture, os testes
+provam só consistência interna.
 
 ## Ao mexer na interface do desktop
 
@@ -253,8 +259,13 @@ que o supera.
 - Domínio e decoder: chamada direta, sem mock.
 - Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados
   por parâmetro. Nada de mock de framework.
-- Teste que precisa de `.ibt` real lê de `apps/desktop/fixtures/real/` e
-  **pula** quando o arquivo não existe. Nunca falha por ausência de fixture.
+- Teste que precisa de `.ibt` real lê o caminho de `TELEMETRY_FIXTURE`
+  (`apps/desktop/.env.testing`) e **pula** quando ela está vazia. Nunca falha
+  por ausência de fixture.
+- O vitest do desktop carrega só `.env.testing`, nunca o `.env` do aplicativo.
+  Na primeira execução, `apps/desktop/scripts/testing-env.ts` cria o
+  `.env.testing` a partir do `.env.testing.example` e tenta preencher
+  `TELEMETRY_FIXTURE` com o `.ibt` mais recente da pasta do iRacing.
 - Api: regras puras testadas direto; services contra Postgres ainda pendentes
   (`docs/pendencias.md`).
 - Antes de dizer que terminou: `pnpm check` verde. Se algo falhou, diga o que

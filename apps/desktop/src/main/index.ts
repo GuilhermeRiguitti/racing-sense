@@ -14,8 +14,31 @@ import { registerIpcHandlers } from './ipc/handlers.js';
  * — o addon nativo do SDK do iRacing. Foi exatamente isso que decidiu Electron
  * em vez de Tauri (ADR 0012).
  */
+loadDevelopmentEnv();
+
 const API_BASE_URL = process.env.TELEMETRY_API_URL ?? 'http://localhost:4000';
 const PUBLICATION_FLUSH_INTERVAL_MS = 60_000;
+
+/**
+ * Em desenvolvimento, lê `apps/desktop/.env` (não versionado) para o ambiente
+ * do processo principal: chave do provedor de LLM, pasta observada, endereço da
+ * api. Variável já definida no terminal vence o arquivo.
+ *
+ * No aplicativo empacotado não há `.env`: o ambiente é o da máquina do piloto.
+ * Arquivo ausente não é erro — o app abre igual, com os padrões.
+ */
+function loadDevelopmentEnv(): void {
+  if (app.isPackaged) {
+    return;
+  }
+  try {
+    process.loadEnvFile(join(app.getAppPath(), '.env'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
