@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatLapTime, nearestIndex, niceCeil, niceTicks, seriesPath } from './chart-math.js';
+import {
+  formatDelta,
+  formatLapTime,
+  nearestIndex,
+  niceCeil,
+  niceTicks,
+  seriesPath,
+} from './chart-math.js';
 
 describe('niceTicks', () => {
   it('produz marcações redondas', () => {
@@ -73,5 +80,17 @@ describe('seriesPath', () => {
 
   it('discreto desenha degrau, sem passar por valor intermediário', () => {
     expect(seriesPath([0, 10], [3, 4], identidade, identidade, true)).toBe('M0.0,3.0H10.0V4.0');
+  });
+});
+
+describe('formatDelta', () => {
+  it('sempre mostra o sinal: + é tempo perdido, − é ganho', () => {
+    expect(formatDelta(0.3124)).toBe('+0,312');
+    expect(formatDelta(-1.2)).toBe('\u22121,200');
+  });
+
+  it('o que arredonda para zero não ganha sinal', () => {
+    expect(formatDelta(0.0002)).toBe('0,000');
+    expect(formatDelta(-0.0002)).toBe('0,000');
   });
 });

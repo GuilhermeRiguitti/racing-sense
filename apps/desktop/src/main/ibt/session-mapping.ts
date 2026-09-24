@@ -1,3 +1,4 @@
+import type { CarLimits, SetupNode } from '../domain/car-setup.js';
 import { type SessionConditions, UNKNOWN_CONDITIONS } from '../domain/conditions.js';
 import type { CarRef, TrackRef } from '../domain/session.js';
 import {
@@ -117,6 +118,55 @@ function trackUsage(doc: SessionInfoNode): string | null {
   const session = sessions.find((item) => readPath(item, 'SessionNum') === current) ?? sessions[0];
 
   return readPath(session, 'SessionTrackRubberState') ?? null;
+}
+
+/**
+ * Chaves do bloco `CarSetup` que são contabilidade do sim, não ajuste do carro.
+ * `UpdateCount` conta quantas vezes o bloco foi reescrito.
+ */
+const SETUP_BOOKKEEPING = new Set(['UpdateCount']);
+
+/**
+ * O acerto do carro, como árvore — a ficha muda de carro para carro, e nada
+ * aqui presume quais seções existem. `null` quando o arquivo não traz o bloco
+ * (série de acerto fixo o esconde).
+ */
+export function toCarSetup(doc: SessionInfoNode): SetupNode[] | null {
+  const setup = doc.CarSetup;
+  if (setup === undefined || typeof setup !== 'object' || Array.isArray(setup)) return null;
+
+  const nodes = Object.entries(setup)
+    .filter(([key]) => !SETUP_BOOKKEEPING.has(key))
+    .map(([key, value]) => toSetupNode(key, value));
+  return nodes.length > 0 ? nodes : null;
+}
+
+function toSetupNode(key: string, value: SessionInfoValue): SetupNode {
+  if (typeof value === 'string') return { key, value, children: [] };
+  if (Array.isArray(value)) {
+    // Lista dentro do acerto é rara; cada item vira um filho numerado a partir
+    // de 1, na ordem em que o sim escreveu.
+    return {
+      key,
+      value: null,
+      children: value.map((item, indice) => toSetupNode(String(indice + 1), item)),
+    };
+  }
+  return {
+    key,
+    value: null,
+    children: Object.entries(value).map(([filho, valor]) => toSetupNode(filho, valor)),
+  };
+}
+
+/** Rotação de corte, de troca de marcha e capacidade do tanque, do próprio sim. */
+export function toCarLimits(doc: SessionInfoNode): CarLimits {
+  const driverInfo = doc.DriverInfo;
+  return {
+    redlineRpm: readNumber(readPath(driverInfo, 'DriverCarRedLine')),
+    shiftRpm: readNumber(readPath(driverInfo, 'DriverCarSLShiftRPM')),
+    fuelCapacityLiters: readNumber(readPath(driverInfo, 'DriverCarFuelMaxLtr')),
+  };
 }
 
 /** Data e hora reais em que a gravação começou. */

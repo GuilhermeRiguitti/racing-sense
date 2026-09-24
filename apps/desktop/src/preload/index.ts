@@ -14,7 +14,15 @@ const api = {
   listSessionLaps: (sessionId: string) => ipcRenderer.invoke(IPC.listSessionLaps, { sessionId }),
   getLapSeries: (sessionId: string, lapNumber: number) =>
     ipcRenderer.invoke(IPC.getLapSeries, { sessionId, lapNumber }),
+  getSessionStint: (sessionId: string) => ipcRenderer.invoke(IPC.getSessionStint, { sessionId }),
   listReferenceLaps: () => ipcRenderer.invoke(IPC.listReferenceLaps),
+  getReferenceLapSeries: (referenceLapId: string) =>
+    ipcRenderer.invoke(IPC.getReferenceLapSeries, { referenceLapId }),
+  compareLapToReference: (request: {
+    sessionId: string;
+    lapNumber: number;
+    referenceLapId: string;
+  }) => ipcRenderer.invoke(IPC.compareLapToReference, request),
   getLapAnalysis: (request: { sessionId: string; lapNumber: number; referenceLapId: string }) =>
     ipcRenderer.invoke(IPC.getLapAnalysis, request),
   ingestTelemetryFile: (locator: string) =>

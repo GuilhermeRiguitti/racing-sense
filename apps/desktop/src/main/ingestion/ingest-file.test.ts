@@ -5,7 +5,8 @@ import { toSessionId } from '../domain/id.js';
 import { aSession } from '../domain/testing.js';
 import type { IbtFile } from '../ibt/ibt-file.js';
 import type { DecodedMetadata } from '../ibt/ibt-telemetry-decoder.js';
-import { ingestTelemetryFile } from './ingest-file.js';
+import type { ChannelType } from '../domain/channel.js';
+import { channelsToRecord, ingestTelemetryFile } from './ingest-file.js';
 
 const PATH = '/telemetry/sessao.ibt';
 
@@ -125,5 +126,66 @@ describe('ingestTelemetryFile, idempotência por arquivo', () => {
     // abertura do aplicativo sem custo.
     expect(ctx.open).not.toHaveBeenCalled();
     expect(ctx.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('ingestTelemetryFile, o que o engenheiro olha', () => {
+  it('grava pneu e ajuste de dentro do carro que o arquivo tiver', async () => {
+    const arquivo = arquivoFalso({
+      ...voltas([1, 2, 3]),
+      LFtempCM: new Array(90).fill(80),
+      dcBrakeBias: new Array(90).fill(54.5),
+    });
+    const ctx = contexto(arquivo);
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    expect(ctx.store.readLapSeries(sessionId, 2).map((serie) => serie.channel)).toEqual([
+      'LFtempCM',
+      'dcBrakeBias',
+    ]);
+  });
+
+  it('guarda com a volta onde ela saiu da pista, na posição medida', async () => {
+    const { Lap, LapDistPct } = voltas([1, 2, 3], 10);
+    // Fora da pista (código 0) na 4ª e 5ª amostras da volta 2; 3 é "na pista".
+    const superficie = LapDistPct.map((_, i) => (i === 13 || i === 14 ? 0 : 3));
+    const ctx = contexto(arquivoFalso({ Lap, LapDistPct, PlayerTrackSurface: superficie }));
+
+    const sessionId = await ingestTelemetryFile(ctx, PATH);
+
+    const volta2 = ctx.store.listLaps(sessionId).find((lap) => lap.number === 2);
+    expect(volta2?.flags).toContain('off-track');
+    expect(volta2?.offTrackStretches).toEqual([{ startPct: 0.3, endPct: 0.4 }]);
+  });
+});
+
+describe('channelsToRecord', () => {
+  const descritor = (name: string, type: ChannelType = 'number') => ({
+    name,
+    description: name,
+    unit: '',
+    type,
+    valuesPerSample: 1,
+  });
+
+  it('pega os canais da lista que o arquivo tem, e ignora os que ele não tem', () => {
+    expect(channelsToRecord([descritor('Speed'), descritor('LFpressure')])).toEqual([
+      'Speed',
+      'LFpressure',
+    ]);
+  });
+
+  it('descobre os ajustes de dentro do carro pelo catálogo do próprio arquivo', () => {
+    const catalogo = [
+      descritor('dcBrakeBias'),
+      descritor('dcTractionControl'),
+      // Botão, não ajuste.
+      descritor('dcPitSpeedLimiterToggle', 'boolean'),
+      // Não é canal de ajuste, só começa parecido.
+      descritor('dcx'),
+    ];
+
+    expect(channelsToRecord(catalogo)).toEqual(['dcBrakeBias', 'dcTractionControl']);
   });
 });

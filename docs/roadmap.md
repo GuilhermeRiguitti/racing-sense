@@ -49,8 +49,8 @@ sessão com reset para os boxes.
 
 ## Etapa 3 — Referência e delta
 
-- [x] Importar `.ibt` e promover uma volta a referência (comando e IPC; o botão
-      na tela é da etapa 4)
+- [x] Importar `.ibt` e promover uma volta a referência (comando, IPC e botão
+      na tela)
 - [x] Recusar comparação entre pista/carro diferentes
 - [x] Delta acumulado por distância — sem grade: avaliado nas posições que a
       volta amostrou, tempo pela contagem de ticks
@@ -70,8 +70,14 @@ A etapa que entrega o produto.
 - [x] Gráfico de canal por distância, com cursor sincronizado entre os painéis e
       leitura pelo teclado; navegação entre sessões e voltas
 - [ ] Zoom num trecho da volta
-- [ ] Marcar no gráfico onde a volta saiu da pista
-- [ ] Gráfico de delta contra a referência
+- [x] Marcar no gráfico onde a volta saiu da pista (trechos gravados com a volta)
+- [x] Gráfico de delta contra a referência, com a referência por baixo da volta
+- [x] Painel do engenheiro: pneu por roda (externa/meio/interna, pressão,
+      desgaste), combustível e voltas no tanque, ajustes de dentro do carro,
+      dinâmica e motor — média da volta ou valor no cursor
+- [x] A sessão volta a volta: tempo, pressão, temperatura e combustível por
+      volta, e quando o piloto mexeu em cada ajuste
+- [x] Ficha de acerto do carro, como o sim a declarou
 - [x] Persistência local em SQLite (amostra bruta sem perda — ADR 0019)
 
 **Pronto quando:** rodar uma sessão no sim, com o aplicativo aberto, e a volta

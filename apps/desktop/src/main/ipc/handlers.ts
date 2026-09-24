@@ -1,8 +1,9 @@
 import { IPC, type IpcResult } from '../../shared/ipc.js';
 import { compareLapToReference } from '../analysis/compare-lap.js';
 import { getLapSeries, listSessionLaps } from '../analysis/laps.js';
-import { importReferenceLap } from '../analysis/reference-laps.js';
+import { getReferenceLapSeries, importReferenceLap } from '../analysis/reference-laps.js';
 import { getLapAnalysis, requestLapAnalysis } from '../analysis/request-lap-analysis.js';
+import { getSessionStint } from '../analysis/stint.js';
 import { currentPilot, signIn, signOut } from '../cloud/auth.js';
 import { flushPublicationQueue } from '../cloud/publication.js';
 import type { Desktop } from '../desktop.js';
@@ -16,6 +17,7 @@ import {
   toReferenceLapDto,
   toSeriesDto,
   toSessionDto,
+  toStintLapDto,
 } from './dto.js';
 
 /**
@@ -80,6 +82,20 @@ export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
     guard(() => {
       const { sessionId, lapNumber } = payload as LapRequest;
       return getLapSeries(store, toSessionId(sessionId), lapNumber).map(toSeriesDto);
+    }),
+  );
+
+  handle(IPC.getSessionStint, (payload) =>
+    guard(() => {
+      const { sessionId } = payload as { sessionId: string };
+      return getSessionStint(store, toSessionId(sessionId)).map(toStintLapDto);
+    }),
+  );
+
+  handle(IPC.getReferenceLapSeries, (payload) =>
+    guard(() => {
+      const { referenceLapId } = payload as { referenceLapId: string };
+      return getReferenceLapSeries(store, toReferenceLapId(referenceLapId)).map(toSeriesDto);
     }),
   );
 

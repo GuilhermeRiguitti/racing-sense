@@ -1,25 +1,43 @@
 import { type KeyboardEvent, type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { downsample } from '../../main/domain/distance-series.js';
-import type { SeriesDto } from '../../shared/dto.js';
-import { type ChannelView, PANELS, type PanelView, seriesFor } from './channels.js';
-import { nearestIndex, niceCeil, niceTicks, seriesPath } from './chart-math.js';
+import type { LapStretchDto, SeriesDto } from '../../shared/dto.js';
+import { type ChannelView, type PanelView, seriesFor } from './channels.js';
+import {
+  formatDelta,
+  formatDistance,
+  niceCeil,
+  niceTicks,
+  seriesPath,
+  valueAtCursor,
+} from './chart-math.js';
 
 const MARGEM_ESQUERDA = 52;
 const MARGEM_DIREITA = 16;
 const ALTURA_EIXO_X = 28;
+const ALTURA_DELTA = 120;
 
 interface Props {
-  readonly series: readonly SeriesDto[];
+  readonly panels: readonly PanelView[];
+  /** Séries da volta escolhida. */
+  readonly lap: readonly SeriesDto[];
+  /** Séries da referência, quando há uma e a volta é comparável. */
+  readonly reference: readonly SeriesDto[] | null;
+  /** Delta acumulado contra a referência, quando há. */
+  readonly delta: SeriesDto | null;
+  /** Onde a volta saiu da pista. `null` quando não se sabe. */
+  readonly offTrack: readonly LapStretchDto[] | null;
   /** Com o comprimento, o eixo fala em metros; sem ele, em fração da volta. */
   readonly trackLengthMeters: number | null;
   /** Esmaece enquanto a próxima volta carrega, sem apagar a atual. */
   readonly stale: boolean;
+  /** Posição do cursor em `lapDistPct`, compartilhada com o resto da tela. */
+  readonly cursor: number | null;
+  readonly onCursor: (cursor: number | null) => void;
 }
 
 /** Uma linha pronta para desenhar, e a série inteira para a leitura do cursor. */
 interface Linha {
   readonly view: ChannelView;
-  readonly slot: 1 | 2;
   readonly completa: SeriesDto;
   readonly desenho: { readonly x: readonly number[]; readonly y: readonly number[] };
   readonly degrau: boolean;
@@ -33,14 +51,26 @@ interface Linha {
  * correlação que não existe. O cursor atravessa todos os painéis de uma vez, e
  * a leitura mostra todo canal naquele ponto da pista.
  *
+ * Quando há referência, o delta abre a pilha: é a primeira pergunta do piloto
+ * ("onde perdi?"), e os painéis abaixo respondem a segunda ("por quê?").
+ *
  * O desenho usa a série reduzida à largura da tela (min/max por coluna de
  * pixel, então o pico de freio sobrevive). A leitura do cursor usa a série
  * inteira: o número que aparece é o que o arquivo gravou.
  */
-export function TraceChart({ series, trackLengthMeters, stale }: Props) {
+export function TraceChart({
+  panels,
+  lap,
+  reference,
+  delta,
+  offTrack,
+  trackLengthMeters,
+  stale,
+  cursor,
+  onCursor,
+}: Props) {
   const caixa = useRef<HTMLDivElement>(null);
   const [largura, setLargura] = useState(0);
-  const [cursor, setCursor] = useState<number | null>(null);
 
   useEffect(() => {
     const elemento = caixa.current;
@@ -56,14 +86,26 @@ export function TraceChart({ series, trackLengthMeters, stale }: Props) {
   const px = (fracao: number) => MARGEM_ESQUERDA + fracao * larguraPlot;
 
   const paineis = useMemo(
-    () => PANELS.map((painel) => montarPainel(painel, series, larguraPlot)),
-    [series, larguraPlot],
+    () =>
+      panels
+        .map((painel) => montarPainel(painel, lap, reference, larguraPlot))
+        // Painel sem nenhuma linha é canal que este carro não tem: some.
+        .filter((painel) => painel.linhas.some((linha) => linha.view.source === 'lap')),
+    [panels, lap, reference, larguraPlot],
+  );
+
+  const deltaReduzido = useMemo(
+    () =>
+      delta === null || delta.x.length === 0 || larguraPlot <= 0
+        ? null
+        : downsample(delta, Math.max(2, Math.floor(larguraPlot * 2))),
+    [delta, larguraPlot],
   );
 
   const moverPara = (evento: PointerEvent<HTMLDivElement>) => {
     const retangulo = evento.currentTarget.getBoundingClientRect();
     const fracao = (evento.clientX - retangulo.left - MARGEM_ESQUERDA) / larguraPlot;
-    setCursor(fracao < 0 || fracao > 1 ? null : fracao);
+    onCursor(fracao < 0 || fracao > 1 ? null : fracao);
   };
 
   const teclado = (evento: KeyboardEvent<HTMLDivElement>) => {
@@ -79,14 +121,12 @@ export function TraceChart({ series, trackLengthMeters, stale }: Props) {
     };
     if (evento.key in proximo) {
       evento.preventDefault();
-      setCursor(proximo[evento.key] ?? null);
+      onCursor(proximo[evento.key] ?? null);
     }
   };
 
-  const distancia = (fracao: number) =>
-    trackLengthMeters === null
-      ? `${(fracao * 100).toFixed(1).replace('.', ',')}%`
-      : `${Math.round(fracao * trackLengthMeters).toLocaleString('pt-BR')} m`;
+  const distancia = (fracao: number) => formatDistance(fracao, trackLengthMeters);
+  const trechos = offTrack ?? [];
 
   return (
     <section
@@ -98,6 +138,14 @@ export function TraceChart({ series, trackLengthMeters, stale }: Props) {
         <span className="trace__readout-value">{cursor === null ? '—' : distancia(cursor)}</span>
         {cursor === null && (
           <span className="trace__hint">Passe o mouse sobre o gráfico, ou use as setas</span>
+        )}
+        {trechos.length > 0 && (
+          <span className="trace__legend-off">
+            <svg width="12" height="12" aria-hidden="true">
+              <rect width="12" height="12" rx="2" className="off-track" />
+            </svg>
+            fora da pista ({trechos.length === 1 ? '1 trecho' : `${trechos.length} trechos`})
+          </span>
         )}
       </div>
       <div
@@ -113,19 +161,36 @@ export function TraceChart({ series, trackLengthMeters, stale }: Props) {
         aria-valuenow={cursor === null ? 0 : Math.round(cursor * 100)}
         aria-valuetext={cursor === null ? 'fora do gráfico' : distancia(cursor)}
         onPointerMove={moverPara}
-        onPointerLeave={() => setCursor(null)}
+        onPointerLeave={() => onCursor(null)}
         onKeyDown={teclado}
       >
+        {largura > 0 && delta !== null && (
+          <PainelDelta
+            completo={delta}
+            reduzido={deltaReduzido}
+            largura={largura}
+            px={px}
+            cursor={cursor}
+            trechos={trechos}
+          />
+        )}
         {largura > 0 &&
           paineis.map((painel) => (
             <Painel
-              key={painel.view.title}
+              key={painel.view.id}
               painel={painel}
               largura={largura}
               px={px}
               cursor={cursor}
+              trechos={trechos}
             />
           ))}
+        {largura > 0 && paineis.length === 0 && (
+          <p className="trace__empty">
+            Esta volta não tem nenhum destes canais gravado. Sessões importadas antes desta versão
+            do aplicativo só guardaram os canais de pilotagem.
+          </p>
+        )}
         {largura > 0 && (
           <EixoX largura={largura} px={px} cursor={cursor} trackLengthMeters={trackLengthMeters} />
         )}
@@ -142,21 +207,6 @@ interface PainelMontado {
   readonly discreto: boolean;
 }
 
-/**
- * O valor gravado mais perto do cursor — **só dentro do trecho que a volta
- * cobriu**. Fora dele, não existe valor: mostrar a última amostra ali faria a
- * tela dizer "100% de freio" num ponto da pista onde o carro nunca esteve.
- * O limite é o próprio intervalo gravado, não uma distância escolhida.
- */
-function valorNoCursor(serie: SeriesDto, cursor: number | null): number | undefined {
-  if (cursor === null || serie.x.length === 0) return undefined;
-  const primeiro = Math.min(serie.x[0] ?? 0, serie.x[serie.x.length - 1] ?? 0);
-  const ultimo = Math.max(serie.x[0] ?? 0, serie.x[serie.x.length - 1] ?? 0);
-  if (cursor < primeiro || cursor > ultimo) return undefined;
-  const indice = nearestIndex(serie.x, cursor);
-  return indice >= 0 ? serie.y[indice] : undefined;
-}
-
 function inteirosEntre(baixo: number, alto: number): number[] {
   const valores: number[] = [];
   for (let v = Math.ceil(baixo); v <= Math.floor(alto); v += 1) valores.push(v);
@@ -165,29 +215,42 @@ function inteirosEntre(baixo: number, alto: number): number[] {
 
 function montarPainel(
   view: PanelView,
-  series: readonly SeriesDto[],
+  lap: readonly SeriesDto[],
+  reference: readonly SeriesDto[] | null,
   larguraPlot: number,
 ): PainelMontado {
   const linhas: Linha[] = [];
-  view.channels.forEach((canal, indice) => {
-    const serie = seriesFor(series, canal.channel);
-    if (serie === undefined || serie.x.length === 0) return;
+  for (const canal of view.channels) {
+    const fonte = canal.source === 'lap' ? lap : reference;
+    if (fonte === null) continue;
+    const serie = seriesFor(fonte, canal.channel);
+    if (serie === undefined || serie.x.length === 0) continue;
     // Duas amostras por coluna de pixel: o mínimo e o máximo daquela coluna.
     // O alvo sai da largura medida da tela, não de um número escolhido.
     const reduzida =
       larguraPlot > 0 ? downsample(serie, Math.max(2, Math.floor(larguraPlot * 2))) : serie;
     linhas.push({
       view: canal,
-      slot: indice === 0 ? 1 : 2,
       completa: serie,
       desenho: { x: reduzida.x, y: reduzida.y.map(canal.toDisplay) },
       degrau: serie.type !== 'number',
     });
-  });
+  }
 
   const todos = linhas.flatMap((linha) => linha.desenho.y);
-  const minimo = todos.length > 0 ? Math.min(...todos) : 0;
-  const maximo = todos.length > 0 ? Math.max(...todos) : 1;
+  // A régua entra na faixa: a troca de marcha a 7250 rpm não pode ficar fora
+  // do painel só porque a volta não chegou lá.
+  for (const regra of view.rules ?? []) todos.push(regra.value);
+  let minimo = Number.POSITIVE_INFINITY;
+  let maximo = Number.NEGATIVE_INFINITY;
+  for (const valor of todos) {
+    if (valor < minimo) minimo = valor;
+    if (valor > maximo) maximo = valor;
+  }
+  if (todos.length === 0) {
+    minimo = 0;
+    maximo = 1;
+  }
 
   const discreto = linhas.length > 0 && linhas.every((linha) => linha.degrau);
   let dominio: readonly [number, number];
@@ -207,16 +270,49 @@ function montarPainel(
   return { view, linhas, dominio, discreto };
 }
 
+/** Faixas de fora da pista atrás do gráfico: o "onde" da marcação da volta. */
+function FaixasForaDaPista({
+  trechos,
+  px,
+  altura,
+}: {
+  trechos: readonly LapStretchDto[];
+  px: (fracao: number) => number;
+  altura: number;
+}) {
+  return (
+    <>
+      {trechos.map((trecho) => {
+        const x = px(trecho.startPct);
+        // Um trecho de uma amostra ainda aparece: um pixel, não zero.
+        const largura = Math.max(1, px(trecho.endPct) - x);
+        return (
+          <rect
+            key={`${trecho.startPct}-${trecho.endPct}`}
+            x={x}
+            y={0}
+            width={largura}
+            height={altura}
+            className="off-track"
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function Painel({
   painel,
   largura,
   px,
   cursor,
+  trechos,
 }: {
   painel: PainelMontado;
   largura: number;
   px: (fracao: number) => number;
   cursor: number | null;
+  trechos: readonly LapStretchDto[];
 }) {
   const { view, linhas, dominio } = painel;
   const [baixo, alto] = dominio;
@@ -226,32 +322,47 @@ function Painel({
   const ticks = painel.discreto
     ? inteirosEntre(baixo, alto)
     : niceTicks(baixo, alto, view.height > 100 ? 4 : 2);
-  const idClip = `clip-${view.title.replace(/\W/g, '')}`;
+  const idClip = `clip-${view.id.replace(/\W/g, '')}`;
+  // Referência por baixo, volta por cima: a linha que o piloto está olhando
+  // nunca fica escondida atrás da régua.
+  const ordenadas = [...linhas].sort(
+    (a, b) => Number(a.view.source === 'lap') - Number(b.view.source === 'lap'),
+  );
 
   return (
     <div className="panel">
       <div className="panel__header">
-        <span className="panel__title">{view.title}</span>
+        <span className="panel__title">
+          {view.title}
+          {/* A régua é explicada no cabeçalho, não sobre o traço: rótulo em cima
+              da linha colide quando duas réguas ficam perto. */}
+          {(view.rules ?? []).length > 0 && (
+            <span className="panel__rules">
+              {(view.rules ?? [])
+                .map((regra) => `${regra.label} ${regra.value.toLocaleString('pt-BR')}`)
+                .join(' · ')}
+            </span>
+          )}
+        </span>
         {/* Legenda sempre que houver duas séries; a cor nunca carrega a identidade sozinha. */}
         <span className="panel__values">
           {linhas.map((linha) => {
-            const bruto = valorNoCursor(linha.completa, cursor);
+            const bruto = valueAtCursor(linha.completa, cursor);
             return (
-              <span key={linha.view.channel} className="panel__value">
+              <span key={`${linha.view.source}-${linha.view.channel}`} className="panel__value">
                 {linhas.length > 1 && (
                   <svg className="panel__key" width="14" height="8" aria-hidden="true">
-                    <line x1="1" y1="4" x2="13" y2="4" className={`stroke-series-${linha.slot}`} />
+                    <line x1="1" y1="4" x2="13" y2="4" className={`stroke-${linha.view.slot}`} />
                   </svg>
                 )}
+                {linhas.length > 1 && <span className="panel__label">{linha.view.label}</span>}
                 <strong>
                   {bruto === undefined ? '—' : linha.view.format(linha.view.toDisplay(bruto))}
                 </strong>
                 {linha.view.unit !== '' && <span className="panel__unit">{linha.view.unit}</span>}
-                {linhas.length > 1 && <span className="panel__label">{linha.view.label}</span>}
               </span>
             );
           })}
-          {linhas.length === 0 && <span className="panel__missing">canal não gravado</span>}
         </span>
       </div>
       <svg width={largura} height={view.height} className="panel__plot" aria-hidden="true">
@@ -260,6 +371,7 @@ function Painel({
             <rect x={px(0)} y={0} width={px(1) - px(0)} height={view.height} />
           </clipPath>
         </defs>
+        <FaixasForaDaPista trechos={trechos} px={px} altura={view.height} />
         {ticks.map((tick) => (
           <g key={tick}>
             <line x1={px(0)} x2={px(1)} y1={py(tick)} y2={py(tick)} className="grid" />
@@ -272,17 +384,123 @@ function Painel({
             </text>
           </g>
         ))}
+        {(view.rules ?? []).map((regra) => (
+          <line
+            key={regra.label}
+            x1={px(0)}
+            x2={px(1)}
+            y1={py(regra.value)}
+            y2={py(regra.value)}
+            className="rule"
+          />
+        ))}
         <g clipPath={`url(#${idClip})`}>
-          {linhas.map((linha) => (
+          {ordenadas.map((linha) => (
             <path
-              key={linha.view.channel}
+              key={`${linha.view.source}-${linha.view.channel}`}
               d={seriesPath(linha.desenho.x, linha.desenho.y, px, py, linha.degrau)}
-              className={`series stroke-series-${linha.slot}`}
+              className={`series stroke-${linha.view.slot}`}
             />
           ))}
         </g>
         {cursor !== null && (
           <line x1={px(cursor)} x2={px(cursor)} y1={0} y2={view.height} className="crosshair" />
+        )}
+      </svg>
+    </div>
+  );
+}
+
+/**
+ * O delta acumulado contra a referência.
+ *
+ * Positivo é tempo perdido, e fica para cima — a convenção das ferramentas de
+ * engenharia de pista (a curva "sobe" onde o piloto ficou para trás). A
+ * polaridade é codificada duas vezes: pela posição em relação ao zero e pela
+ * cor (divergente azul/vermelho, com o zero neutro). A leitura do cursor diz em
+ * texto "perdendo" ou "ganhando", então a cor nunca carrega o sentido sozinha.
+ *
+ * O que importa é a **inclinação**: onde a curva sobe, a volta está perdendo
+ * tempo naquele trecho, mesmo que o acumulado ainda seja negativo.
+ */
+function PainelDelta({
+  completo,
+  reduzido,
+  largura,
+  px,
+  cursor,
+  trechos,
+}: {
+  completo: SeriesDto;
+  reduzido: SeriesDto | null;
+  largura: number;
+  px: (fracao: number) => number;
+  cursor: number | null;
+  trechos: readonly LapStretchDto[];
+}) {
+  const altura = ALTURA_DELTA;
+  const pontos = reduzido ?? completo;
+  let maiorModulo = 0;
+  for (const valor of pontos.y) maiorModulo = Math.max(maiorModulo, Math.abs(valor));
+  const limite = niceCeil(maiorModulo) || 0.1;
+  const topo = 6;
+  const base = altura - 4;
+  const py = (valor: number) => base - ((valor + limite) / (2 * limite)) * (base - topo);
+  const zero = py(0);
+  const ticks = niceTicks(-limite, limite, 4);
+
+  const linha = seriesPath(pontos.x, pontos.y, px, py, false);
+  const primeiroX = px(pontos.x[0] ?? 0);
+  const ultimoX = px(pontos.x[pontos.x.length - 1] ?? 0);
+  // A área entre a curva e o zero; o recorte decide de que lado ela é pintada.
+  const area =
+    pontos.x.length > 0 ? `${linha}L${ultimoX.toFixed(1)},${zero}L${primeiroX.toFixed(1)},${zero}Z` : '';
+
+  const agora = valueAtCursor(completo, cursor);
+
+  return (
+    <div className="panel panel--delta">
+      <div className="panel__header">
+        <span className="panel__title">Delta para a referência</span>
+        <span className="panel__values">
+          <span className="panel__value">
+            <strong>{agora === undefined ? '—' : formatDelta(agora)}</strong>
+            <span className="panel__unit">s</span>
+            {agora !== undefined && agora !== 0 && (
+              <span className="panel__label">{agora > 0 ? 'atrás' : 'à frente'}</span>
+            )}
+          </span>
+        </span>
+      </div>
+      <svg width={largura} height={altura} className="panel__plot" aria-hidden="true">
+        <defs>
+          <clipPath id="delta-perda">
+            <rect x={px(0)} y={0} width={px(1) - px(0)} height={Math.max(0, zero)} />
+          </clipPath>
+          <clipPath id="delta-ganho">
+            <rect x={px(0)} y={zero} width={px(1) - px(0)} height={Math.max(0, altura - zero)} />
+          </clipPath>
+        </defs>
+        <FaixasForaDaPista trechos={trechos} px={px} altura={altura} />
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line
+              x1={px(0)}
+              x2={px(1)}
+              y1={py(tick)}
+              y2={py(tick)}
+              className={tick === 0 ? 'baseline' : 'grid'}
+            />
+            <text x={px(0) - 8} y={py(tick)} className="tick tick--y">
+              {tick === 0 ? '0' : formatDelta(tick)}
+            </text>
+          </g>
+        ))}
+        <path d={area} className="delta-area delta-area--loss" clipPath="url(#delta-perda)" />
+        <path d={area} className="delta-area delta-area--gain" clipPath="url(#delta-ganho)" />
+        <path d={linha} className="series delta-line" />
+        {cursor !== null && (
+          <line x1={px(cursor)} x2={px(cursor)} y1={0} y2={altura} className="crosshair" />
         )}
       </svg>
     </div>

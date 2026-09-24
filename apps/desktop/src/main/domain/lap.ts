@@ -69,6 +69,51 @@ export interface Lap {
   readonly isComplete: boolean;
   /** Vazio quando a volta pode ser referência. Ver `LapFlag`. */
   readonly flags: readonly LapFlag[];
+  /**
+   * Onde a volta saiu da pista, em `lapDistPct`. É o "onde" de `off-track`:
+   * a marcação diz que saiu, isto diz em que ponto — que é o que o piloto
+   * procura no gráfico.
+   *
+   * Ausente em volta gravada antes de o app registrar os trechos, ou de arquivo
+   * sem o canal de superfície. Ausente não é "não saiu": `flags` é quem diz.
+   */
+  readonly offTrackStretches?: readonly LapStretch[];
+}
+
+/** Um trecho da volta, de uma posição medida a outra, em `lapDistPct`. */
+export interface LapStretch {
+  readonly startPct: number;
+  readonly endPct: number;
+}
+
+/**
+ * Os trechos contínuos em que `ativo` foi verdadeiro, na posição medida.
+ *
+ * Um trecho começa na primeira amostra verdadeira e termina na última da
+ * sequência — sem juntar trechos próximos, sem descartar trecho curto. Qualquer
+ * dessas duas coisas precisaria de uma distância escolhida (regra 18).
+ */
+export function stretchesWhere(
+  posicoes: readonly number[],
+  ativo: readonly boolean[],
+): LapStretch[] {
+  if (posicoes.length !== ativo.length) {
+    throw new InvariantError(
+      `Trechos: ${posicoes.length} posições para ${ativo.length} amostras de sinal`,
+    );
+  }
+  const trechos: LapStretch[] = [];
+  let inicio: number | null = null;
+  for (let i = 0; i < ativo.length; i += 1) {
+    if (ativo[i] === true && inicio === null) inicio = i;
+    const acabou = ativo[i] !== true || i === ativo.length - 1;
+    if (inicio !== null && acabou) {
+      const fim = ativo[i] === true ? i : i - 1;
+      trechos.push({ startPct: posicoes[inicio] ?? 0, endPct: posicoes[fim] ?? 0 });
+      inicio = null;
+    }
+  }
+  return trechos;
 }
 
 /**

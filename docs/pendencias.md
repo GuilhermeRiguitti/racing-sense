@@ -45,11 +45,30 @@ fica como está: a web pode mostrar a versão antiga sem prejuízo.
 
 ## 10. Gráficos e UX do desktop
 
-O que o piloto vê é o produto. A primeira tela existe (sessões, voltas, cinco
-painéis por distância com cursor sincronizado). Falta: zoom num trecho, marcar
-onde a volta saiu da pista, desenhar o delta contra a referência (o cálculo já
-existe e chega pelo IPC `laps:compare`), o botão de promover volta a referência
-e o relatório do agente ancorado no trecho. Usar a skill `dataviz` antes de mexer em gráfico.
+O que o piloto vê é o produto. A tela de análise tem delta contra a
+referência, abas de pilotagem, pneus, suspensão e carro, trechos fora da pista
+marcados, o painel do engenheiro, a sessão volta a volta e a ficha de acerto.
+Falta: zoom num trecho e o relatório do agente ancorado no trecho. Usar a skill
+`dataviz` antes de mexer em gráfico.
+
+## 12. Canais de engenharia não conferidos contra arquivo real
+
+Os nomes de pneu, suspensão e motor gravados na ingestão (`LFtempM`,
+`LFpressure`, `LFrideHeight`, `LFwearL`, `dc*`…) e os campos de acerto e
+limites da session info (`CarSetup`, `DriverCarSLShiftRPM`,
+`DriverCarFuelMaxLtr`) vieram da documentação do SDK, **não** de um `.ibt`
+aberto. Canal com nome errado não quebra nada — some da lista e a aba fica
+vazia. O teste `ibt-real-file.test.ts` confere isso quando há fixture; falta
+rodá-lo com os oito arquivos. Também não se sabe ainda se `LFwear*` muda com o
+carro na pista ou só quando a equipe mede no box.
+
+## 13. Sessão ingerida antes dos canais novos
+
+A ingestão é idempotente por arquivo: sessão já gravada não é reprocessada, e
+por isso fica sem os canais de engenharia, os trechos fora da pista e o acerto
+(a tela diz isso em vez de mostrar vazio). Hoje o caminho é apagar o banco
+local e deixar o watcher reingerir a pasta. Reprocessar sob demanda é a ação que
+falta — e é reprocessamento local, não sincronização (ADR 0017).
 
 ## 11. Empacotamento do desktop
 

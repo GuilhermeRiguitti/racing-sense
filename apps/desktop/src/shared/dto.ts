@@ -27,8 +27,23 @@ export interface ConditionsDto {
   readonly trackUsage: string | null;
 }
 
+/** Um nó da ficha de acerto. Ver `SetupNode` no domínio. */
+export interface SetupNodeDto {
+  readonly key: string;
+  readonly value: string | null;
+  readonly children: readonly SetupNodeDto[];
+}
+
+export interface CarLimitsDto {
+  readonly redlineRpm: number | null;
+  readonly shiftRpm: number | null;
+  readonly fuelCapacityLiters: number | null;
+}
+
 export interface SessionDto {
   readonly id: string;
+  /** Id estável da pista com layout: é o que decide se uma referência serve. */
+  readonly trackId: string;
   readonly trackName: string;
   readonly trackConfig: string | null;
   /**
@@ -37,6 +52,7 @@ export interface SessionDto {
    * pensa ("freei 30 m antes"). `null` quando o arquivo não informa.
    */
   readonly trackLengthMeters: number | null;
+  readonly carId: string;
   readonly carName: string;
   readonly driverName: string | null;
   readonly sessionType: string | null;
@@ -48,6 +64,14 @@ export interface SessionDto {
   /** Temperatura, horário e céu viajam com a sessão: sem isso a comparação mente. */
   readonly conditions: ConditionsDto;
   readonly channels: readonly ChannelDto[];
+  /** A ficha de acerto como o sim declarou; `null` quando o arquivo não traz. */
+  readonly setup: readonly SetupNodeDto[] | null;
+  readonly carLimits: CarLimitsDto;
+}
+
+export interface LapStretchDto {
+  readonly startPct: number;
+  readonly endPct: number;
 }
 
 export type LapFlagDto = 'incomplete' | 'pit' | 'off-track';
@@ -60,6 +84,28 @@ export interface LapDto {
   readonly isComplete: boolean;
   /** Por que a volta não serve de referência. Vazio = serve. */
   readonly flags: readonly LapFlagDto[];
+  /**
+   * Onde a volta saiu da pista. `null` quando não se sabe (volta gravada antes
+   * de o app registrar os trechos) — o que é diferente de lista vazia.
+   */
+  readonly offTrackStretches: readonly LapStretchDto[] | null;
+}
+
+/** Um canal resumido numa volta. Ver `ChannelSummary` no domínio. */
+export interface ChannelSummaryDto {
+  readonly channel: string;
+  readonly unit: string;
+  readonly type: ChannelTypeDto;
+  readonly first: number;
+  readonly last: number;
+  readonly min: number;
+  readonly max: number;
+  readonly mean: number | null;
+}
+
+export interface StintLapDto {
+  readonly lap: LapDto;
+  readonly channels: readonly ChannelSummaryDto[];
 }
 
 export interface SeriesDto {
@@ -85,9 +131,12 @@ export interface ComparisonDto {
 export interface ReferenceLapDto {
   readonly id: string;
   readonly label: string;
+  readonly trackId: string;
   readonly trackName: string;
+  readonly carId: string;
   readonly carName: string;
   readonly lapNumber: number;
+  readonly lapTimeSeconds: number | null;
 }
 
 export interface AnalysisFindingDto {

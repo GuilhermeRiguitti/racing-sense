@@ -96,6 +96,36 @@ describe('handlers de IPC', () => {
     expect(resultado).not.toHaveProperty('stack');
   });
 
+  it('devolve a sessão volta a volta, com o resumo de cada canal', async () => {
+    const bus = ipcBus();
+    registerIpcHandlers(desktop(), bus.register);
+
+    const resultado = await bus.invoke(IPC.getSessionStint, { sessionId: 'session-1' });
+
+    expect(resultado).toMatchObject({
+      value: [
+        {
+          lap: { number: 3, offTrackStretches: null },
+          channels: [{ channel: 'Speed', first: 40, last: 38, max: 62 }],
+        },
+      ],
+    });
+  });
+
+  it('devolve as séries da referência, para desenhar por baixo da volta', async () => {
+    const bus = ipcBus();
+    registerIpcHandlers(desktop(), bus.register);
+
+    const resultado = await bus.invoke(IPC.getReferenceLapSeries, {
+      referenceLapId: 'reference-1',
+    });
+
+    expect(resultado).toMatchObject({ value: [{ channel: 'Speed', y: [40, 62, 38] }] });
+    expect(
+      await bus.invoke(IPC.getReferenceLapSeries, { referenceLapId: 'não-existe' }),
+    ).toMatchObject({ failed: true, code: 'NOT_FOUND' });
+  });
+
   it('pedir análise não devolve o relatório — quem quer, consulta depois', async () => {
     const bus = ipcBus();
     const app = desktop();

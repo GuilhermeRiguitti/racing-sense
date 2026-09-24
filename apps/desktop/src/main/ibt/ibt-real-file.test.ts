@@ -4,7 +4,7 @@ import { openLocalStore } from '../db/local-store.js';
 import { createChannelSeries } from '../domain/channel.js';
 import { downsample, toDistanceSeries } from '../domain/distance-series.js';
 import { detectLaps } from '../domain/lap-detection.js';
-import { ingestTelemetryFile } from '../ingestion/ingest-file.js';
+import { channelsToRecord, ingestTelemetryFile } from '../ingestion/ingest-file.js';
 import { type IbtFile, openIbtFile } from './ibt-file.js';
 
 /**
@@ -65,6 +65,32 @@ describe.skipIf(arquivo === null)('decodificação de um .ibt real', () => {
     expect(nomes).toContain('LapDistPct');
     expect(nomes).toContain('OnPitRoad');
     expect(nomes.length).toBeGreaterThan(100);
+  });
+
+  it('tem os canais de engenharia que a gravação pede, com os nomes que usamos', async () => {
+    const meta = await decoder.readMetadata();
+    const gravados = channelsToRecord(meta.channels);
+
+    // Os nomes de pneu e suspensão vieram da documentação do SDK, não de um
+    // arquivo. Se o sim os escreve diferente, eles somem da lista em silêncio
+    // e a aba de pneus fica vazia — este teste é o que pega isso.
+    expect(gravados).toContain('LFpressure');
+    expect(gravados.some((nome) => /^LFtemp/.test(nome))).toBe(true);
+    expect(gravados).toContain('LFrideHeight');
+    expect(gravados).toContain('FuelLevel');
+    expect(gravados.some((nome) => nome.startsWith('dc'))).toBe(true);
+  });
+
+  it('lê os limites do carro e, quando a série permite, o acerto', async () => {
+    const { carLimits, setup } = (await decoder.readMetadata()).session;
+
+    expect(carLimits.redlineRpm).not.toBeNull();
+    expect(carLimits.fuelCapacityLiters).not.toBeNull();
+    // Acerto fixo esconde a ficha; quando ela vem, vem como árvore com seções.
+    if (setup !== null) {
+      expect(setup.length).toBeGreaterThan(0);
+      expect(setup.every((secao) => secao.children.length > 0 || secao.value !== null)).toBe(true);
+    }
   });
 
   it('lê uma amostra por registro declarado, nem mais nem menos', async () => {

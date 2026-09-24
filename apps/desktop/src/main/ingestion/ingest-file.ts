@@ -1,10 +1,14 @@
 import type { DesktopEvent } from '../../shared/ipc.js';
 import type { LocalStore } from '../db/local-store.js';
-import { type ChannelSeries, createChannelSeries } from '../domain/channel.js';
+import {
+  type ChannelDescriptor,
+  type ChannelSeries,
+  createChannelSeries,
+} from '../domain/channel.js';
 import { MissingChannelError, RepeatedLapNumberError } from '../domain/errors.js';
 import type { SessionId } from '../domain/id.js';
 import { toSessionId } from '../domain/id.js';
-import type { Lap } from '../domain/lap.js';
+import { type Lap, stretchesWhere } from '../domain/lap.js';
 import { detectLaps } from '../domain/lap-detection.js';
 import type { TelemetrySession } from '../domain/session.js';
 import { type IbtFile, openIbtFile } from '../ibt/ibt-file.js';
@@ -38,25 +42,93 @@ const SURFACE_OFF_TRACK = 0;
 /** Código do iRacing para "carro fora do mundo do sim" (`irsdk_TrkLoc::NotInWorld`). */
 const SURFACE_NOT_IN_WORLD = -1;
 
+/** As quatro rodas, na grafia com que o sim prefixa os canais de cada uma. */
+const CORNERS = ['LF', 'RF', 'LR', 'RR'] as const;
+
+/**
+ * O que o sim mede em cada roda. `tempL/M/R` é a superfície da banda, `tempCL/
+ * CM/CR` a carcaça; `L` e `R` são os lados da banda olhando para a frente do
+ * carro — num pneu esquerdo, `L` é o lado de fora.
+ */
+const PER_CORNER = [
+  'tempL',
+  'tempM',
+  'tempR',
+  'tempCL',
+  'tempCM',
+  'tempCR',
+  'pressure',
+  'wearL',
+  'wearM',
+  'wearR',
+  'rideHeight',
+  'shockDefl',
+  'brakeLinePress',
+] as const;
+
 /**
  * Canais que viram série gravada por volta.
  *
- * Os seis que respondem "onde perdi tempo". Não são todos os 288 porque ainda não
- * há análise que use os outros — guardar sem uso é custo sem retorno.
+ * Os seis primeiros respondem "onde perdi tempo". O resto é o que um
+ * engenheiro de pista olha: pneu, suspensão, dinâmica, motor e combustível.
  *
- * **Para a análise de setup, basta acrescentar nomes aqui.** Nada mais muda: o
- * tipo de cada canal vem do arquivo (contínuo ou discreto), a gravação escolhe a
- * largura exata pelo próprio dado, e a reamostragem sabe não interpolar o que é
- * discreto. Canal ausente é ignorado, não é erro: o conjunto muda entre carros.
+ * Isto **não** é catálogo fixo (regra 13): é a lista do que vale gravar, e
+ * canal ausente é ignorado, não é erro — o conjunto muda entre carros e builds
+ * do sim. O tipo de cada canal vem do arquivo (contínuo ou discreto), a gravação
+ * escolhe a largura exata pelo próprio dado, e a reamostragem sabe não
+ * interpolar o que é discreto.
  */
-export const ANALYSIS_CHANNELS = [
+export const ANALYSIS_CHANNELS: readonly string[] = [
   'Speed',
   'Throttle',
   'Brake',
   'Gear',
   'RPM',
   'SteeringWheelAngle',
-] as const;
+  // Dinâmica: o que o carro fez com o que o piloto pediu.
+  'LatAccel',
+  'LongAccel',
+  'YawRate',
+  'BrakeABSactive',
+  // Motor e combustível.
+  'FuelLevel',
+  'FuelUsePerHour',
+  'WaterTemp',
+  'OilTemp',
+  'OilPress',
+  // Superfície sob o carro: é daqui que sai onde a volta saiu da pista.
+  'PlayerTrackSurface',
+  ...CORNERS.flatMap((corner) => PER_CORNER.map((medida) => `${corner}${medida}`)),
+];
+
+/**
+ * Ajuste feito de dentro do carro: balanço de freio, ABS, controle de tração,
+ * barra estabilizadora — o acerto que muda **durante** as voltas.
+ *
+ * Não há lista deles: o conjunto é de cada carro. Eles saem do catálogo do
+ * próprio arquivo, pela convenção de nome do sim (`dc` + maiúscula). Booleano
+ * fica de fora porque, com esse prefixo, é botão (limitador do box, partida,
+ * farol), não ajuste.
+ */
+export function isInCarAdjustment(channel: ChannelDescriptor): boolean {
+  return (
+    /^dc[A-Z]/.test(channel.name) &&
+    channel.valuesPerSample === 1 &&
+    channel.type !== 'boolean' &&
+    channel.type !== 'text'
+  );
+}
+
+/** O que gravar deste arquivo: a lista acima mais os ajustes que o carro tem. */
+export function channelsToRecord(catalog: readonly ChannelDescriptor[]): string[] {
+  const disponiveis = new Set(catalog.map((channel) => channel.name));
+  const escolhidos = ANALYSIS_CHANNELS.filter((name) => disponiveis.has(name));
+  const ajustes = catalog
+    .filter(isInCarAdjustment)
+    .map((channel) => channel.name)
+    .filter((name) => !escolhidos.includes(name));
+  return [...escolhidos, ...ajustes];
+}
 
 /*
  * Não existe grade de distância na gravação, de propósito (ADR 0019).
@@ -132,18 +204,32 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
       opcional('PlayerTrackSurface'),
     ]);
 
-    const laps: readonly Lap[] = detectLaps({
+    const foraDaPista = trackSurface?.map((v) => v === SURFACE_OFF_TRACK);
+    const recortadas: readonly Lap[] = detectLaps({
       tickRate: metadata.tickRate,
       lapNumber,
       lapDistPct,
       ...(onPitRoad !== undefined ? { onPitRoad: onPitRoad.map((v) => v !== 0) } : {}),
-      ...(trackSurface !== undefined
+      ...(trackSurface !== undefined && foraDaPista !== undefined
         ? {
-            offTrack: trackSurface.map((v) => v === SURFACE_OFF_TRACK),
+            offTrack: foraDaPista,
             inWorld: trackSurface.map((v) => v !== SURFACE_NOT_IN_WORLD),
           }
         : {}),
     });
+
+    // O "onde" da saída de pista viaja com a volta: a marcação diz que saiu, o
+    // trecho diz em que ponto — que é o que o piloto procura no gráfico.
+    const laps: readonly Lap[] =
+      foraDaPista === undefined
+        ? recortadas
+        : recortadas.map((lap) => ({
+            ...lap,
+            offTrackStretches: stretchesWhere(
+              lapDistPct.slice(lap.startSample, lap.endSample + 1),
+              foraDaPista.slice(lap.startSample, lap.endSample + 1),
+            ),
+          }));
 
     const repetidos = [
       ...new Set(laps.map((lap) => lap.number).filter((n, i, todos) => todos.indexOf(n) !== i)),
@@ -176,7 +262,7 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
     // A amostra bruta de cada canal, com a posição medida dela na pista. Nada
     // é reamostrado nem interpolado aqui: o que o banco guarda é o que o
     // arquivo disse.
-    const canaisDeAnalise = ANALYSIS_CHANNELS.filter((name) => available.has(name));
+    const canaisDeAnalise = channelsToRecord(metadata.channels);
     const valoresPorCanal = new Map<string, readonly number[]>(
       await Promise.all(
         canaisDeAnalise.map(async (name) => [name, await collect(file.readChannel(name))] as const),
@@ -203,6 +289,7 @@ export async function ingestTelemetryFile(ctx: IngestContext, path: string): Pro
       }
       seriesByLap.set(lap.number, series);
     }
+
 
     store.saveRecording({ session, laps, seriesByLap });
     store.recordIngestedFile(path, session.id);

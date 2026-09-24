@@ -1,3 +1,4 @@
+import { UNKNOWN_CAR_LIMITS } from '../domain/car-setup.js';
 import type { ChannelSeries } from '../domain/channel.js';
 import type { AnalysisReport } from '../domain/insight.js';
 import type { Lap } from '../domain/lap.js';
@@ -11,8 +12,11 @@ import type { TelemetrySession } from '../domain/session.js';
  * string. Deixar isso implícito é como um `recordedAt` vira texto no meio do
  * domínio e ninguém percebe até quebrar uma comparação.
  */
-interface StoredSession extends Omit<TelemetrySession, 'recordedAt'> {
+interface StoredSession extends Omit<TelemetrySession, 'recordedAt' | 'setup' | 'carLimits'> {
   readonly recordedAt: string | null;
+  /** Ausentes em sessão gravada antes de o app ler acerto e limites do carro. */
+  readonly setup?: TelemetrySession['setup'];
+  readonly carLimits?: TelemetrySession['carLimits'];
 }
 
 export function encodeSession(session: TelemetrySession): string {
@@ -28,6 +32,9 @@ export function decodeSession(payload: string): TelemetrySession {
   return {
     ...stored,
     recordedAt: stored.recordedAt === null ? null : new Date(stored.recordedAt),
+    // Sessão antiga não tem os campos: "não sei", nunca um acerto inventado.
+    setup: stored.setup ?? null,
+    carLimits: stored.carLimits ?? UNKNOWN_CAR_LIMITS,
   };
 }
 

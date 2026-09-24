@@ -1,25 +1,35 @@
 import { useEffect, useState } from 'react';
 import type { LapDto } from '../../shared/dto.js';
 import { bridge } from './bridge.js';
-import { formatLapTime } from './chart-math.js';
 import { LapTable } from './LapTable.js';
+import { LapView } from './LapView.js';
 import { SessionHeader } from './SessionHeader.js';
 import { SessionList } from './SessionList.js';
-import { TraceChart } from './TraceChart.js';
+import { SetupSheet } from './SetupSheet.js';
+import { StintCharts } from './StintCharts.js';
 import { useBridgeQuery } from './useBridgeQuery.js';
 import { useSessions } from './useSessions.js';
 
 /**
- * A tela do piloto: sessões, voltas e a volta escolhida ao longo da pista.
+ * A tela do piloto: sessões, a sessão volta a volta, e a volta escolhida ao
+ * longo da pista, contra a referência.
  *
- * Abre já na sessão mais recente e na volta mais útil dela, porque o caso de
- * uso é "acabei de sair do carro": ninguém quer clicar três vezes para ver a
- * volta que acabou de dar.
+ * Abre já na sessão mais recente e na volta mais útil dela, com a referência
+ * mais recente do mesmo carro e pista, porque o caso de uso é "acabei de sair
+ * do carro": ninguém quer clicar três vezes para ver onde perdeu tempo.
  */
 export function App() {
   const { sessions, loading, error } = useSessions();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lapNumber, setLapNumber] = useState<number | null>(null);
+  /**
+   * A referência que o piloto escolheu. `undefined` é "ainda não escolheu":
+   * vale a mais recente compatível. `null` é "escolheu ver sem referência".
+   */
+  const [escolhaReferencia, setEscolhaReferencia] = useState<string | null | undefined>(
+    undefined,
+  );
+  const [versaoReferencias, setVersaoReferencias] = useState(0);
 
   // Sessão nova ingerida vira a escolhida: é a que o piloto acabou de rodar.
   useEffect(() => {
@@ -35,6 +45,10 @@ export function App() {
   }, [sessions, sessionId]);
 
   const laps = useBridgeQuery(sessionId, () => bridge().listSessionLaps(sessionId ?? ''));
+  const stint = useBridgeQuery(sessionId, () => bridge().getSessionStint(sessionId ?? ''));
+  const referencias = useBridgeQuery(`referencias#${versaoReferencias}`, () =>
+    bridge().listReferenceLaps(),
+  );
 
   useEffect(() => {
     if (laps.data === null) return;
@@ -42,13 +56,23 @@ export function App() {
     setLapNumber(voltaInicial(laps.data)?.number ?? null);
   }, [laps.data, lapNumber]);
 
-  const series = useBridgeQuery(
-    sessionId !== null && lapNumber !== null ? `${sessionId}#${lapNumber}` : null,
-    () => bridge().getLapSeries(sessionId ?? '', lapNumber ?? 0),
-  );
-
   const session = sessions.find((s) => s.id === sessionId) ?? null;
   const lap = laps.data?.find((l) => l.number === lapNumber) ?? null;
+
+  // Só referência do mesmo carro e pista entra na lista: as outras seriam
+  // recusadas pela comparação (ADR 0008), então nem são oferecidas.
+  const compativeis =
+    session === null
+      ? []
+      : (referencias.data ?? []).filter(
+          (r) => r.trackId === session.trackId && r.carId === session.carId,
+        );
+  const referenceId =
+    escolhaReferencia === undefined
+      ? (compativeis[0]?.id ?? null)
+      : compativeis.some((r) => r.id === escolhaReferencia)
+        ? escolhaReferencia
+        : (compativeis[0]?.id ?? null);
 
   return (
     <div className="app">
@@ -97,29 +121,34 @@ export function App() {
               <p className="muted">Nenhuma volta nesta gravação.</p>
             )}
             {laps.data !== null && laps.data.length > 0 && (
-              <LapTable laps={laps.data} selected={lapNumber} onSelect={setLapNumber} />
+              <div className="session-overview">
+                <LapTable laps={laps.data} selected={lapNumber} onSelect={setLapNumber} />
+                {stint.data !== null && (
+                  <StintCharts
+                    stint={stint.data}
+                    channels={session.channels}
+                    selected={lapNumber}
+                    onSelect={setLapNumber}
+                  />
+                )}
+              </div>
             )}
 
             {lap !== null && (
-              <section className="lap-view">
-                <h2 className="lap-view__title">
-                  Volta {lap.number}
-                  <span className="lap-view__time">{formatLapTime(lap.lapTimeSeconds)}</span>
-                </h2>
-                {series.error !== null && (
-                  <p role="alert" className="alert">
-                    Não foi possível carregar os canais: {series.error}
-                  </p>
-                )}
-                {series.data !== null && (
-                  <TraceChart
-                    series={series.data}
-                    trackLengthMeters={session.trackLengthMeters}
-                    stale={series.loading}
-                  />
-                )}
-              </section>
+              <LapView
+                session={session}
+                lap={lap}
+                references={compativeis}
+                referenceId={referenceId}
+                onReferenceChange={setEscolhaReferencia}
+                onReferenceCreated={(id) => {
+                  setEscolhaReferencia(id);
+                  setVersaoReferencias((v) => v + 1);
+                }}
+              />
             )}
+
+            <SetupSheet setup={session.setup} />
           </>
         )}
       </main>

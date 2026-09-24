@@ -33,10 +33,14 @@ em dois carros e duas pistas (Ferrari 296 GT3 / Road Atlanta e Mercedes-AMG GT3 
 Suzuka). O recorte de voltas, a reamostragem por distância e o downsampling
 também estão de pé e conferidos contra arquivo real. A persistência local é
 SQLite de verdade, guardando a amostra exatamente como o arquivo entregou (ADR
-0019). A primeira tela existe: sessões, voltas com a situação de cada uma e a
-volta em cinco painéis sobre o eixo de distância, com cursor sincronizado. O
-delta contra a referência existe no domínio e chega ao renderer pelo IPC
-`laps:compare`, mas ainda não é desenhado; a segmentação em trechos espera os
+0019). A tela de análise existe: sessões, voltas com a situação de cada uma, a
+sessão volta a volta (tempo, pressão, temperatura, combustível, ajustes
+mexidos), e a volta em abas (pilotagem, pneus, suspensão, carro) sobre o eixo de
+distância, com o delta contra a referência no topo, os trechos fora da pista
+marcados, cursor sincronizado e o painel do engenheiro ao lado. A ingestão grava
+também pneu, suspensão, motor, combustível e os ajustes `dc*` do carro, e guarda
+a ficha de acerto da session info — nomes ainda não conferidos contra arquivo
+real (`docs/pendencias.md`, item 12). A segmentação em trechos espera os
 setores da pista. O que ainda é stub é o **narrador**. A api tem schema Prisma e
 rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
 `docs/roadmap.md`.

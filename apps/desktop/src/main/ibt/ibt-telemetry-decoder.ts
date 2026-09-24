@@ -13,7 +13,9 @@ import {
 import { DISK_SUB_HEADER_SIZE, IBT_HEADER_SIZE, VAR_HEADER_SIZE } from './format.js';
 import { decodeSessionInfo, type SessionInfoNode } from './session-info.js';
 import {
+  toCarLimits,
   toCarRef,
+  toCarSetup,
   toConditions,
   toDriverName,
   toRecordedAt,
@@ -94,6 +96,8 @@ export async function readMetadata(source: ByteSource): Promise<DecodedMetadata>
       sessionType: toSessionType(info),
       recordedAt: toRecordedAt(diskSubHeader.startDate),
       conditions: toConditions(info),
+      setup: toCarSetup(info),
+      carLimits: toCarLimits(info),
     },
   };
 }

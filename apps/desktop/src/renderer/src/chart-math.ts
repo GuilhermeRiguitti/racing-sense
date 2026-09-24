@@ -1,3 +1,5 @@
+import type { SeriesDto } from '../../shared/dto.js';
+
 /**
  * Contas de desenho. Nada aqui é análise: é converter número em pixel.
  *
@@ -128,4 +130,37 @@ export function seriesPath(
     }
   }
   return d;
+}
+
+/**
+ * Delta em segundos com sinal sempre explícito: +0,312 é tempo perdido,
+ * −0,145 é ganho. Três casas, a resolução em que o sim mostra o tempo de volta.
+ * O sinal de menos é o tipográfico (U+2212), da mesma largura do mais.
+ */
+export function formatDelta(segundos: number): string {
+  const texto = Math.abs(segundos).toFixed(3).replace('.', ',');
+  if (Number(texto.replace(',', '.')) === 0) return '0,000';
+  return `${segundos > 0 ? '+' : '\u2212'}${texto}`;
+}
+
+/**
+ * O valor gravado mais perto do cursor — **só dentro do trecho que a volta
+ * cobriu**. Fora dele, não existe valor: mostrar a última amostra ali faria a
+ * tela dizer "100% de freio" num ponto da pista onde o carro nunca esteve.
+ * O limite é o próprio intervalo gravado, não uma distância escolhida.
+ */
+export function valueAtCursor(serie: SeriesDto, cursor: number | null): number | undefined {
+  if (cursor === null || serie.x.length === 0) return undefined;
+  const primeiro = Math.min(serie.x[0] ?? 0, serie.x[serie.x.length - 1] ?? 0);
+  const ultimo = Math.max(serie.x[0] ?? 0, serie.x[serie.x.length - 1] ?? 0);
+  if (cursor < primeiro || cursor > ultimo) return undefined;
+  const indice = nearestIndex(serie.x, cursor);
+  return indice >= 0 ? serie.y[indice] : undefined;
+}
+
+/** Posição na volta como o piloto pensa: metros, quando a pista informa o comprimento. */
+export function formatDistance(fracao: number, trackLengthMeters: number | null): string {
+  return trackLengthMeters === null
+    ? `${(fracao * 100).toFixed(1).replace('.', ',')}%`
+    : `${Math.round(fracao * trackLengthMeters).toLocaleString('pt-BR')} m`;
 }

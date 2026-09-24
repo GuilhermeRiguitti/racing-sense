@@ -6,6 +6,7 @@
  * quebra aqui — não em quinze arquivos de teste.
  */
 
+import { UNKNOWN_CAR_LIMITS } from './car-setup.js';
 import { type ChannelSeries, createChannelSeries } from './channel.js';
 import { type SessionConditions, UNKNOWN_CONDITIONS } from './conditions.js';
 import { toReferenceLapId, toSessionId } from './id.js';
@@ -67,6 +68,8 @@ export const aSession = (overrides: Partial<TelemetrySession> = {}): TelemetrySe
   tickRate: 60,
   sampleCount: 3600,
   conditions: someConditions(),
+  setup: null,
+  carLimits: UNKNOWN_CAR_LIMITS,
   channels: [
     {
       name: 'Speed',

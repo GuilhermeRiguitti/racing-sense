@@ -1,3 +1,4 @@
+import type { CarLimits, SetupNode } from './car-setup.js';
 import type { ChannelDescriptor } from './channel.js';
 import type { SessionConditions } from './conditions.js';
 import type { SessionId } from './id.js';
@@ -41,6 +42,17 @@ export interface TelemetrySession {
   readonly channels: readonly ChannelDescriptor[];
   /** Temperatura, horário, céu. Sem isso a comparação entre pilotos mente. */
   readonly conditions: SessionConditions;
+  /**
+   * O acerto com que a sessão foi rodada, como o sim declarou. `null` quando o
+   * arquivo não traz — série de acerto fixo esconde, e sessão gravada antes
+   * de o app ler o acerto também não tem.
+   *
+   * Um `.ibt` por saída dos boxes: trocar acerto na garagem começa arquivo
+   * novo, então um acerto por sessão é o que o dado dá. O que muda **durante**
+   * as voltas são os ajustes de dentro do carro (`dc*`), e esses são canais.
+   */
+  readonly setup: readonly SetupNode[] | null;
+  readonly carLimits: CarLimits;
 }
 
 /** Duração da gravação em segundos. */

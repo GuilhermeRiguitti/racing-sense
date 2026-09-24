@@ -17,6 +17,16 @@
   --selected: rgba(42, 120, 214, 0.1);
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  /* A referência é neutra: é régua, não protagonista. */
+  --reference: #898781;
+  /* Delta divergente: azul é ganho, vermelho é perda, o zero é a linha de base. */
+  --delta-gain: #2a78d6;
+  --delta-loss: #e34948;
+  --delta-line: #52514e;
+  /* Fora da pista é estado, não série: a cor de status crítico, em véu. */
+  --off-track: rgba(208, 59, 59, 0.12);
   --status-good: #0ca30c;
   --status-critical: #d03b3b;
   --crosshair: #52514e;
@@ -36,6 +46,13 @@
     --selected: rgba(57, 135, 229, 0.16);
     --series-1: #3987e5;
     --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --reference: #898781;
+    --delta-gain: #3987e5;
+    --delta-loss: #e66767;
+    --delta-line: #c3c2b7;
+    --off-track: rgba(208, 59, 59, 0.2);
     --crosshair: #c3c2b7;
   }
 }
@@ -53,6 +70,13 @@
   --selected: rgba(57, 135, 229, 0.16);
   --series-1: #3987e5;
   --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --reference: #898781;
+  --delta-gain: #3987e5;
+  --delta-loss: #e66767;
+  --delta-line: #c3c2b7;
+  --off-track: rgba(208, 59, 59, 0.2);
   --crosshair: #c3c2b7;
 }
 
@@ -230,6 +254,7 @@ kbd {
 /* --- voltas ------------------------------------------------------------- */
 
 .laps {
+  width: 100%;
   border-collapse: collapse;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -247,6 +272,7 @@ kbd {
 }
 
 .laps th {
+  white-space: nowrap;
   text-align: left;
   font-size: 12px;
   font-weight: 500;
@@ -397,7 +423,9 @@ kbd {
 
 .panel__values {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 16px;
 }
 
 .panel__value {
@@ -463,14 +491,45 @@ kbd {
   stroke-linecap: round;
 }
 
-.stroke-series-1 {
+.stroke-1 {
   stroke: var(--series-1);
   stroke-width: 2;
 }
 
-.stroke-series-2 {
+.stroke-2 {
   stroke: var(--series-2);
   stroke-width: 2;
+}
+
+.stroke-3 {
+  stroke: var(--series-3);
+  stroke-width: 2;
+}
+
+.stroke-4 {
+  stroke: var(--series-4);
+  stroke-width: 2;
+}
+
+.stroke-reference {
+  stroke: var(--reference);
+  stroke-width: 1.5;
+}
+
+.fill-1 {
+  fill: var(--series-1);
+}
+
+.fill-2 {
+  fill: var(--series-2);
+}
+
+.fill-3 {
+  fill: var(--series-3);
+}
+
+.fill-4 {
+  fill: var(--series-4);
 }
 
 .crosshair {
@@ -478,4 +537,502 @@ kbd {
   stroke-width: 1;
   shape-rendering: crispEdges;
   pointer-events: none;
+}
+
+/* --- delta, réguas e trechos fora da pista ------------------------------- */
+
+.delta-area {
+  stroke: none;
+}
+
+.delta-area--loss {
+  fill: var(--delta-loss);
+  fill-opacity: 0.14;
+}
+
+.delta-area--gain {
+  fill: var(--delta-gain);
+  fill-opacity: 0.14;
+}
+
+.delta-line {
+  stroke: var(--delta-line);
+}
+
+.panel--delta {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.off-track {
+  fill: var(--off-track);
+}
+
+.rule {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.panel__rules {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 12px;
+}
+
+.trace__legend-off {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.trace__empty {
+  padding: 24px 16px 24px 52px;
+  color: var(--text-secondary);
+  max-width: 560px;
+}
+
+/* --- visão geral da sessão ------------------------------------------------ */
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.session-overview {
+  display: grid;
+  grid-template-columns: minmax(300px, 440px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.laps__delta {
+  color: var(--text-secondary);
+}
+
+.stint {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stint__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trend {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 0 6px;
+  min-width: 0;
+}
+
+.trend__header {
+  display: grid;
+  gap: 2px;
+  padding: 0 12px 4px;
+}
+
+.trend__header .panel__values {
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  min-height: 20px;
+}
+
+.trend__plot {
+  cursor: pointer;
+}
+
+.trend__plot svg {
+  display: block;
+}
+
+.trend__selected {
+  fill: var(--selected);
+}
+
+.trend__legend {
+  display: flex;
+  gap: 12px;
+  padding: 2px 12px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.trend__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+/* Ponto oco: o contorno é a cor da série, não o anel de superfície do .dot. */
+.dot.dot--hollow {
+  fill: var(--surface);
+  stroke-width: 2;
+}
+
+.dot--hollow.stroke-1 {
+  stroke: var(--series-1);
+}
+
+.dot--hollow.stroke-2 {
+  stroke: var(--series-2);
+}
+
+.dot--hollow.stroke-3 {
+  stroke: var(--series-3);
+}
+
+.dot--hollow.stroke-4 {
+  stroke: var(--series-4);
+}
+
+.stint__changes {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.stint__changes ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.stint__change-lap {
+  display: inline-block;
+  min-width: 64px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- a volta ---------------------------------------------------------------- */
+
+.lap-view__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 24px;
+}
+
+.lap-view__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.lap-view__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.stat {
+  display: grid;
+}
+
+.stat__label,
+.field__label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stat__value {
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.stat__direction {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.field {
+  display: grid;
+  gap: 2px;
+}
+
+select,
+.button {
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  min-height: 32px;
+}
+
+select {
+  max-width: 320px;
+}
+
+.button {
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--selected);
+}
+
+.button:disabled,
+select:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+select:focus-visible,
+.button:focus-visible,
+.tabs__tab:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.notice {
+  border-left: 3px solid var(--baseline);
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.notice strong {
+  color: var(--text-primary);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs__tab {
+  font: inherit;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 6px 12px;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.tabs__tab:hover {
+  color: var(--text-primary);
+}
+
+.tabs__tab.is-selected {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--text-primary);
+}
+
+/* --- o engenheiro ------------------------------------------------------------ */
+
+.engineer {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+}
+
+.card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.card__meta,
+.card__empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.facts {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.facts__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.facts dt {
+  color: var(--text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.facts__note {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stint__changes .facts__note {
+  display: inline;
+  margin-left: 8px;
+}
+
+.tires {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tire {
+  display: grid;
+  gap: 4px;
+}
+
+.tire__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tire__bands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tire__band {
+  display: grid;
+  justify-items: center;
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tire__band + .tire__band {
+  border-left: 1px solid var(--border);
+}
+
+.tire__band-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.tire__facts {
+  display: grid;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- acerto ------------------------------------------------------------------- */
+
+.setup {
+  display: grid;
+  gap: 8px;
+}
+
+.setup__sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.setup__section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.setup__section summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.setup__group-title {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.setup__entries {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.setup__entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setup__entry dt {
+  color: var(--text-secondary);
+}
+
+.setup__entry dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- janela estreita ----------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .lap-view__body,
+  .session-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .engineer {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .stint__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

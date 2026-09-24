@@ -1,5 +1,5 @@
 import type { LapDto } from '../../shared/dto.js';
-import { formatLapTime } from './chart-math.js';
+import { formatDelta, formatLapTime } from './chart-math.js';
 
 /** O que cada marcação quer dizer, na língua de quem pilota. */
 const MOTIVO: Record<LapDto['flags'][number], string> = {
@@ -41,6 +41,9 @@ export function LapTable({ laps, selected, onSelect }: Props) {
           <th scope="col" className="num">
             Tempo
           </th>
+          <th scope="col" className="num">
+            <abbr title="Diferença para a melhor volta válida da sessão">Δ melhor</abbr>
+          </th>
           <th scope="col">Situação</th>
         </tr>
       </thead>
@@ -66,6 +69,14 @@ export function LapTable({ laps, selected, onSelect }: Props) {
               <td className="num">
                 {formatLapTime(lap.lapTimeSeconds)}
                 {melhor?.number === lap.number && <span className="laps__best">melhor</span>}
+              </td>
+              <td className="num laps__delta">
+                {melhor !== null &&
+                lap.lapTimeSeconds !== null &&
+                melhor.lapTimeSeconds !== null &&
+                melhor.number !== lap.number
+                  ? formatDelta(lap.lapTimeSeconds - melhor.lapTimeSeconds)
+                  : ''}
               </td>
               <td>
                 <span className={`status status--${valida ? 'good' : 'critical'}`}>

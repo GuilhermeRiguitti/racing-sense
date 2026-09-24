@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InvariantError } from './errors.js';
-import { isValidLap, lapDurationSeconds } from './lap.js';
+import { isValidLap, lapDurationSeconds, stretchesWhere } from './lap.js';
 import { aLap } from './testing.js';
 
 describe('lapDurationSeconds', () => {
@@ -29,5 +29,32 @@ describe('isValidLap', () => {
   it('rejeita volta marcada, mesmo completa e cronometrada', () => {
     expect(isValidLap(aLap({ flags: ['off-track'] }))).toBe(false);
     expect(isValidLap(aLap({ flags: ['pit'] }))).toBe(false);
+  });
+});
+
+describe('stretchesWhere', () => {
+  const posicoes = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
+
+  it('devolve cada sequência verdadeira como um trecho, na posição medida', () => {
+    const ativo = [false, true, true, false, true, false];
+
+    expect(stretchesWhere(posicoes, ativo)).toEqual([
+      { startPct: 0.2, endPct: 0.3 },
+      { startPct: 0.5, endPct: 0.5 },
+    ]);
+  });
+
+  it('fecha o trecho que vai até a última amostra', () => {
+    expect(stretchesWhere(posicoes, [false, false, false, false, true, true])).toEqual([
+      { startPct: 0.5, endPct: 0.6 },
+    ]);
+  });
+
+  it('não junta trechos vizinhos nem descarta trecho de uma amostra', () => {
+    expect(stretchesWhere(posicoes, [true, false, true, false, true, false])).toHaveLength(3);
+  });
+
+  it('recusa sinal de tamanho diferente das posições', () => {
+    expect(() => stretchesWhere(posicoes, [true])).toThrow(InvariantError);
   });
 });
