@@ -1,0 +1,1029 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conta criada e sessão aberta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/session": {
+      "post": {
+        "operationId": "AuthController_signIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessão aberta; o cookie vem no `Set-Cookie`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E-mail ou senha inválidos."
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthController_signOut",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Sessão encerrada."
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem login. O app funciona igual, só sem a nuvem."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/sessions": {
+      "post": {
+        "operationId": "SessionsController_publish",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sessão guardada. Publicar de novo substitui."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/public": {
+      "get": {
+        "operationId": "SessionsController_listPublic",
+        "parameters": [
+          {
+            "name": "trackId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedSessionSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/{sessionId}": {
+      "get": {
+        "operationId": "SessionsController_view",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "shareToken",
+            "required": false,
+            "in": "query",
+            "description": "Token de um link de compartilhamento.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedSessionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não existe, ou este visitante não pode ver."
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      },
+      "delete": {
+        "operationId": "SessionsController_remove",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Apagada. O que o piloto apagou no desktop some aqui."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/{sessionId}/laps/{lapNumber}/series": {
+      "get": {
+        "operationId": "SessionsController_lapSeries",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lapNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "shareToken",
+            "required": false,
+            "in": "query",
+            "description": "Token de um link de compartilhamento.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeriesDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não existe, ou este visitante não pode ver."
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/{sessionId}/visibility": {
+      "patch": {
+        "operationId": "SessionsController_setVisibility",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetVisibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetVisibilityDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/{sessionId}/share-links": {
+      "post": {
+        "operationId": "SessionsController_share",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/sessions/{sessionId}/share-links/{token}": {
+      "delete": {
+        "operationId": "SessionsController_revokeShareLink",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/pilots/{pilotId}/sessions": {
+      "get": {
+        "operationId": "PilotsController_listByOwner",
+        "parameters": [
+          {
+            "name": "pilotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishedSessionSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pilots"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Telemetry API",
+    "description": "Rede social da análise de telemetria: login, sessões publicadas pelo desktop, visibilidade e links de compartilhamento. Não lê telemetria — recebe dado já processado.",
+    "version": "0.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "telemetry_session"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "piloto@exemplo.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "displayName"
+        ]
+      },
+      "Visibility": {
+        "type": "string",
+        "enum": [
+          "private",
+          "unlisted",
+          "public"
+        ],
+        "description": "Visibilidade aplicada às sessões novas. Nasce `private`."
+      },
+      "PilotDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "defaultVisibility": {
+            "description": "Visibilidade aplicada às sessões novas. Nasce `private`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "defaultVisibility"
+        ]
+      },
+      "SignInDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "piloto@exemplo.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "ConditionsDto": {
+        "type": "object",
+        "properties": {
+          "airTempCelsius": {
+            "type": "number",
+            "nullable": true
+          },
+          "trackTempCelsius": {
+            "type": "number",
+            "nullable": true
+          },
+          "relativeHumidityPct": {
+            "type": "number",
+            "nullable": true
+          },
+          "windSpeedMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "skies": {
+            "type": "string",
+            "nullable": true
+          },
+          "timeOfDaySeconds": {
+            "type": "number",
+            "nullable": true,
+            "description": "Segundos desde a meia-noite."
+          },
+          "trackUsage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "airTempCelsius",
+          "trackTempCelsius",
+          "relativeHumidityPct",
+          "windSpeedMs",
+          "skies",
+          "timeOfDaySeconds",
+          "trackUsage"
+        ]
+      },
+      "LapFlag": {
+        "type": "string",
+        "enum": [
+          "incomplete",
+          "pit",
+          "off-track"
+        ],
+        "description": "Por que a volta não serve de referência. Vazio = serve."
+      },
+      "ChannelType": {
+        "type": "string",
+        "enum": [
+          "number",
+          "integer",
+          "boolean",
+          "text",
+          "bitfield"
+        ],
+        "description": "Contínuo se liga com reta; discreto (marcha, booleano) se desenha em degrau."
+      },
+      "SeriesAxis": {
+        "type": "string",
+        "enum": [
+          "time",
+          "lapDistPct"
+        ]
+      },
+      "SeriesDto": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "type": {
+            "description": "Contínuo se liga com reta; discreto (marcha, booleano) se desenha em degrau.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChannelType"
+              }
+            ]
+          },
+          "axis": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeriesAxis"
+              }
+            ]
+          },
+          "x": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "y": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "channel",
+          "unit",
+          "type",
+          "axis",
+          "x",
+          "y"
+        ]
+      },
+      "PublishedLapDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "number"
+          },
+          "startSample": {
+            "type": "number"
+          },
+          "endSample": {
+            "type": "number"
+          },
+          "lapTimeSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "isComplete": {
+            "type": "boolean"
+          },
+          "flags": {
+            "type": "array",
+            "description": "Por que a volta não serve de referência. Vazio = serve.",
+            "items": {
+              "$ref": "#/components/schemas/LapFlag"
+            }
+          },
+          "series": {
+            "description": "Séries por distância, como o desktop gravou.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesDto"
+            }
+          }
+        },
+        "required": [
+          "number",
+          "startSample",
+          "endSample",
+          "lapTimeSeconds",
+          "isComplete",
+          "flags",
+          "series"
+        ]
+      },
+      "PublishSessionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "O id que a sessão tem no desktop. Publicar de novo substitui."
+          },
+          "trackId": {
+            "type": "string"
+          },
+          "trackName": {
+            "type": "string"
+          },
+          "trackConfig": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackLengthMeters": {
+            "type": "number",
+            "nullable": true
+          },
+          "carId": {
+            "type": "string"
+          },
+          "carName": {
+            "type": "string"
+          },
+          "driverName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sessionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "tickRate": {
+            "type": "number"
+          },
+          "sampleCount": {
+            "type": "number"
+          },
+          "conditions": {
+            "$ref": "#/components/schemas/ConditionsDto"
+          },
+          "bestLapTimeSeconds": {
+            "type": "number",
+            "nullable": true,
+            "description": "Melhor volta válida, calculada no desktop (ADR 0018)."
+          },
+          "laps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishedLapDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "trackId",
+          "trackName",
+          "trackConfig",
+          "trackLengthMeters",
+          "carId",
+          "carName",
+          "driverName",
+          "sessionType",
+          "recordedAt",
+          "tickRate",
+          "sampleCount",
+          "conditions",
+          "bestLapTimeSeconds",
+          "laps"
+        ]
+      },
+      "PublishedSessionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "trackId": {
+            "type": "string"
+          },
+          "trackName": {
+            "type": "string"
+          },
+          "carId": {
+            "type": "string"
+          },
+          "carName": {
+            "type": "string"
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "bestLapTimeSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "lapCount": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sessionId",
+          "ownerId",
+          "ownerName",
+          "trackId",
+          "trackName",
+          "carId",
+          "carName",
+          "visibility",
+          "bestLapTimeSeconds",
+          "lapCount",
+          "recordedAt",
+          "publishedAt"
+        ]
+      },
+      "LapDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "number"
+          },
+          "startSample": {
+            "type": "number"
+          },
+          "endSample": {
+            "type": "number"
+          },
+          "lapTimeSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "isComplete": {
+            "type": "boolean"
+          },
+          "flags": {
+            "type": "array",
+            "description": "Por que a volta não serve de referência. Vazio = serve.",
+            "items": {
+              "$ref": "#/components/schemas/LapFlag"
+            }
+          }
+        },
+        "required": [
+          "number",
+          "startSample",
+          "endSample",
+          "lapTimeSeconds",
+          "isComplete",
+          "flags"
+        ]
+      },
+      "PublishedSessionDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "trackId": {
+            "type": "string"
+          },
+          "trackName": {
+            "type": "string"
+          },
+          "carId": {
+            "type": "string"
+          },
+          "carName": {
+            "type": "string"
+          },
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          },
+          "bestLapTimeSeconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "lapCount": {
+            "type": "number"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "trackConfig": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackLengthMeters": {
+            "type": "number",
+            "nullable": true
+          },
+          "driverName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sessionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "tickRate": {
+            "type": "number"
+          },
+          "conditions": {
+            "$ref": "#/components/schemas/ConditionsDto"
+          },
+          "laps": {
+            "description": "Voltas sem as séries; peça a série por volta.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LapDto"
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "ownerId",
+          "ownerName",
+          "trackId",
+          "trackName",
+          "carId",
+          "carName",
+          "visibility",
+          "bestLapTimeSeconds",
+          "lapCount",
+          "recordedAt",
+          "publishedAt",
+          "trackConfig",
+          "trackLengthMeters",
+          "driverName",
+          "sessionType",
+          "tickRate",
+          "conditions",
+          "laps"
+        ]
+      },
+      "SetVisibilityDto": {
+        "type": "object",
+        "properties": {
+          "visibility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              }
+            ]
+          }
+        },
+        "required": [
+          "visibility"
+        ]
+      },
+      "ShareLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "token",
+          "createdAt",
+          "revokedAt"
+        ]
+      }
+    }
+  }
+}

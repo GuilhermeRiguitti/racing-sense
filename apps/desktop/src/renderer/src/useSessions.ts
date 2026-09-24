@@ -1,5 +1,5 @@
-import type { SessionDto } from '@telemetry/contracts';
 import { useCallback, useEffect, useState } from 'react';
+import type { SessionDto } from '../../shared/dto.js';
 import { bridge } from './bridge.js';
 
 /**

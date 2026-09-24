@@ -9,23 +9,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "check": "pnpm run lint && pnpm run arch && pnpm run typecheck && pnpm run test",
+    "dev:desktop": "pnpm --dir apps/desktop dev",
+    "dev:api": "pnpm --dir apps/api dev",
+    "dev:web": "pnpm --dir apps/web dev",
+    "build": "pnpm -r run build",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
     "typecheck": "pnpm -r --no-bail run typecheck",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "dev:web": "pnpm --filter @telemetry/web dev",
-    "arch": "node scripts/check-architecture.mjs",
-    "dev:desktop": "pnpm --filter @telemetry/desktop dev",
-    "dev:cloud": "pnpm --filter @telemetry/cloud-api dev"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
-    "@types/node": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "test": "pnpm -r --no-bail run test",
+    "lint": "pnpm -r --no-bail run lint",
+    "lint:fix": "pnpm -r --no-bail run lint:fix",
+    "api:openapi": "pnpm --dir apps/api openapi",
+    "api:types": "pnpm run api:openapi && pnpm --dir apps/desktop api:types && pnpm --dir apps/web api:types"
   }
 }

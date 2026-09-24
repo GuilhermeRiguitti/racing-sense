@@ -4,42 +4,19 @@ import { defineConfig } from 'electron-vite';
 /**
  * Três alvos, três runtimes:
  *
- * - `main`   — Node. É onde vive o composition root, o watcher e o SQLite.
+ * - `main`   — Node. É onde vivem o watcher, o SQLite, o decoder e o modelo.
  * - `preload` — ponte, com acesso restrito. Só expõe os canais de IPC declarados.
  * - `renderer` — navegador. Não tem Node, não tem `fs`, não tem chave de API.
  *
  * O renderer ser um navegador sem Node não é limitação: é a fronteira de
  * segurança do Electron. Tudo que precisa de disco ou de rede passa por IPC.
+ *
+ * As dependências de `package.json` ficam fora do bundle do `main` e são
+ * carregadas de `node_modules` em runtime — o padrão do electron-vite. É o que
+ * o `better-sqlite3` exige: módulo nativo não se empacota.
  */
 export default defineConfig({
-  main: {
-    build: {
-      /**
-       * Os pacotes do workspace são publicados como `.ts` cru (`exports` aponta
-       * para `src/index.ts`). Deixados externos, o Node do Electron tenta
-       * carregá-los do disco e não resolve `./x.js` para `./x.ts` — então eles
-       * **precisam** entrar no bundle. Só o que é de `node_modules` fica de fora.
-       */
-      externalizeDeps: {
-        exclude: [
-          '@telemetry/adapter-fs',
-          '@telemetry/adapter-http',
-          '@telemetry/adapter-ibt',
-          '@telemetry/adapter-llm',
-          '@telemetry/adapter-memory',
-          '@telemetry/adapter-sqlite',
-          '@telemetry/application',
-          '@telemetry/application-desktop',
-          '@telemetry/contracts',
-          '@telemetry/domain',
-        ],
-      },
-      rollupOptions: {
-        // Módulo nativo não pode ser empacotado: é carregado do disco.
-        external: ['better-sqlite3'],
-      },
-    },
-  },
+  main: {},
   preload: {
     build: {
       rollupOptions: {

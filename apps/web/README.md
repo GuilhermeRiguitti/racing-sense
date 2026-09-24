@@ -3,7 +3,7 @@
 A rede social: perfil do piloto, feed de sessões públicas e voltas compartilhadas.
 
 ```bash
-pnpm dev:web   # http://localhost:3000
+pnpm dev       # ou, da raiz: pnpm dev:web — http://localhost:3000
 ```
 
 ## Por que Next aqui (e não no desktop)
@@ -16,11 +16,12 @@ servidor do Next não oferece.
 
 ## Fronteira
 
-Depende **só** de `@telemetry/contracts` e lê a cloud-api. Nunca fala com a
-máquina do piloto, e nunca decide visibilidade por conta própria — quem decide é
-`canView`, no domínio, aplicado pela cloud-api. Regra de acesso duplicada é como
-vaza dado privado.
+Fala **só** com a api, por HTTP, com o cliente tipado em `src/lib/api.ts`
+(tipos gerados de `../api/openapi.json` — `pnpm api:types`). Não tem banco,
+nunca fala com a máquina do piloto e nunca decide visibilidade por conta
+própria: quem decide é a api (`canView`). Regra de acesso duplicada é como vaza
+dado privado.
 
 | Variável | Para quê |
 |---|---|
-| `NEXT_PUBLIC_CLOUD_API_URL` | endereço da cloud-api |
+| `NEXT_PUBLIC_API_URL` | endereço da api (padrão `http://localhost:4000`) |

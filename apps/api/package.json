@@ -1,0 +1,64 @@
+{
+  "name": "@telemetry/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API da rede social: perfil do piloto, sessões publicadas pelo desktop e links de compartilhamento.",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "postinstall": "prisma generate",
+    "dev": "nest start --watch",
+    "build": "prisma generate && nest build",
+    "start": "node dist/main.js",
+    "openapi": "nest build && node dist/openapi.js",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.1.0",
+    "@nestjs/core": "^12.1.0",
+    "@nestjs/platform-express": "^12.1.0",
+    "@nestjs/swagger": "^12.0.2",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "iron-session": "^9.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@nestjs/cli": "^12.0.5",
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.16.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.0",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "prisma": "^7.10.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^5.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/engines",
+      "@swc/core",
+      "prisma"
+    ],
+    "ignoredBuiltDependencies": [
+      "@scarf/scarf"
+    ]
+  }
+}

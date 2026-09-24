@@ -1,6 +1,6 @@
 # ADR 0010 — CQS na camada de aplicação
 
-**Status:** Aceito · 2026-09-17
+**Status:** Superado por ADR 0020 · 2026-09-17
 
 ## Contexto
 

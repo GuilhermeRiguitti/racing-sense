@@ -9,7 +9,7 @@ escrito — não é "achei que estava funcionando".
 vem primeiro é sempre o mesmo: *o piloto acabou de sair do carro e quer ver onde
 perdeu tempo*. O que serve a esse momento ganha.
 
-A web e a cloud-api são funcionalidade extra, para depois — compartilhar uma
+A web e a api são funcionalidade extra, para depois — compartilhar uma
 volta, comparar com um amigo, ter perfil. Entre melhorar o gráfico de delta e
 melhorar a consistência da nuvem, o gráfico ganha.
 
@@ -36,7 +36,7 @@ batem com o que o sim mostrou na sessão.
 
 ## Etapa 2 — Voltas
 
-- [x] `detectLaps` com histerese na linha de chegada (`packages/domain`)
+- [x] `detectLaps` com histerese na linha de chegada (`apps/desktop/src/main/domain`)
 - [x] Marcar out lap, in lap, saída de pista, incidente e volta
       cortada pelo início/fim da gravação (marcar, não descartar: a volta suja
       tem conteúdo, só não pode ser referência)
@@ -64,7 +64,7 @@ extensão. É o teste que pega erro de alinhamento.
 
 A etapa que entrega o produto.
 
-- [x] Watcher ligado à ingestão (file-lock resolvido, em `adapter-fs`)
+- [x] Watcher ligado à ingestão (file-lock resolvido; arquivo criado durante a varredura inicial também entra)
 - [x] IPC empurrando evento para o renderer: sessão ingerida, análise pronta,
       publicação — com a interface consultando de novo em vez de confiar no payload
 - [x] Gráfico de canal por distância, com cursor sincronizado entre os painéis e
@@ -72,8 +72,7 @@ A etapa que entrega o produto.
 - [ ] Zoom num trecho da volta
 - [ ] Marcar no gráfico onde a volta saiu da pista
 - [ ] Gráfico de delta contra a referência
-- [x] Persistência local passando a suíte de contrato das portas (SQLite,
-      amostra bruta sem perda — ADR 0019)
+- [x] Persistência local em SQLite (amostra bruta sem perda — ADR 0019)
 
 **Pronto quando:** rodar uma sessão no sim, com o aplicativo aberto, e a volta
 aparecer na tela sozinha — sem clicar em nada.
@@ -82,8 +81,8 @@ Antes de escrever a primeira linha de gráfico, use a skill `dataviz`.
 
 ## Etapa 5 — Agente
 
-- [ ] `NarratorPort` implementada de verdade em `adapter-llm`
-- [ ] Relatório validado contra `analysisReportDto`
+- [ ] Narrador implementado de verdade (`apps/desktop/src/main/analysis/narrator.ts`)
+- [ ] Relatório validado contra o formato de `AnalysisReport`
 - [ ] Custo por análise medido e registrado
 
 **Pronto quando:** o relatório aponta um trecho real de perda de tempo que se confirma
@@ -91,8 +90,9 @@ olhando o gráfico — e não inventa nenhum número.
 
 ## Depois — a parte social
 
-A cloud-api e a web saem do esqueleto: receber a sessão publicada, Postgres com
-migrations, autenticação ligada, painel de visibilidade e feed. Nada disso
+A api já recebe a sessão publicada, com Prisma, migration inicial, cadastro e
+login (ADR 0020). Falta rodar contra Postgres de verdade, o painel de
+visibilidade na web e o feed com gráfico. Nada disso
 bloqueia o desktop, e o desktop funciona inteiro sem nada disso.
 
 ## Fase 2 — Telemetria ao vivo

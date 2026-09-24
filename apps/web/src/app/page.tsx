@@ -1,4 +1,4 @@
-import { listPublicSessions } from '../lib/cloud-api.js';
+import { listPublicSessions } from '../lib/api';
 
 /**
  * Feed público: as sessões que outros pilotos abriram.
@@ -20,7 +20,11 @@ export default async function Home() {
         <ul>
           {sessions.map((session) => (
             <li key={session.sessionId}>
-              {session.trackName} · {session.carName} · {session.lapCount} voltas
+              <a href={`/sessions/${session.sessionId}`}>
+                {session.trackName} · {session.carName}
+              </a>{' '}
+              · {session.lapCount} voltas ·{' '}
+              <a href={`/pilots/${session.ownerId}`}>{session.ownerName}</a>
             </li>
           ))}
         </ul>

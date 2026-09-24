@@ -3,7 +3,7 @@
 ## Regra
 
 **Nenhum arquivo `.ibt` entra no repositório.** São binários grandes e contêm nome de
-piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e `fixtures/real/`.
+piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e qualquer pasta `fixtures/real/`.
 
 ## Como obter um arquivo para desenvolvimento
 
@@ -12,16 +12,16 @@ piloto e dados de sessão. O `.gitignore` bloqueia `*.ibt` e `fixtures/real/`.
 2. Entre no carro e rode algumas voltas — 3 ou 4 já bastam para exercitar detecção de
    volta, out lap e in lap.
 3. Saia da sessão. O arquivo fica em `Documentos\iRacing\telemetry\`.
-4. Copie para `fixtures/real/` na sua máquina (ignorado pelo git).
+4. Copie para `apps/desktop/fixtures/real/` na sua máquina (ignorado pelo git).
 
 Para os testes de detecção de volta, um arquivo com **reset para os boxes** no meio
 vale mais que um limpo: é o caso que quebra implementação ingênua.
 
 ## Rodando os testes de integração
 
-Ponha um arquivo em **`fixtures/real/sample.ibt`** (ou aponte a variável
+Ponha um arquivo em **`apps/desktop/fixtures/real/sample.ibt`** (ou aponte a variável
 `TELEMETRY_FIXTURE` para um caminho). O teste
-`apps/desktop/src/main/ibt-real-file.test.ts` roda sozinho quando encontra, e
+`apps/desktop/src/main/ibt/ibt-real-file.test.ts` roda sozinho quando encontra, e
 **pula** quando não encontra — nunca falha por ausência.
 
 É esse teste que sustenta a validação dos offsets do formato: ele confere que a
@@ -33,8 +33,8 @@ contagem de amostras lidas bate com a declarada e que `LapDistPct` fica em
 Teste que depende de arquivo real não roda em CI. Por isso:
 
 - **Unitário**: constrói os bytes na mão, como em
-  `packages/ibt-core/src/decoder.test.ts`. Roda em qualquer lugar.
-- **Integração**: lê de `fixtures/real/`. Deve ser marcado para pular quando o arquivo
+  `apps/desktop/src/main/ibt/decoder.test.ts`. Roda em qualquer lugar.
+- **Integração**: lê de `apps/desktop/fixtures/real/`. Deve ser marcado para pular quando o arquivo
   não existir, nunca falhar por ausência.
 
 Quando o decoder estiver validado (etapa 1 do roadmap), vale gerar um `.ibt` sintético

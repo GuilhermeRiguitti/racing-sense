@@ -1,6 +1,6 @@
 # ADR 0011 — Três aplicações e a fronteira de autonomia
 
-**Status:** Aceito · 2026-09-17
+**Status:** Aceito · 2026-09-17 · **Superado em parte por ADR 0020** (`cloud-api` virou `api`; o "Nest liga, não pensa" saiu com o composition root)
 **Refina:** ADR 0004 (watcher local), ADR 0009 (hexagonal)
 **Refinado por:** ADR 0016, que transforma "a análise mora no desktop" de
 convenção em barreira de compilação

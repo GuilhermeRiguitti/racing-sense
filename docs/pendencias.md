@@ -24,20 +24,21 @@ setor declarado pelo sim é o corte sem número arbitrado. A expectativa é o bl
 `SplitTimeInfo.Sectors[].SectorStartPct` da session info, **ainda não conferido
 contra arquivo real**.
 
-## 8. Nuvem: Postgres, migrations e autenticação de verdade
+## 8. api contra Postgres de verdade
 
-`adapter-postgres` é esqueleto e a cloud-api não persiste nada ainda. Falta:
-migrations, o middleware que lê o cookie selado e põe o `pilotId` na requisição,
-cadastro de piloto e a rota que recebe a sessão publicada pelo desktop.
-
-Quando existir Postgres no CI, o adapter roda a mesma suíte de contrato que o de
-memória e o de SQLite já passam.
+A api tem schema Prisma, migration inicial (`apps/api/prisma/migrations`),
+cadastro, login com cookie selado, publicação, visibilidade e links (ADR 0020).
+Subiu e respondeu sem banco (Swagger, 401, validação), mas **nenhuma rota foi
+exercitada contra um Postgres real**. Falta: teste de ponta a ponta dos services
+(publicar, abrir por link, revogar, apagar) com Postgres em container, e o mesmo
+no CI.
 
 ## 9. Apagar na nuvem o que foi apagado no desktop
 
-Apagar sessão no desktop não apaga da nuvem. Isso **não** é problema de
-sincronização — divergência entre os dois lados é aceitável por design (ADR
-0017). É o piloto retirando algo que publicou, e precisa existir.
+A api já tem `DELETE /sessions/{sessionId}`. O desktop ainda não tem ação de apagar
+sessão, e portanto não chama a rota. Isso **não** é problema de sincronização —
+divergência entre os dois lados é aceitável por design (ADR 0017). É o piloto
+retirando algo que publicou, e precisa existir.
 
 O resto da divergência (sessão reprocessada local que não voltou para a nuvem)
 fica como está: a web pode mostrar a versão antiga sem prejuízo.

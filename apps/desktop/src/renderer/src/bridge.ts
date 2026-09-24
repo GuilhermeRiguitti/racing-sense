@@ -1,4 +1,5 @@
-import type { DesktopEventDto, LapDto, SeriesDto, SessionDto } from '@telemetry/contracts';
+import type { LapDto, SeriesDto, SessionDto } from '../../shared/dto.js';
+import type { DesktopEvent } from '../../shared/ipc.js';
 
 /** Resultado de uma chamada pela ponte: sucesso ou falha, nunca exceção. */
 export type BridgeResult<T> =
@@ -12,7 +13,7 @@ export interface TelemetryBridge {
   listReferenceLaps(): Promise<BridgeResult<readonly unknown[]>>;
   ingestTelemetryFile(locator: string): Promise<BridgeResult<{ sessionId: string }>>;
   /** Assina os avisos do processo principal. Devolve como cancelar. */
-  onEvent(listener: (event: DesktopEventDto) => void): () => void;
+  onEvent(listener: (event: DesktopEvent) => void): () => void;
 }
 
 declare global {

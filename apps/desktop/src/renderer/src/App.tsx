@@ -1,5 +1,5 @@
-import type { LapDto } from '@telemetry/contracts';
 import { useEffect, useState } from 'react';
+import type { LapDto } from '../../shared/dto.js';
 import { bridge } from './bridge.js';
 import { formatLapTime } from './chart-math.js';
 import { LapTable } from './LapTable.js';
