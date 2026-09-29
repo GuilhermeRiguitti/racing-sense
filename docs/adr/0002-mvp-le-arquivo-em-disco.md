@@ -1,6 +1,6 @@
 # ADR 0002 — MVP lê `.ibt` em disco; telemetria ao vivo fica para a fase 2
 
-**Status:** Aceito · 2026-09-17
+**Status:** Aceito · 2026-09-17 · Superado em parte por ADR 0023 (a leitura ao vivo entrou, sem addon compilado)
 
 ## Contexto
 

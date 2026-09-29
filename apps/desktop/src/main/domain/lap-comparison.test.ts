@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createChannelSeries } from './channel.js';
 import { IncompatibleReferenceError, InvariantError } from './errors.js';
 import { compareToReference, DELTA_CHANNEL } from './lap-comparison.js';
-import { aCar, aLap, aReferenceLap, aTrack } from './testing.js';
+import { aCar, aLap, aReferenceLap, aTrack } from '../../../tests/support/builders.js';
 
 const TICK = 60;
 

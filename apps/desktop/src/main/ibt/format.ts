@@ -61,6 +61,27 @@ export const HEADER_OFFSETS = {
   varBufs: 48,
 } as const;
 
+/**
+ * Nome do arquivo mapeado que o sim publica enquanto roda (`IRSDK_MEMMAPFILENAME`
+ * no `irsdk_defines.h`). É o canal oficial de leitura ao vivo (ADR 0022 e 0023).
+ */
+export const LIVE_MEMORY_MAP_NAME = 'Local\\IRSDKMemMapFileName';
+
+/**
+ * Bits do campo `status` do header (`irsdk_StatusField`). Só existe um: o sim
+ * está conectado e escrevendo. Em arquivo o campo não tem uso.
+ */
+export const STATUS_CONNECTED = 1;
+
+/**
+ * Quantas vezes tentar copiar o frame mais recente antes de desistir do tick.
+ *
+ * Vem do `irsdk_getNewData` do SDK oficial (`irsdk_utils.cpp`), que tenta duas
+ * vezes: se o sim reescreveu o buffer no meio da cópia, a segunda pega o
+ * seguinte. Não foi escolhido aqui.
+ */
+export const LIVE_FRAME_COPY_ATTEMPTS = 2;
+
 /** Offsets dentro de um descritor de buffer (`VAR_BUF_SIZE` bytes). */
 export const VAR_BUF_OFFSETS = {
   tickCount: 0,

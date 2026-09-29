@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { openLocalStore } from '../db/local-store.js';
 import { MissingChannelError, RepeatedLapNumberError } from '../domain/errors.js';
 import { toSessionId } from '../domain/id.js';
-import { aSession } from '../domain/testing.js';
+import { aSession } from '../../../tests/support/builders.js';
 import type { IbtFile } from '../ibt/ibt-file.js';
 import type { DecodedMetadata } from '../ibt/ibt-telemetry-decoder.js';
 import type { ChannelType } from '../domain/channel.js';

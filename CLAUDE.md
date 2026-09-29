@@ -42,7 +42,11 @@ também pneu, suspensão, motor, combustível e os ajustes `dc*` do carro, e gua
 a ficha de acerto da session info — nomes ainda não conferidos contra arquivo
 real (`docs/pendencias.md`, item 12). A segmentação em trechos sai dos
 setores que o sim declara (`SplitTimeInfo`): tempo de setor por volta, ganho ou
-perda por setor contra a referência e a volta ideal. O que ainda é stub é o **narrador**. A api tem schema Prisma e
+perda por setor contra a referência e a volta ideal. A **leitura ao vivo** começou
+(ADR 0023): a memória compartilhada do SDK é lida só leitura via `koffi`, e a tela
+"Ao vivo" mostra cada canal e se ele está mudando. O layout foi conferido contra o
+sim aberto em 2026-09-26 (`ibt/live-real-sim.test.ts`); o que falta está no item 14
+de `docs/pendencias.md`. O que ainda é stub é o **narrador**. A api tem schema Prisma e
 rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
 `docs/roadmap.md`.
 
@@ -85,6 +89,7 @@ Mudou rota ou DTO na api: rode `pnpm api:types` e confira o typecheck das três.
 |---|---|
 | Regra de corrida (volta, delta, compatibilidade) | `apps/desktop/src/main/domain/` — sem I/O |
 | Leitura de bytes do `.ibt` | `apps/desktop/src/main/ibt/` |
+| Leitura ao vivo do sim | bytes em `ibt/live.ts` (puro) e `ibt/live-memory.ts` (Windows); o serviço em `src/main/live/` |
 | Tabela ou consulta do banco local | `apps/desktop/src/main/db/local-store.ts` (+ `schema.ts`) |
 | Algo que o coach faz (ingerir, comparar, analisar) | `apps/desktop/src/main/{ingestion,analysis}/` — função que recebe o `LocalStore` |
 | Chamada à api a partir do desktop | `apps/desktop/src/main/cloud/` |
@@ -101,7 +106,8 @@ Da estrutura:
    tipos gerados do `openapi.json`. Se duas apps precisam da mesma regra, ela
    mora em uma só (a que é dona do dado) — a outra pergunta por HTTP.
 2. **`domain` e `ibt` do desktop são puros.** Nada de `node:*`, nada de lib, nada
-   de I/O. O decoder recebe uma `ByteSource`; quem abre arquivo é `ibt-file.ts`.
+   de I/O. O decoder recebe uma `ByteSource`; quem abre arquivo é `ibt-file.ts`,
+   e quem abre a memória compartilhada do sim é `live-memory.ts`.
 3. **Gerar e ler são separados.** Gerar análise (`requestLapAnalysis`) chama o
    modelo e grava; ler (`getLapAnalysis`) só lê. Tela que abre nunca dispara
    modelo.
@@ -266,6 +272,14 @@ que o supera.
 
 ## Testes
 
+- **O teste mora ao lado do módulo que testa**: `src/main/domain/lap.ts` →
+  `src/main/domain/lap.test.ts`.
+- **O que só existe para rodar teste mora em `apps/desktop/tests/`**, fora de
+  `src/`: construtores de dados e fakes em `tests/support/` (importados pelos
+  `*.test.ts`), o preparo do `.env.testing` em `tests/support/testing-env.ts` e
+  o script que abre o app e tira prints em `tests/e2e/`. Código de produção
+  nunca importa de `tests/`.
+- Biblioteca: **vitest** no desktop e na api. A web ainda não tem testes.
 - Domínio e decoder: chamada direta, sem mock.
 - Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados
   por parâmetro. Nada de mock de framework.
@@ -273,7 +287,7 @@ que o supera.
   (`apps/desktop/.env.testing`) e **pula** quando ela está vazia. Nunca falha
   por ausência de fixture.
 - O vitest do desktop carrega só `.env.testing`, nunca o `.env` do aplicativo.
-  Na primeira execução, `apps/desktop/scripts/testing-env.ts` cria o
+  Na primeira execução, `apps/desktop/tests/support/testing-env.ts` cria o
   `.env.testing` a partir do `.env.testing.example` e tenta preencher
   `TELEMETRY_FIXTURE` com o `.ibt` mais recente da pasta do iRacing.
 - Api: regras puras testadas direto; services contra Postgres ainda pendentes
@@ -303,6 +317,8 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0018-so-volta-valida-e-material-de-analise.md` | por que qualquer saída de pista invalida a volta |
 | `docs/adr/0019-grava-a-amostra-como-o-arquivo-entregou.md` | por que o banco guarda a amostra sem grade nem arredondamento |
 | `docs/adr/0022-o-app-so-le-do-iracing.md` | por que o app nunca manda comando para o sim, e o que o EULA diz |
+| `docs/adr/0023-leitura-ao-vivo-pela-memoria-compartilhada.md` | a leitura ao vivo: `koffi`, frame congelado, ao vivo não grava |
+| `docs/adr/0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md` | a transmissão do piloto para o engenheiro: salas, frame opaco, só o próprio carro |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -316,9 +332,12 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 **MVP:** ler `.ibt` em disco, recortar voltas, comparar com referência, gráficos
 e relatório do agente.
 
-**Fora do MVP:** telemetria ao vivo via memória compartilhada e overlay em tempo
-real. Não implemente — quando entrar, é outra fonte de bytes para o decoder
-(`ByteSource`) e nada mais muda.
+**Fase 2, em andamento (ADR 0023):** leitura ao vivo pela memória compartilhada,
+só para visualizar — nada do ao vivo vai para o banco; a análise continua saindo
+do `.ibt`. A transmissão para o engenheiro em outra máquina está decidida no ADR
+0024 (WebSocket com salas na api, frame opaco, só o carro do piloto) e espera o
+login rodar contra Postgres. Overlay em tempo real **não** está decidido: ADR
+antes de código.
 
 **Fora do produto:** qualquer comando para o sim — broadcast, tecla simulada,
 ajuste automático (regra 25, ADR 0022).

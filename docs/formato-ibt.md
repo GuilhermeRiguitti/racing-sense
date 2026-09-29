@@ -133,15 +133,43 @@ bufOffset + (N * bufLen) + varHeader.offset
 - **Amostra não sabe de volta.** O agrupamento por volta é trabalho do
   domínio (`detectLaps`), usando `Lap`/`LapDistPct`.
 
-## Memória compartilhada (fase 2, não implementar agora)
+## Memória compartilhada (fase 2, ADR 0023)
 
-- Região `Local\IRSDKMemMapFileName`, atualizada a ~60 Hz.
+Implementada em `ibt/live.ts` (puro) e `ibt/live-memory.ts` (Windows, via `koffi`).
+**Conferida contra o sim aberto em 2026-09-26** (Mercedes-AMG GT3 / Road Atlanta,
+treino). O teste é `ibt/live-real-sim.test.ts`, que pula com o sim
+fechado.
+
+Medido:
+
+| Campo | Valor | Nota |
+|---|---|---|
+| `numVars` | 335 | 287 no `.ibt` da Mercedes: ao vivo vêm os `CarIdx*` |
+| `bufLen` | 8616 B | ~8× o do `.ibt` (1101 B) |
+| canais com `count > 1` | 45 | quase todos de 64 posições (`CarIdx*`), alguns de 6; somam 6768 B |
+| `numBuf` | 3 | ticks consecutivos: ~50 ms de folga para quem lê atrasado |
+| session info | 512 KB reservados | o texto termina no primeiro NUL |
+
+⚠️ **Ao vivo, `Σ tamanho × count ≠ bufLen`.** A memória tem padding entre canais
+(27 buracos, quase todos de 32 bytes depois de um array `CarIdx*`); o arquivo não.
+A conta que vale ao vivo é: nenhum canal invade o anterior, e o último termina no
+`bufLen`. Ler pelo `offset` de cada canal, como o decoder faz, não é afetado.
+
+- Região `Local\IRSDKMemMapFileName`, atualizada a ~60 Hz. Aberta com
+  `FILE_MAP_READ` e nada mais.
 - Mesma estrutura, **sem** o disk sub header.
 - Até 4 buffers em double buffering: o sim alterna a escrita para que o leitor sempre
   pegue um frame consistente.
 - Ao ler vários canais do mesmo tick, congele o buffer no início do loop antes de
   qualquer leitura (`freeze_var_buffer_latest()` no `pyirsdk`). Sem isso você mistura
   dados de ticks diferentes — e o bug aparece como ruído, não como erro.
+  O código segue o `irsdk_getNewData`: anota o `tickCount`, copia, relê, e
+  descarta a cópia se mudou (`freezeLatestFrame`).
+- O bit 1 do `status` diz se o sim está numa sessão escrevendo. Sem ele, o app
+  solta o handle e reabre no próximo pedido, como o SDK oficial.
+- Ao vivo, `sessionInfoLength` é o espaço reservado, não o tamanho do texto: a
+  string termina no primeiro NUL, e o que vem depois é sobra de uma versão
+  anterior.
 
 ## Fontes
 

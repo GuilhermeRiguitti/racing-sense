@@ -25,6 +25,12 @@ export const IPC = {
   signIn: 'auth:sign-in',
   signOut: 'auth:sign-out',
   /**
+   * O frame mais recente do sim, lido na hora (ADR 0023). A tela pergunta no
+   * ritmo em que desenha: frame ao vivo não vira evento, para não existirem duas
+   * versões do mesmo instante.
+   */
+  getLiveSnapshot: 'live:snapshot',
+  /**
    * Único canal de mão única: o processo principal empurrando fato novo para a
    * interface. Todos os outros são pergunta e resposta.
    */

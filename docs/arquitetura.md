@@ -129,7 +129,7 @@ api; as páginas só consomem.
 | Gemini → outro provedor | variável de ambiente |
 | AI SDK → outra lib | `apps/desktop/src/main/analysis/` |
 | SQLite → outro banco local | `apps/desktop/src/main/db/` e quem usa `LocalStore` |
-| arquivo → memória compartilhada (fase 2) | outra implementação de `IbtFile` |
+| `koffi` → outro FFI ou addon próprio (ao vivo) | `apps/desktop/src/main/ibt/live-memory.ts` |
 | Prisma/Postgres → outro | `apps/api/src/**/*.service.ts` |
 | NestJS → outro framework | `apps/api` inteira; desktop e web só regeneram tipos se o contrato mudar |
 | iron-session → outro esquema | `apps/api/src/auth/`; os clientes não tocam no cookie |
@@ -140,7 +140,8 @@ api; as páginas só consomem.
 
 O decoder não abre arquivo: recebe uma `ByteSource`. O `.ibt` e o stream ao vivo
 usam o mesmo header e a mesma tabela de variáveis — muda só de onde vêm os bytes.
-Na fase 2, é outra fonte de bytes (ADR 0002).
+Ao vivo, a fonte é a memória compartilhada lida por `live-memory.ts`, e a mesma
+decodificação serve às duas (ADR 0023).
 
 ### 2. A análise é determinística; o modelo só redige
 

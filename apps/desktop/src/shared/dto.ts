@@ -193,3 +193,32 @@ export interface PilotDto {
   readonly displayName: string;
   readonly defaultVisibility: 'private' | 'unlisted' | 'public';
 }
+
+/** O catálogo do que o sim está entregando ao vivo. Ver `LiveCatalog` em `main/live`. */
+export interface LiveCatalogDto {
+  readonly catalogId: string;
+  readonly tickRate: number;
+  readonly channels: readonly ChannelDto[];
+  readonly trackName: string;
+  readonly carName: string;
+  readonly driverName: string | null;
+  readonly sessionType: string | null;
+  /** Posição do carro do dono da máquina nos canais `CarIdx*`. */
+  readonly playerCarIdx: number | null;
+}
+
+/** Valor de um canal num frame: escalar, ou um por carro nos canais `CarIdx*`. */
+export type LiveValueDto = number | readonly number[];
+
+export type LiveSnapshotDto =
+  | { readonly state: 'sim-closed' }
+  | { readonly state: 'disconnected' }
+  | {
+      readonly state: 'connected';
+      /** Só vem quando mudou desde o `knownCatalogId` enviado. */
+      readonly catalog: LiveCatalogDto | null;
+      readonly catalogId: string;
+      readonly tickCount: number;
+      /** Na ordem de `catalog.channels`. */
+      readonly values: readonly LiveValueDto[];
+    };

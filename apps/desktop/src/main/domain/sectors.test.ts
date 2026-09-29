@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { firstArrivals } from './arrivals.js';
 import { InvariantError } from './errors.js';
 import { isValidSectorStarts, sectorTimes } from './sectors.js';
-import { aLap } from './testing.js';
+import { aLap } from '../../../tests/support/builders.js';
 
 const TICK = 60;
 

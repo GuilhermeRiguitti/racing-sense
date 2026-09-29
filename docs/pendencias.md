@@ -62,3 +62,24 @@ falta — e é reprocessamento local, não sincronização (ADR 0017).
 
 `electron-builder` configurado, instalador Windows assinado e auto-update. Inclui
 o rebuild nativo do `better-sqlite3` para a versão do Electron.
+
+## 14. Leitura ao vivo contra o sim aberto
+
+O layout ao vivo foi conferido contra o sim aberto em 2026-09-26, num treino
+(`ibt/live-real-sim.test.ts`, medidas em `docs/formato-ibt.md`). Falta:
+
+- conferir nome de piloto **com acento** numa session info ao vivo (o da
+  conferência era ASCII);
+- anotar quais canais ficam **parados** em cada posição — ao volante, espectador,
+  engenheiro de equipe — em vez de presumir. A tela mede isso na coluna "Ao vivo";
+- medir quanto tempo o `tickCount` fica parado com o sim pausado ou em replay,
+  antes de escolher o tempo limite para soltar o handle de um sim que caiu.
+
+Para a transmissão ao engenheiro (ADR 0024), o que a medida disse: o frame cru
+tem 8616 B, e 6768 B dele são arrays, quase todos um valor por carro — que não
+viajam. O carro do piloto sozinho fica em ~1,2 KB por tick — ~70 KB/s a 60 Hz, antes do
+envelope. Com `numBuf` 3, o desktop do piloto recupera até ~50 ms de leitura
+atrasada sem perder tick.
+
+A transmissão para o engenheiro está decidida no ADR 0024 e depende do item 8:
+sem Postgres não há login, e sem login não há sala fechada.

@@ -3,6 +3,7 @@ import type { LapDto } from '../../shared/dto.js';
 import { bridge } from './bridge.js';
 import { LapTable, lapStanding } from './LapTable.js';
 import { LapView } from './LapView.js';
+import { LiveView } from './LiveView.js';
 import { SessionHeader } from './SessionHeader.js';
 import { SessionList } from './SessionList.js';
 import { SetupSheet } from './SetupSheet.js';
@@ -32,6 +33,8 @@ export function App() {
   const [versaoReferencias, setVersaoReferencias] = useState(0);
   /** Out lap, in lap e slow down ficam escondidos até o piloto pedir (ADR 0021). */
   const [mostrarInvalidas, setMostrarInvalidas] = useState(false);
+  /** A tela ao vivo lê o sim enquanto está aberta; fechada, nada é lido. */
+  const [aoVivo, setAoVivo] = useState(false);
 
   // Sessão nova ingerida vira a escolhida: é a que o piloto acabou de rodar.
   useEffect(() => {
@@ -90,13 +93,23 @@ export function App() {
   return (
     <div className="app">
       <aside className="app__sidebar">
+        <button
+          type="button"
+          className={`sessions__item live__entry${aoVivo ? ' is-selected' : ''}`}
+          aria-current={aoVivo ? 'true' : undefined}
+          onClick={() => setAoVivo(true)}
+        >
+          <span className="sessions__track">Ao vivo</span>
+          <span className="sessions__meta">O que o sim está entregando agora</span>
+        </button>
         {loading ? (
           <p className="muted">Carregando sessões…</p>
         ) : (
           <SessionList
             sessions={sessions}
-            selected={sessionId}
+            selected={aoVivo ? null : sessionId}
             onSelect={(id) => {
+              setAoVivo(false);
               setSessionId(id);
               setLapNumber(null);
             }}
@@ -105,13 +118,15 @@ export function App() {
       </aside>
 
       <main className="app__main">
-        {error !== null && (
+        {aoVivo && <LiveView />}
+
+        {!aoVivo && error !== null && (
           <p role="alert" className="alert">
             Não foi possível carregar as sessões: {error}
           </p>
         )}
 
-        {!loading && sessions.length === 0 && (
+        {!aoVivo && !loading && sessions.length === 0 && (
           <div className="empty">
             <h1>Nenhuma sessão ainda</h1>
             <p>
@@ -121,7 +136,7 @@ export function App() {
           </div>
         )}
 
-        {session !== null && (
+        {!aoVivo && session !== null && (
           <>
             <SessionHeader session={session} />
 

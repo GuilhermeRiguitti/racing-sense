@@ -35,6 +35,8 @@ const api = {
   signIn: (credentials: { email: string; password: string }) =>
     ipcRenderer.invoke(IPC.signIn, credentials),
   signOut: () => ipcRenderer.invoke(IPC.signOut),
+  getLiveSnapshot: (knownCatalogId: string | null) =>
+    ipcRenderer.invoke(IPC.getLiveSnapshot, { knownCatalogId }),
 
   /**
    * Assina os avisos do processo principal e devolve como cancelar.

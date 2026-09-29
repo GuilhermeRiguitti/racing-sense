@@ -67,6 +67,9 @@ justificativa no ADR 0020.
 
 ## Testes
 
+- O teste mora ao lado do módulo que testa (`src/main/domain/lap.test.ts`). O que
+  só existe para rodar teste — construtores de dados, fakes, preparo do ambiente,
+  o script de prints — mora em `apps/desktop/tests/`.
 - Domínio e decoder: chamada direta, sem mock.
 - Desktop: SQLite `:memory:` real; `.ibt`, narrador e `fetch` falsos passados por
   parâmetro. Nada de mock de framework.

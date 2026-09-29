@@ -1,10 +1,11 @@
 /**
  * Abstração da origem dos bytes.
  *
- * É o ponto de troca entre MVP e fase 2: hoje a implementação lê de um arquivo
- * `.ibt`; ao vivo ela lerá da memória compartilhada do sim. Nada mais muda.
- *
  * A implementação sobre disco é `openIbtFile`, em `ibt-file.ts`.
+ *
+ * A memória compartilhada do sim tem o mesmo header e a mesma tabela de
+ * variáveis, mas não usa esta interface: lá a leitura é síncrona e o frame
+ * precisa ser congelado — ver `LiveMemory`, em `live.ts`.
  */
 export interface ByteSource {
   /**

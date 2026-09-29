@@ -9,7 +9,7 @@
  * de telemetria temporárias, que são apagadas no fim. Só os prints ficam.
  *
  *   pnpm build
- *   node scripts/drive-app.mjs [--ibt caminho] [--reference 14 --lap 10] [--out pasta]
+ *   node tests/e2e/drive-app.mjs [--ibt caminho] [--reference 14 --lap 10] [--live] [--out pasta]
  */
 import { spawn } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -19,7 +19,7 @@ import { basename, join } from 'node:path';
 import { parseArgs, parseEnv } from 'node:util';
 import { chromium } from 'playwright-core';
 
-const APP_DIR = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const APP_DIR = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
 const { values: opcoes } = parseArgs({
   options: {
@@ -28,6 +28,7 @@ const { values: opcoes } = parseArgs({
     lap: { type: 'string' },
     out: { type: 'string', default: join(tmpdir(), 'telemetry-shots') },
     port: { type: 'string', default: '9333' },
+    live: { type: 'boolean', default: false },
   },
 });
 
@@ -99,8 +100,9 @@ try {
     .find((pagina) => !pagina.url().startsWith('devtools'));
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await page.waitForSelector('.sessions__item', { timeout: 60_000 });
-  await page.click('.sessions__item');
+  // Dentro da lista: o item "Ao vivo" da barra lateral usa a mesma classe.
+  await page.waitForSelector('.sessions .sessions__item', { timeout: 60_000 });
+  await page.click('.sessions .sessions__item');
   await page.waitForSelector('table.laps tbody tr', { timeout: 60_000 });
   await espera(1500);
   await page.screenshot({ path: join(opcoes.out, '1-sessao.png') });
@@ -128,6 +130,16 @@ try {
     await espera(1500);
     await page.locator('.lap-view').screenshot({ path: join(opcoes.out, '2-volta.png') });
     console.log('print:', join(opcoes.out, '2-volta.png'));
+  }
+
+  if (opcoes.live) {
+    // A tela ao vivo lê a memória do sim de verdade: com o sim fechado, o print
+    // mostra o estado "sim fechado"; numa sessão, a tabela de canais.
+    await page.click('.live__entry');
+    await page.waitForSelector('.live__table, .empty h1, .alert', { timeout: 20_000 });
+    await espera(1500);
+    await page.screenshot({ path: join(opcoes.out, '3-ao-vivo.png') });
+    console.log('print:', join(opcoes.out, '3-ao-vivo.png'));
   }
 } finally {
   await browser?.close().catch(() => {});

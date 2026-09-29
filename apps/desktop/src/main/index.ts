@@ -10,9 +10,9 @@ import { registerIpcHandlers } from './ipc/handlers.js';
 /**
  * Processo principal: Node, com estado e vida longa.
  *
- * É aqui que moram o watcher da pasta de telemetria, o banco local e — na fase 2
- * — o addon nativo do SDK do iRacing. Foi exatamente isso que decidiu Electron
- * em vez de Tauri (ADR 0012).
+ * É aqui que moram o watcher da pasta de telemetria, o banco local e a leitura
+ * da memória compartilhada do iRacing (ADR 0023). Foi exatamente isso que
+ * decidiu Electron em vez de Tauri (ADR 0012).
  */
 loadDevelopmentEnv();
 
@@ -119,6 +119,7 @@ app.whenReady().then(() => {
 
   app.on('will-quit', () => {
     clearInterval(flush);
+    desktop.live.close();
     void ingestion.stop().finally(() => desktop.store.close());
   });
 

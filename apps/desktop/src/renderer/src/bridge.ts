@@ -1,6 +1,7 @@
 import type {
   ComparisonDto,
   LapDto,
+  LiveSnapshotDto,
   ReferenceLapDto,
   SeriesDto,
   SessionDto,
@@ -33,6 +34,8 @@ export interface TelemetryBridge {
     label: string;
   }): Promise<BridgeResult<{ referenceLapId: string }>>;
   ingestTelemetryFile(locator: string): Promise<BridgeResult<{ sessionId: string }>>;
+  /** O frame mais recente do sim. O catálogo só vem quando difere de `knownCatalogId`. */
+  getLiveSnapshot(knownCatalogId: string | null): Promise<BridgeResult<LiveSnapshotDto>>;
   /** Assina os avisos do processo principal. Devolve como cancelar. */
   onEvent(listener: (event: DesktopEvent) => void): () => void;
 }

@@ -14,13 +14,15 @@ tabela ou painel, abra o app e **olhe** o resultado antes de dizer que terminou.
 
 ```bash
 pnpm --dir apps/desktop build     # o script abre o app compilado, não o dev server
-node apps/desktop/scripts/drive-app.mjs --reference 14 --lap 10
+node apps/desktop/tests/e2e/drive-app.mjs --reference 14 --lap 10
 ```
 
 - `--ibt <caminho>` — o `.ibt` a abrir. Sem ele, usa `TELEMETRY_FIXTURE` do
   `apps/desktop/.env.testing` (o mesmo arquivo dos testes).
 - `--reference <n>` — promove a volta `n` a referência pelo botão da tela.
 - `--lap <n>` — abre a volta `n`; com `--reference`, compara contra ela.
+- `--live` — abre a tela "Ao vivo" e tira `3-ao-vivo.png`. Com o sim fechado, o
+  print mostra o estado "sim fechado"; com o sim numa sessão, a tabela de canais.
 - `--out <pasta>` — onde ficam os prints (padrão: `%TEMP%/telemetry-shots`).
 
 Saída: `1-sessao.png` (cabeçalho, tabela de voltas, gráficos da sessão) e, com

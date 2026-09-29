@@ -14,7 +14,7 @@ import { type IbtFile, openIbtFile } from './ibt-file.js';
  * repositório (são grandes e têm nome de piloto dentro).
  *
  * Para rodar: `TELEMETRY_FIXTURE`, em `apps/desktop/.env.testing`, aponta para
- * um `.ibt` real — `scripts/testing-env.ts` tenta preencher sozinho na primeira
+ * um `.ibt` real — `tests/support/testing-env.ts` tenta preencher sozinho na primeira
  * execução. Caminho preenchido e arquivo que não abre falha
  * alto, com o caminho na mensagem — pular aí esconderia o erro de digitação.
  * Ver `docs/fixtures.md`.

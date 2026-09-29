@@ -14,8 +14,8 @@ import {
  * Lê sob demanda, sem carregar o arquivo inteiro: uma stint de 30 min a 60 Hz
  * passa de 100 mil amostras por canal.
  *
- * É a forma que a ingestão consome. Na fase 2 (telemetria ao vivo), a memória
- * compartilhada do sim entrega este mesmo formato e a ingestão não muda.
+ * É a forma que a ingestão consome. O ao vivo não passa por aqui: ele só
+ * visualiza, e o que vira sessão é o `.ibt` (ADR 0023).
  */
 export interface IbtFile {
   readonly path: string;

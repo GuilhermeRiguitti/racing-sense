@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import { defineConfig } from 'vitest/config';
-import { ensureTestingEnv } from './scripts/testing-env';
+import { ensureTestingEnv } from './tests/support/testing-env';
 
 /**
  * O ambiente dos testes vem de `.env.testing`, e só dele.

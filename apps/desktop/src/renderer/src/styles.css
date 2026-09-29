@@ -1146,3 +1146,84 @@ select:focus-visible,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- ao vivo ------------------------------------------------------------ */
+
+.live__entry {
+  margin-bottom: 12px;
+}
+
+.live__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.live__search {
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-width: 240px;
+}
+
+.live__search:focus-visible {
+  outline: 2px solid var(--series-1);
+}
+
+.live__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.live__note {
+  max-width: 72ch;
+}
+
+.live__table {
+  /* A largura vem do <colgroup>, não do conteúdo: valor mudando não move coluna. */
+  table-layout: fixed;
+}
+
+.live__table th,
+.live__table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* `.laps th` alinha à esquerda; o valor é número e alinha com os dígitos. */
+.live__table th.num {
+  text-align: right;
+}
+
+.live__col-name {
+  width: 260px;
+}
+
+.live__col-value {
+  width: 180px;
+}
+
+.live__col-unit {
+  /* As unidades de enum do SDK são longas: `irsdk_SessionState`. */
+  width: 160px;
+}
+
+.live__col-state {
+  width: 100px;
+}
+
+.live__table tbody tr {
+  cursor: default;
+}
+
+.live__name {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+}
