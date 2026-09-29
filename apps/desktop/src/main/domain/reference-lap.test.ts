@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { IncompatibleReferenceError } from './errors.js';
 import { assertComparable, isComparableWith } from './reference-lap.js';
-import { aCar, aReferenceLap, aTrack } from './testing.js';
+import { aCar, aReferenceLap, aTrack } from '../../../tests/support/builders.js';
 
 describe('compatibilidade da volta de referência', () => {
   const reference = aReferenceLap();

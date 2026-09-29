@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ChannelSeries, createChannelSeries } from '../domain/channel.js';
 import { toReferenceLapId, toSessionId } from '../domain/id.js';
-import { aLap, aReferenceLap, aSeries, aSession } from '../domain/testing.js';
+import { aLap, aReferenceLap, aSeries, aSession } from '../../../tests/support/builders.js';
 import { openLocalStore } from './local-store.js';
 
 const novo = () => openLocalStore(':memory:');

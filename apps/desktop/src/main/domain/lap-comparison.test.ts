@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createChannelSeries } from './channel.js';
 import { IncompatibleReferenceError, InvariantError } from './errors.js';
 import { compareToReference, DELTA_CHANNEL } from './lap-comparison.js';
-import { aCar, aLap, aReferenceLap, aTrack } from './testing.js';
+import { aCar, aLap, aReferenceLap, aTrack } from '../../../tests/support/builders.js';
 
 const TICK = 60;
 
@@ -37,10 +37,11 @@ const referenciaDe = (posicoes: readonly number[]) => {
   return aReferenceLap({ lap, series });
 };
 
-const alvoDe = (posicoes: readonly number[]) => ({
+const alvoDe = (posicoes: readonly number[], sectorStartPcts: readonly number[] | null = null) => ({
   track: aTrack(),
   car: aCar(),
   ...umaVolta(posicoes),
+  sectorStartPcts,
 });
 
 describe('compareToReference', () => {
@@ -168,5 +169,62 @@ describe('compareToReference', () => {
     expect(() => compareToReference(referenciaDe(constante(10)), semTempo)).toThrow(
       /sem tempo cronometrado/,
     );
+  });
+});
+
+describe('compareToReference, setor a setor', () => {
+  const SETORES = [0, 0.25, 0.5, 0.75];
+
+  it('volta contra ela mesma: diferença zero em todo setor', () => {
+    const posicoes = constante(600);
+
+    const { sectors } = compareToReference(referenciaDe(posicoes), alvoDe(posicoes, SETORES));
+
+    expect(sectors?.map((setor) => setor.deltaSeconds)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('a perda aparece só no setor em que andou mais devagar', () => {
+    // Igual à referência até 0,5; dali a 0,75, metade da velocidade; depois,
+    // igual de novo. Referência: 120 ticks, 30 por setor.
+    const alvo = [
+      ...Array.from({ length: 60 }, (_, k) => k / 120),
+      ...Array.from({ length: 60 }, (_, k) => 0.5 + k / 240),
+      ...Array.from({ length: 30 }, (_, k) => 0.75 + k / 120),
+    ];
+
+    const { sectors, totalDeltaSeconds } = compareToReference(
+      referenciaDe(constante(120)),
+      alvoDe(alvo, SETORES),
+    );
+
+    const deltas = sectors?.map((setor) => setor.deltaSeconds) ?? [];
+    expect(deltas[0]).toBeCloseTo(0, 9);
+    expect(deltas[1]).toBeCloseTo(0, 9);
+    expect(deltas[2]).toBeCloseTo(30 / TICK, 9);
+    expect(deltas[3]).toBeCloseTo(0, 9);
+    // A soma dos setores fecha o delta da volta: nada sobra, nada falta.
+    expect(deltas.reduce((soma, d) => (soma ?? 0) + (d ?? 0), 0)).toBeCloseTo(totalDeltaSeconds, 9);
+  });
+
+  it('cada setor diz onde começa, onde termina e o tempo das duas voltas', () => {
+    const posicoes = constante(120);
+
+    const { sectors } = compareToReference(referenciaDe(posicoes), alvoDe(posicoes, SETORES));
+
+    expect(sectors?.[3]).toEqual({
+      index: 3,
+      startPct: 0.75,
+      endPct: 1,
+      lapSeconds: 30 / TICK,
+      referenceSeconds: 30 / TICK,
+      deltaSeconds: 0,
+    });
+  });
+
+  it('sessão sem setores declarados: sem setores, e o delta continua igual', () => {
+    const comparacao = compareToReference(referenciaDe(constante(60)), alvoDe(constante(60)));
+
+    expect(comparacao.sectors).toBeNull();
+    expect(comparacao.deltaSeries.y.every((delta) => delta === 0)).toBe(true);
   });
 });

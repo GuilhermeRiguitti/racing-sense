@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bestSectors,
   formatDelta,
   formatLapTime,
+  formatSectorTime,
   nearestIndex,
   niceCeil,
   niceTicks,
@@ -92,5 +94,36 @@ describe('formatDelta', () => {
   it('o que arredonda para zero não ganha sinal', () => {
     expect(formatDelta(0.0002)).toBe('0,000');
     expect(formatDelta(-0.0002)).toBe('0,000');
+  });
+});
+
+describe('formatSectorTime', () => {
+  it('segundos com milésimos; minutos só acima de um minuto', () => {
+    expect(formatSectorTime(23.3841)).toBe('23.384');
+    expect(formatSectorTime(61.5)).toBe('1:01.500');
+    expect(formatSectorTime(null)).toBe('—');
+  });
+});
+
+describe('bestSectors', () => {
+  it('o melhor de cada setor pode vir de voltas diferentes; a ideal é a soma', () => {
+    const { best, ideal } = bestSectors([
+      { sectorTimes: [11.5, 23.4, 27.9] },
+      { sectorTimes: [11.6, 23.2, 28.0] },
+    ]);
+
+    expect(best).toEqual([11.5, 23.2, 27.9]);
+    expect(ideal).toBeCloseTo(62.6, 9);
+  });
+
+  it('setor sem tempo em nenhuma volta deixa a ideal sem valor', () => {
+    const { best, ideal } = bestSectors([{ sectorTimes: [11.5, null] }, { sectorTimes: null }]);
+
+    expect(best).toEqual([11.5, null]);
+    expect(ideal).toBeNull();
+  });
+
+  it('sem volta com setores, sem setores', () => {
+    expect(bestSectors([{ sectorTimes: null }])).toEqual({ best: [], ideal: null });
   });
 });

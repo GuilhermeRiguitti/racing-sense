@@ -1,22 +1,11 @@
+import { type Arrivals, arrivalAt, firstArrivals } from './arrivals.js';
 import { type ChannelSeries, createChannelSeries } from './channel.js';
 import { InvariantError } from './errors.js';
 import type { Lap } from './lap.js';
 import type { ReferenceLap } from './reference-lap.js';
 import { assertComparable } from './reference-lap.js';
+import { type SectorStarts, sectorTimes } from './sectors.js';
 import type { CarRef, TrackRef } from './session.js';
-
-/*
- * Por que não existe segmentação de ganho e perda aqui, ainda.
- *
- * A proposta era cortar a volta onde a derivada do delta "muda de sinal de forma
- * sustentada". "Sustentada" é um limiar — quantos metros, quantos centésimos —
- * e o efeito dele depende de onde o piloto freou: exatamente o número arbitrado
- * que a regra 18c proíbe. Devolver lista vazia no lugar seria stub mentindo.
- *
- * O corte sem número escolhido são os setores da pista, que a session info
- * declara (pendência 7). Quando eles viajarem com a volta, a segmentação volta
- * a partir deles.
- */
 
 export interface LapComparison {
   readonly referenceLapId: ReferenceLap['id'];
@@ -35,6 +24,30 @@ export interface LapComparison {
    * grade. Negativo = naquele ponto a volta estava à frente da referência.
    */
   readonly deltaSeries: ChannelSeries;
+  /**
+   * Onde o tempo foi ganho ou perdido, setor a setor da pista.
+   *
+   * É a segmentação do delta: o corte vem dos setores que o sim declara, não de
+   * um limiar sobre a derivada (regra 18). `null` quando a sessão não tem
+   * setores — arquivo sem o bloco, ou sessão gravada antes de o app lê-lo.
+   */
+  readonly sectors: readonly SectorComparison[] | null;
+}
+
+/** Um setor da pista, com o tempo das duas voltas nele. */
+export interface SectorComparison {
+  /** Posição do setor na volta, a partir de 0 — a numeração do sim. */
+  readonly index: number;
+  readonly startPct: number;
+  /** Onde o setor termina: o começo do seguinte, ou a linha (1) no último. */
+  readonly endPct: number;
+  readonly lapSeconds: number | null;
+  readonly referenceSeconds: number | null;
+  /**
+   * Tempo da volta menos o da referência, só neste setor. Negativo = ganhou
+   * tempo aqui. `null` quando uma das duas voltas não amostrou a divisa.
+   */
+  readonly deltaSeconds: number | null;
 }
 
 export interface ComparisonTarget {
@@ -42,6 +55,11 @@ export interface ComparisonTarget {
   readonly car: CarRef;
   readonly lap: Lap;
   readonly series: readonly ChannelSeries[];
+  /**
+   * Os setores da pista, da sessão da volta analisada. A pista é a mesma da
+   * referência — `assertComparable` recusa antes, se não for.
+   */
+  readonly sectorStartPcts: SectorStarts | null;
 }
 
 /** Nome da série de delta. Não é canal do sim — é conta do domínio. */
@@ -54,14 +72,9 @@ export const DELTA_CHANNEL = 'Delta';
  * carros ou pistas diferentes produz número plausível e sem sentido.
  *
  * O delta em cada ponto da pista é **quando a volta chegou ali menos quando a
- * referência chegou ali**. É a definição e mais nada:
- *
- * - O tempo de cada amostra vem da contagem de amostras, não de canal de relógio:
- *   cada amostra é um tick, e a volta dura exatamente `n` ticks (`detectLaps`).
- * - A posição de cada amostra é a medida pelo sim (`lapDistPct`), como gravada.
- * - O tempo da referência numa posição que ela não amostrou é interpolado entre
- *   os dois ticks vizinhos. Interpolar tempo é legítimo — ele é contínuo, e o
- *   carro passou por todas as posições entre um tick e outro.
+ * referência chegou ali** (`firstArrivals`). O tempo da referência numa posição
+ * que ela não amostrou é interpolado entre os dois ticks vizinhos
+ * (`arrivalAt`).
  *
  * Não existe grade de reamostragem, e portanto nenhuma resolução escolhida: o
  * delta é avaliado nas posições que a volta analisada de fato amostrou.
@@ -76,30 +89,21 @@ export function compareToReference(
 ): LapComparison {
   assertComparable(reference, target);
 
-  const alvo = firstArrivals(target.lap, target.series);
-  const regua = firstArrivals(reference.lap, reference.series);
+  const alvo = arrivalsOf(target.lap, target.series);
+  const regua = arrivalsOf(reference.lap, reference.series);
 
-  const primeira = regua.x[0] ?? Number.POSITIVE_INFINITY;
-  const ultima = regua.x[regua.x.length - 1] ?? Number.NEGATIVE_INFINITY;
   const x: number[] = [];
   const y: number[] = [];
-  // Ponteiro que só avança: as duas passagens crescem em distância.
-  let j = 0;
+  // As duas passagens crescem em distância: a busca continua de onde parou.
+  let hint = 0;
   for (let i = 0; i < alvo.x.length; i += 1) {
     const posicao = alvo.x[i] ?? 0;
-    if (posicao < primeira || posicao > ultima) continue; // fora do que a referência cobriu
-
-    while (j + 1 < regua.x.length && (regua.x[j + 1] ?? 0) < posicao) j += 1;
-    const antes = regua.x[j] ?? 0;
-    const depois = regua.x[j + 1] ?? antes;
-    const tAntes = regua.t[j] ?? 0;
-    const tDepois = regua.t[j + 1] ?? tAntes;
-    const vao = depois - antes;
-    const peso = vao > 0 ? (posicao - antes) / vao : 0;
-    const tempoDaReferencia = tAntes + (tDepois - tAntes) * peso;
+    const daReferencia = arrivalAt(regua, posicao, hint);
+    if (daReferencia === null) continue; // fora do que a referência cobriu
+    hint = daReferencia.index;
 
     x.push(posicao);
-    y.push((alvo.t[i] ?? 0) - tempoDaReferencia);
+    y.push((alvo.t[i] ?? 0) - daReferencia.seconds);
   }
 
   return {
@@ -114,54 +118,41 @@ export function compareToReference(
       x,
       y,
     }),
+    sectors:
+      target.sectorStartPcts === null ? null : compareSectors(alvo, regua, target.sectorStartPcts),
   };
 }
 
-interface FirstArrivals {
-  readonly lapTimeSeconds: number;
-  /** Posições estritamente crescentes. */
-  readonly x: readonly number[];
-  /** Segundos desde a linha de chegada, um por posição. */
-  readonly t: readonly number[];
+function compareSectors(
+  alvo: Arrivals,
+  regua: Arrivals,
+  starts: SectorStarts,
+): SectorComparison[] {
+  const daVolta = sectorTimes(alvo, starts);
+  const daReferencia = sectorTimes(regua, starts);
+  return starts.map((startPct, index) => {
+    const lapSeconds = daVolta[index] ?? null;
+    const referenceSeconds = daReferencia[index] ?? null;
+    return {
+      index,
+      startPct,
+      endPct: starts[index + 1] ?? 1,
+      lapSeconds,
+      referenceSeconds,
+      deltaSeconds:
+        lapSeconds === null || referenceSeconds === null ? null : lapSeconds - referenceSeconds,
+    };
+  });
 }
 
 /**
- * Quando a volta chegou pela primeira vez a cada posição que amostrou.
- *
- * Numa volta normal é a própria volta, amostra a amostra. O "primeira vez"
- * existe para o carro que andou para trás — rodou dentro da pista e voltou
- * alguns metros, sem sair dela, e a volta continua válida (ADR 0018). A posição
- * repetida não ganha um segundo tempo: o delta mede quando se chegou, e a
- * amostra que não passa da maior posição já alcançada não chegou a lugar novo.
- * Nenhum número entra nessa decisão.
+ * Todo canal gravado da volta carrega a posição medida de cada amostra; basta
+ * um. Sem nenhum, não há como saber onde o carro estava em cada tick.
  */
-function firstArrivals(lap: Lap, series: readonly ChannelSeries[]): FirstArrivals {
-  if (lap.lapTimeSeconds === null) {
-    throw new InvariantError(`Volta ${lap.number} sem tempo cronometrado não tem delta`);
-  }
-  const amostras = lap.endSample - lap.startSample + 1;
-  // Todo canal gravado da volta carrega a posição medida de cada amostra; basta
-  // um. Sem nenhum, não há como saber onde o carro estava em cada tick.
+function arrivalsOf(lap: Lap, series: readonly ChannelSeries[]): Arrivals {
   const posicoes = series[0]?.x;
   if (posicoes === undefined) {
     throw new InvariantError(`Volta ${lap.number} sem série gravada: não há posição por amostra`);
   }
-  if (posicoes.length !== amostras) {
-    throw new InvariantError(
-      `Volta ${lap.number}: ${posicoes.length} posições para ${amostras} amostras`,
-    );
-  }
-
-  const porAmostra = lap.lapTimeSeconds / amostras;
-  const x: number[] = [];
-  const t: number[] = [];
-  let maior = Number.NEGATIVE_INFINITY;
-  for (let k = 0; k < posicoes.length; k += 1) {
-    const posicao = posicoes[k] ?? 0;
-    if (posicao <= maior) continue;
-    maior = posicao;
-    x.push(posicao);
-    t.push(k * porAmostra);
-  }
-  return { lapTimeSeconds: lap.lapTimeSeconds, x, t };
+  return firstArrivals(lap, posicoes);
 }

@@ -104,6 +104,41 @@ export function formatLapTime(segundos: number | null): string {
 }
 
 /**
+ * Tempo de setor como o sim mostra: segundos com milésimos, e minutos só
+ * quando o setor passa de um minuto (pista longa com poucos setores).
+ */
+export function formatSectorTime(segundos: number | null): string {
+  if (segundos === null || !Number.isFinite(segundos)) return '—';
+  return segundos < 60 ? segundos.toFixed(3) : formatLapTime(segundos);
+}
+
+/**
+ * O melhor tempo de cada setor entre as voltas dadas, e a volta ideal — a soma
+ * deles. É só soma do que o piloto já fez: nenhum número é estimado.
+ *
+ * `ideal` fica `null` se algum setor não tem tempo em nenhuma volta.
+ */
+export function bestSectors(voltas: readonly { readonly sectorTimes: readonly (number | null)[] | null }[]): {
+  readonly best: readonly (number | null)[];
+  readonly ideal: number | null;
+} {
+  const quantos = Math.max(0, ...voltas.map((volta) => volta.sectorTimes?.length ?? 0));
+  const best = Array.from({ length: quantos }, (_, i) => {
+    let melhor: number | null = null;
+    for (const volta of voltas) {
+      const tempo = volta.sectorTimes?.[i] ?? null;
+      if (tempo !== null && (melhor === null || tempo < melhor)) melhor = tempo;
+    }
+    return melhor;
+  });
+  const ideal =
+    best.length > 0 && best.every((tempo) => tempo !== null)
+      ? best.reduce<number>((soma, tempo) => soma + (tempo ?? 0), 0)
+      : null;
+  return { best, ideal };
+}
+
+/**
  * Caminho SVG de uma série.
  *
  * Canal contínuo liga os pontos com reta. Canal discreto desenha degrau: o

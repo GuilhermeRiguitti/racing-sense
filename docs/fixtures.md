@@ -21,7 +21,7 @@ vale mais que um limpo: é o caso que quebra implementação ingênua.
 ## Rodando os testes de integração
 
 O caminho do arquivo vem de `TELEMETRY_FIXTURE`, em **`apps/desktop/.env.testing`**
-(não versionado). Na primeira execução dos testes, `apps/desktop/scripts/testing-env.ts`
+(não versionado). Na primeira execução dos testes, `apps/desktop/tests/support/testing-env.ts`
 cria esse arquivo a partir de `.env.testing.example` e preenche a variável com o `.ibt`
 mais recente de `Documentos\iRacing\telemetry`. Se não achar, ou se o arquivo
 escolhido for curto demais, preencha à mão:

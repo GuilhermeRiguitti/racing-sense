@@ -4,6 +4,7 @@ import type {
   ComparisonDto,
   LapDto,
   LapFlagDto,
+  LiveSnapshotDto,
   ReferenceLapDto,
   SeriesDto,
   SessionDto,
@@ -17,6 +18,7 @@ import type { LapComparison } from '../domain/lap-comparison.js';
 import type { ChannelSummary } from '../domain/lap-summary.js';
 import type { ReferenceLap } from '../domain/reference-lap.js';
 import type { TelemetrySession } from '../domain/session.js';
+import type { LiveSnapshot } from '../live/live-telemetry.js';
 
 /**
  * Marcação nova no domínio sem a tela acompanhar vira erro de compilação aqui,
@@ -50,6 +52,7 @@ export function toSessionDto(session: TelemetrySession): SessionDto {
     // A árvore do acerto já é só dado (texto e listas): atravessa como está.
     setup: session.setup,
     carLimits: { ...session.carLimits },
+    sectorStartPcts: session.sectorStartPcts === null ? null : [...session.sectorStartPcts],
   };
 }
 
@@ -66,6 +69,7 @@ export function toLapDto(lap: Lap): LapDto {
         ? null
         : lap.offTrackStretches.map((trecho) => ({ ...trecho })),
     incidents: lap.incidents ?? null,
+    sectorTimes: lap.sectorTimes === undefined ? null : [...lap.sectorTimes],
   };
 }
 
@@ -86,6 +90,7 @@ export function toComparisonDto(comparison: LapComparison): ComparisonDto {
     lapNumber: comparison.lapNumber,
     totalDeltaSeconds: comparison.totalDeltaSeconds,
     deltaSeries: toSeriesDto(comparison.deltaSeries),
+    sectors: comparison.sectors === null ? null : comparison.sectors.map((setor) => ({ ...setor })),
   };
 }
 
@@ -125,5 +130,26 @@ export function toStintLapDto(stintLap: StintLap): StintLapDto {
   return {
     lap: toLapDto(stintLap.lap),
     channels: stintLap.channels.map(toChannelSummaryDto),
+  };
+}
+
+export function toLiveSnapshotDto(snapshot: LiveSnapshot): LiveSnapshotDto {
+  if (snapshot.state !== 'connected') return snapshot;
+  const { catalog } = snapshot;
+  return {
+    ...snapshot,
+    catalog:
+      catalog === null
+        ? null
+        : {
+            catalogId: catalog.catalogId,
+            tickRate: catalog.tickRate,
+            channels: catalog.channels.map((channel) => ({ ...channel })),
+            trackName: catalog.track.name,
+            carName: catalog.car.name,
+            driverName: catalog.driverName,
+            sessionType: catalog.sessionType,
+            playerCarIdx: catalog.playerCarIdx,
+          },
   };
 }

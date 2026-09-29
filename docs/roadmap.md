@@ -54,8 +54,9 @@ sessão com reset para os boxes.
 - [x] Recusar comparação entre pista/carro diferentes
 - [x] Delta acumulado por distância — sem grade: avaliado nas posições que a
       volta amostrou, tempo pela contagem de ticks
-- [ ] Segmentação dos trechos de ganho e perda — espera os setores da pista
-      (pendência 7); cortar por "mudança sustentada" do delta exigiria limiar
+- [x] Segmentação dos trechos de ganho e perda — pelos setores que o sim declara
+      (`SplitTimeInfo`), conferidos contra arquivo real; cortar por "mudança
+      sustentada" do delta exigiria limiar
 
 **Pronto quando:** comparando uma volta contra ela mesma, o delta é ~0 em toda a
 extensão. É o teste que pega erro de alinhamento.
@@ -103,10 +104,24 @@ bloqueia o desktop, e o desktop funciona inteiro sem nada disso.
 
 ## Fase 2 — Telemetria ao vivo
 
-Fora do escopo atual. O que já está preparado: o decoder é puro e a origem dos bytes é
-injetada, então entra uma `ByteSource` nova sobre a memória compartilhada e o resto
-não muda. Custo real dessa fase: addon nativo, node-gyp, VS Build Tools, Windows x64 e
-CI que não testa essa parte. Ver `docs/formato-ibt.md`.
+Começou (ADR 0023). A leitura da memória compartilhada está de pé via `koffi`,
+sem addon compilado: `ibt/live-memory.ts` abre o arquivo mapeado só leitura,
+`ibt/live.ts` congela o frame e decodifica com o mesmo catálogo em runtime do
+`.ibt`. A tela "Ao vivo" mostra cada canal que o sim entrega e se ele está
+mudando.
+
+Próximos passos, nesta ordem:
+
+1. Conferir contra o sim aberto e anotar o que fica parado em cada posição
+   (`docs/pendencias.md`, item 14).
+2. Gráfico ao vivo dos canais que o piloto olha (velocidade, pedais, marcha) sobre
+   a volta corrente, por distância.
+3. Decidir, em ADR, se e como a telemetria do piloto chega ao engenheiro em outra
+   máquina.
+
+**Pronto quando:** com o sim numa sessão, o piloto (ou o engenheiro) vê a volta
+corrente se desenhar enquanto ela acontece, e os números batem com o `.ibt` da
+mesma volta depois de ingerido.
 
 A fase 2 continua só de leitura: o arquivo mapeado oficial do SDK, nada de
 comando para o sim (ADR 0022).

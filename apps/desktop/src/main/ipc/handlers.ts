@@ -13,6 +13,7 @@ import { ingestTelemetryFile } from '../ingestion/ingest-file.js';
 import {
   toAnalysisReportDto,
   toComparisonDto,
+  toLiveSnapshotDto,
   toLapDto,
   toReferenceLapDto,
   toSeriesDto,
@@ -66,7 +67,7 @@ const lapAgainstReference = (payload: unknown) => {
 };
 
 export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
-  const { store, api, narrate, emit } = desktop;
+  const { store, api, narrate, emit, live } = desktop;
 
   // --- leitura: tudo local, sem rede ---
   handle(IPC.listSessions, () => guard(() => store.listSessions().map(toSessionDto)));
@@ -109,6 +110,14 @@ export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
 
   handle(IPC.getLapAnalysis, (payload) =>
     guard(() => toAnalysisReportDto(getLapAnalysis(store, lapAgainstReference(payload)))),
+  );
+
+  // --- ao vivo: lê a memória do sim na hora, só leitura ---
+  handle(IPC.getLiveSnapshot, (payload) =>
+    guard(() => {
+      const { knownCatalogId } = (payload ?? {}) as { knownCatalogId?: string | null };
+      return toLiveSnapshotDto(live.snapshot(knownCatalogId ?? null));
+    }),
   );
 
   // --- escrita local ---

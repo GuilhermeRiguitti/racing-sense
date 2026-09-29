@@ -3,6 +3,7 @@ import type { DesktopEvent } from '../shared/ipc.js';
 import { type Narrate, narratorFromEnv } from './analysis/narrator.js';
 import { type ApiClient, createApiClient, type FetchLike } from './cloud/api-client.js';
 import { type LocalStore, openLocalStore } from './db/local-store.js';
+import { createLiveTelemetry, type LiveTelemetry } from './live/live-telemetry.js';
 import {
   createFileTelemetryWatcher,
   type TelemetryWatcher,
@@ -21,6 +22,8 @@ export interface Desktop {
   readonly watcher: TelemetryWatcher;
   readonly api: ApiClient;
   readonly narrate: Narrate;
+  /** A leitura ao vivo do sim. Só lê; nunca manda nada para ele (ADR 0022). */
+  readonly live: LiveTelemetry;
   readonly emit: (event: DesktopEvent) => void;
 }
 
@@ -61,6 +64,7 @@ export function buildDesktop(environment: DesktopEnvironment): Desktop {
     }),
     api: createApiClient({ baseUrl: environment.apiBaseUrl, fetch: environment.fetch }),
     narrate: narratorFromEnv(environment.env),
+    live: createLiveTelemetry(),
     emit: environment.emit,
   };
 }

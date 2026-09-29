@@ -195,6 +195,8 @@ export function LapView({
             reference={comparar ? serieReferencia.data : null}
             delta={comparar ? (comparacao.data?.deltaSeries ?? null) : null}
             offTrack={lap.offTrackStretches}
+            sectorStartPcts={session.sectorStartPcts}
+            sectors={comparar ? (comparacao.data?.sectors ?? null) : null}
             trackLengthMeters={session.trackLengthMeters}
             stale={series.loading || comparacao.loading}
             cursor={cursor}

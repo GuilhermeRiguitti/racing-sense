@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { openLocalStore } from '../db/local-store.js';
 import { CloudRequestError } from '../domain/errors.js';
 import { toSessionId } from '../domain/id.js';
-import { aLap, aSeries, aSession } from '../domain/testing.js';
+import { aLap, aSeries, aSession } from '../../../tests/support/builders.js';
 import { call, createApiClient, type FetchLike } from './api-client.js';
 import { currentPilot, signIn } from './auth.js';
 import { buildPublication, flushPublicationQueue } from './publication.js';

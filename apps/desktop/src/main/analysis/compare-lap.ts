@@ -38,5 +38,6 @@ export function compareLapToReference(
     car: session.car,
     lap,
     series: store.readLapSeries(sessionId, lapNumber),
+    sectorStartPcts: session.sectorStartPcts,
   });
 }

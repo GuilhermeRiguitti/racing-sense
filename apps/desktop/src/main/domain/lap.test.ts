@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { InvariantError } from './errors.js';
 import { countsForSession, isValidLap, lapDurationSeconds, stretchesWhere } from './lap.js';
-import { aLap } from './testing.js';
+import { aLap } from '../../../tests/support/builders.js';
 
 describe('lapDurationSeconds', () => {
   it('deriva a duração dos índices de amostra', () => {

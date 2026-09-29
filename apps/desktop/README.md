@@ -75,7 +75,7 @@ Variável que você não quer mudar fica fora do arquivo (ou comentada), não va
 | `TELEMETRY_FIXTURE` | caminho de um `.ibt` real, gravado pelo iRacing |
 
 Não precisa criar à mão. Na primeira vez que `pnpm test` roda,
-`scripts/testing-env.ts` copia o `.env.testing.example` para `.env.testing` e
+`tests/support/testing-env.ts` copia o `.env.testing.example` para `.env.testing` e
 procura a pasta `Documentos\iRacing\telemetry` (na pasta do usuário ou no
 OneDrive). Achando, preenche `TELEMETRY_FIXTURE` com o `.ibt` mais recente.
 Depois de criado, o script não mexe mais no arquivo; para refazer, apague-o.

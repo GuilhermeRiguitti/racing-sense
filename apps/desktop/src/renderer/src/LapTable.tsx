@@ -1,6 +1,6 @@
 import { countsForSession } from '../../main/domain/lap.js';
 import type { LapDto } from '../../shared/dto.js';
-import { formatDelta, formatLapTime } from './chart-math.js';
+import { bestSectors, formatDelta, formatLapTime, formatSectorTime } from './chart-math.js';
 
 /** O que cada marcação quer dizer, na língua de quem pilota. */
 export const MOTIVO: Record<LapDto['flags'][number], string> = {
@@ -77,6 +77,13 @@ export function LapTable({
       null,
     );
 
+  // Melhor setor e volta ideal só entre as voltas limpas (regra 17): um setor
+  // em que o piloto cortou a pista seria o "melhor" justamente por causa do
+  // corte, e a volta ideal passaria a somar tempo que não existe.
+  const setores = bestSectors(laps.filter((lap) => lapStanding(lap) === 'valid'));
+  const quantosSetores = Math.max(0, ...laps.map((lap) => lap.sectorTimes?.length ?? 0));
+  const melhorTempo = melhor?.lapTimeSeconds ?? null;
+
   return (
     <div className="laps-box">
       <div className="laps__caption">
@@ -102,6 +109,11 @@ export function LapTable({
               <th scope="col" className="num">
                 <abbr title="Diferença para a melhor volta válida da sessão">Δ melhor</abbr>
               </th>
+              {Array.from({ length: quantosSetores }, (_, i) => (
+                <th key={i} scope="col" className="num laps__sector">
+                  <abbr title={`Tempo no setor ${i + 1}, como o sim divide a pista`}>S{i + 1}</abbr>
+                </th>
+              ))}
               <th scope="col" className="num">
                 <abbr title="Incidentes da volta">Inc.</abbr>
               </th>
@@ -139,6 +151,24 @@ export function LapTable({
                       ? formatDelta(lap.lapTimeSeconds - melhor.lapTimeSeconds)
                       : ''}
                   </td>
+                  {Array.from({ length: quantosSetores }, (_, i) => {
+                    const tempo = lap.sectorTimes?.[i] ?? null;
+                    // Negrito, não cor: "melhor" é texto, e a cor fica para
+                    // identidade de série e para estado.
+                    const eMelhor =
+                      tempo !== null && situacao === 'valid' && tempo === setores.best[i];
+                    return (
+                      <td key={i} className="num laps__sector">
+                        {eMelhor ? (
+                          <strong title="Melhor setor entre as voltas limpas">
+                            {formatSectorTime(tempo)}
+                          </strong>
+                        ) : (
+                          formatSectorTime(tempo)
+                        )}
+                      </td>
+                    );
+                  })}
                   <td className="num">{formatIncidents(lap.incidents)}</td>
                   <td>
                     <span className={`status status--${valida(situacao) ? 'valid' : 'invalid'}`}>
@@ -151,6 +181,25 @@ export function LapTable({
             })}
           </tbody>
         </table>
+      )}
+      {quantosSetores > 0 && laps.some((lap) => lapStanding(lap) === 'session') && (
+        <p className="laps__ideal muted">
+          Melhor setor (em negrito) e volta ideal contam só voltas sem saída de pista.
+        </p>
+      )}
+      {setores.ideal !== null && (
+        <p className="laps__ideal">
+          <abbr title="A soma dos melhores setores das voltas limpas: o que já foi feito, junto numa volta só">
+            Volta ideal
+          </abbr>{' '}
+          <strong>{formatLapTime(setores.ideal)}</strong>
+          {melhorTempo !== null && melhorTempo - setores.ideal > 0 && (
+            <span className="muted">
+              {' '}
+              · {formatDelta(setores.ideal - melhorTempo)} s da melhor volta
+            </span>
+          )}
+        </p>
       )}
     </div>
   );

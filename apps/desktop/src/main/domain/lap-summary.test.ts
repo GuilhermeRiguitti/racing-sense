@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { summarizeLap, summarizeSeries } from './lap-summary.js';
-import { aSeries } from './testing.js';
+import { aSeries } from '../../../tests/support/builders.js';
 
 describe('summarizeSeries', () => {
   it('resume primeira, última, mínimo, máximo e média das amostras', () => {

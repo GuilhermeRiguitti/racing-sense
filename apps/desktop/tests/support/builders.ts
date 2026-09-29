@@ -1,18 +1,18 @@
 /**
  * Construtores de dados para teste.
  *
- * Ficam junto do domínio, e não em cada arquivo de teste, para que a forma de um
+ * Ficam em `tests/support`, e não em cada arquivo de teste, para que a forma de um
  * `ReferenceLap` válido seja definida num lugar só. Quando uma invariante mudar,
  * quebra aqui — não em quinze arquivos de teste.
  */
 
-import { UNKNOWN_CAR_LIMITS } from './car-setup.js';
-import { type ChannelSeries, createChannelSeries } from './channel.js';
-import { type SessionConditions, UNKNOWN_CONDITIONS } from './conditions.js';
-import { toReferenceLapId, toSessionId } from './id.js';
-import type { Lap } from './lap.js';
-import type { ReferenceLap } from './reference-lap.js';
-import type { CarRef, TelemetrySession, TrackRef } from './session.js';
+import { UNKNOWN_CAR_LIMITS } from '../../src/main/domain/car-setup.js';
+import { type ChannelSeries, createChannelSeries } from '../../src/main/domain/channel.js';
+import { type SessionConditions, UNKNOWN_CONDITIONS } from '../../src/main/domain/conditions.js';
+import { toReferenceLapId, toSessionId } from '../../src/main/domain/id.js';
+import type { Lap } from '../../src/main/domain/lap.js';
+import type { ReferenceLap } from '../../src/main/domain/reference-lap.js';
+import type { CarRef, TelemetrySession, TrackRef } from '../../src/main/domain/session.js';
 
 export const aTrack = (overrides: Partial<TrackRef> = {}): TrackRef => ({
   id: 'interlagos',
@@ -70,6 +70,7 @@ export const aSession = (overrides: Partial<TelemetrySession> = {}): TelemetrySe
   conditions: someConditions(),
   setup: null,
   carLimits: UNKNOWN_CAR_LIMITS,
+  sectorStartPcts: null,
   channels: [
     {
       name: 'Speed',

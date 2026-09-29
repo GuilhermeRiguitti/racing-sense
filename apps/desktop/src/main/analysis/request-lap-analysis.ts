@@ -38,6 +38,7 @@ export async function requestLapAnalysis(
     car: session.car,
     lap,
     series,
+    sectorStartPcts: session.sectorStartPcts,
   });
 
   const narration = await narrate({

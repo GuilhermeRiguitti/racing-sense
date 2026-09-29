@@ -23,8 +23,8 @@ export default tseslint.config(
     },
   },
   {
-    // Processo principal, preload e scripts de ferramenta: Node.
-    files: ['src/main/**', 'src/preload/**', 'scripts/**', '*.config.ts'],
+    // Processo principal, preload e infraestrutura de teste (tests/): Node.
+    files: ['src/main/**', 'src/preload/**', 'tests/**', '*.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {

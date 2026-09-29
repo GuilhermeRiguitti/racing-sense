@@ -9,7 +9,7 @@ import {
 import { toReferenceLapId, toSessionId } from '../domain/id.js';
 import type { Lap } from '../domain/lap.js';
 import type { ReferenceLap } from '../domain/reference-lap.js';
-import { aCar, aLap, aReferenceLap, aSeries, aSession } from '../domain/testing.js';
+import { aCar, aLap, aReferenceLap, aSeries, aSession } from '../../../tests/support/builders.js';
 import { compareLapToReference } from './compare-lap.js';
 import { getLapSeries, listSessionLaps } from './laps.js';
 import type { Narrate } from './narrator.js';

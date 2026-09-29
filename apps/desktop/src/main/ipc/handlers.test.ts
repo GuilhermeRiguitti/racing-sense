@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { IPC, type IpcResult, REQUEST_CHANNELS } from '../../shared/ipc.js';
 import { openLocalStore } from '../db/local-store.js';
 import type { Desktop } from '../desktop.js';
-import { aLap, aReferenceLap, aSeries, aSession } from '../domain/testing.js';
+import { aLap, aReferenceLap, aSeries, aSession } from '../../../tests/support/builders.js';
+import { createLiveTelemetry } from '../live/live-telemetry.js';
 import { registerIpcHandlers } from './handlers.js';
 
 /** Simula o `ipcMain.handle` do Electron sem subir Electron nenhum. */
@@ -39,6 +40,7 @@ function desktop(overrides: Partial<Desktop> = {}): Desktop {
     narrate: vi.fn(async () => ({ summary: 'Resumo', findings: [], model: 'fake' })),
     emit: vi.fn(),
     watcher: {} as Desktop['watcher'],
+    live: createLiveTelemetry(() => null),
     ...overrides,
   };
 }
@@ -109,6 +111,15 @@ describe('handlers de IPC', () => {
           channels: [{ channel: 'Speed', first: 40, last: 38, max: 62 }],
         },
       ],
+    });
+  });
+
+  it('sim fechado chega à tela como estado, não como falha', async () => {
+    const bus = ipcBus();
+    registerIpcHandlers(desktop(), bus.register);
+
+    expect(await bus.invoke(IPC.getLiveSnapshot, { knownCatalogId: null })).toEqual({
+      value: { state: 'sim-closed' },
     });
   });
 

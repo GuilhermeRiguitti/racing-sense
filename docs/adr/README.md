@@ -22,7 +22,7 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | # | Decisão | Status |
 |---|---|---|
 | [0001](0001-monorepo-pnpm.md) | Monorepo pnpm com pacotes em TypeScript | Superado em parte por 0020 |
-| [0002](0002-mvp-le-arquivo-em-disco.md) | MVP lê `.ibt` em disco; ao vivo fica para a fase 2 | Aceito |
+| [0002](0002-mvp-le-arquivo-em-disco.md) | MVP lê `.ibt` em disco; ao vivo fica para a fase 2 | Superado em parte por 0023 |
 | [0003](0003-decoder-proprio-vs-lib.md) | Decoder próprio como default, `ibt-telemetry` como validação | Proposto |
 | [0004](0004-ingestao-watcher-local.md) | Ingestão por watcher local | Aceito |
 | [0005](0005-camada-agentica-ai-sdk.md) | AI SDK da Vercel em vez de Mastra | Aceito |
@@ -43,3 +43,5 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0020](0020-aplicacoes-independentes.md) | Três aplicações independentes, sem código compartilhado | Aceito |
 | [0021](0021-saida-de-pista-sem-punicao-conta-na-sessao.md) | Saída de pista sem punição conta na sessão; a referência continua limpa | Aceito |
 | [0022](0022-o-app-so-le-do-iracing.md) | O app só lê do iRacing; nunca manda comando para o sim | Aceito |
+| [0023](0023-leitura-ao-vivo-pela-memoria-compartilhada.md) | A leitura ao vivo entra, pelo arquivo mapeado do SDK, via FFI e sem addon compilado | Aceito |
+| [0024](0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md) | A telemetria ao vivo do piloto chega ao engenheiro por WebSocket com salas, repassada pela api | Aceito |

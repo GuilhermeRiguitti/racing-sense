@@ -1,5 +1,6 @@
 import type { CarLimits, SetupNode } from '../domain/car-setup.js';
 import { type SessionConditions, UNKNOWN_CONDITIONS } from '../domain/conditions.js';
+import { isValidSectorStarts, type SectorStarts } from '../domain/sectors.js';
 import type { CarRef, TrackRef } from '../domain/session.js';
 import {
   readNumber,
@@ -167,6 +168,41 @@ export function toCarLimits(doc: SessionInfoNode): CarLimits {
     shiftRpm: readNumber(readPath(driverInfo, 'DriverCarSLShiftRPM')),
     fuelCapacityLiters: readNumber(readPath(driverInfo, 'DriverCarFuelMaxLtr')),
   };
+}
+
+/**
+ * Onde cada setor da pista começa, do bloco `SplitTimeInfo.Sectors`:
+ *
+ * ```yaml
+ * SplitTimeInfo:
+ *  Sectors:
+ *  - SectorNum: 0
+ *    SectorStartPct: 0.000000
+ *  - SectorNum: 1
+ *    SectorStartPct: 0.167875
+ * ```
+ *
+ * Conferido contra um `.ibt` real de Road Atlanta (2026-09-24). Ordena pelo
+ * número do setor, não pela ordem do texto. Bloco ausente, ou setores fora de
+ * forma (não começa na linha, não cresce), devolve `null` — setor torto daria
+ * tempo de setor plausível e errado.
+ */
+export function toSectorStarts(doc: SessionInfoNode): SectorStarts | null {
+  const split = doc.SplitTimeInfo;
+  const sectors = asArray(
+    typeof split === 'object' && !Array.isArray(split) ? split?.Sectors : undefined,
+  );
+
+  const lidos = sectors.map((sector) => ({
+    num: readNumber(readPath(sector, 'SectorNum')),
+    start: readNumber(readPath(sector, 'SectorStartPct')),
+  }));
+  if (lidos.length === 0 || lidos.some((s) => s.num === null || s.start === null)) return null;
+
+  const starts = lidos
+    .sort((a, b) => (a.num as number) - (b.num as number))
+    .map((s) => s.start as number);
+  return isValidSectorStarts(starts) ? starts : null;
 }
 
 /** Data e hora reais em que a gravação começou. */
