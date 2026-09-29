@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 253 192" width="253" height="192">
+  <title>Racing Sense</title>
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse">
+      <rect width="253" height="192" fill="#fff"/>
+      <path d="M-3.50,144.00 C111.50,144.00 141.91,48.00 256.91,48.00" fill="none" stroke="#000" stroke-width="23.00"/>
+    </mask>
+  </defs>
+  <path d="M8.00,184.00 L208.00,184.00 L245.41,8.00 L45.41,8.00 Z" fill="#F4F7FA" mask="url(#cut)"/>
+</svg>
