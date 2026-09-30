@@ -6,6 +6,7 @@ import { ingestTelemetryFile } from './ingestion/ingest-file.js';
 import { createIngestionService } from './ingestion/ingestion-service.js';
 import { createEventEmitter } from './ipc/events.js';
 import { registerIpcHandlers } from './ipc/handlers.js';
+import { createOverlayWindows } from './overlay/overlay-windows.js';
 
 /**
  * Processo principal: Node, com estado e vida longa.
@@ -40,13 +41,35 @@ function loadDevelopmentEnv(): void {
   }
 }
 
+const PRELOAD = join(import.meta.dirname, '../preload/index.cjs');
+
+/**
+ * Carrega a tela. Sem página carregada, `ready-to-show` nunca dispara e a
+ * janela, criada com `show: false`, fica invisível para sempre. Em
+ * desenvolvimento o electron-vite serve o renderer e passa o endereço por
+ * variável de ambiente; no build, a página está ao lado do processo principal.
+ *
+ * A mesma página serve a janela principal e as do overlay: a query diz qual
+ * widget desenhar.
+ */
+function loadRenderer(window: BrowserWindow, query: Readonly<Record<string, string>> = {}): void {
+  const devServerUrl = process.env.ELECTRON_RENDERER_URL;
+  if (devServerUrl !== undefined) {
+    const url = new URL(devServerUrl);
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+    void window.loadURL(url.toString());
+  } else {
+    void window.loadFile(join(import.meta.dirname, '../renderer/index.html'), { query: { ...query } });
+  }
+}
+
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
     show: false,
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.cjs'),
+      preload: PRELOAD,
       // As três linhas que mantêm o renderer sendo só um navegador.
       contextIsolation: true,
       nodeIntegration: false,
@@ -55,17 +78,7 @@ function createWindow(): BrowserWindow {
   });
 
   window.once('ready-to-show', () => window.show());
-
-  // Sem página carregada, `ready-to-show` nunca dispara e a janela, criada com
-  // `show: false`, fica invisível para sempre. Em desenvolvimento o
-  // electron-vite serve o renderer e passa o endereço por variável de ambiente;
-  // no build, a página está ao lado do processo principal.
-  const devServerUrl = process.env.ELECTRON_RENDERER_URL;
-  if (devServerUrl !== undefined) {
-    void window.loadURL(devServerUrl);
-  } else {
-    void window.loadFile(join(import.meta.dirname, '../renderer/index.html'));
-  }
+  loadRenderer(window);
   return window;
 }
 
@@ -117,17 +130,28 @@ app.whenReady().then(() => {
     });
   }, PUBLICATION_FLUSH_INTERVAL_MS);
 
+  // O overlay por cima do sim: uma janela por widget ligado (ADR 0025).
+  const overlays = createOverlayWindows({
+    settings: desktop.overlaySettings,
+    preload: PRELOAD,
+    load: loadRenderer,
+  });
+
   app.on('will-quit', () => {
     clearInterval(flush);
+    overlays.close();
     desktop.live.close();
     void ingestion.stop().finally(() => desktop.store.close());
   });
 
-  createWindow();
+  // Fechar a janela do app fecha o overlay junto: overlay sem o app aberto
+  // seria um processo que o piloto não vê como fechar.
+  const openMain = () => createWindow().on('closed', () => overlays.close());
+  openMain();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      openMain();
     }
   });
 });

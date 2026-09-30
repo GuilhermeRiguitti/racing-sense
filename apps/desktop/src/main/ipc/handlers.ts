@@ -1,4 +1,5 @@
 import { IPC, type IpcResult } from '../../shared/ipc.js';
+import { isWidgetId, type OverlaySettingsPatch } from '../../shared/overlay.js';
 import { compareLapToReference } from '../analysis/compare-lap.js';
 import { getLapSeries, listSessionLaps } from '../analysis/laps.js';
 import { getReferenceLapSeries, importReferenceLap } from '../analysis/reference-laps.js';
@@ -14,6 +15,7 @@ import {
   toAnalysisReportDto,
   toComparisonDto,
   toLiveSnapshotDto,
+  toLiveTicksDto,
   toLapDto,
   toReferenceLapDto,
   toSeriesDto,
@@ -67,7 +69,7 @@ const lapAgainstReference = (payload: unknown) => {
 };
 
 export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
-  const { store, api, narrate, emit, live } = desktop;
+  const { store, api, narrate, emit, live, overlay, overlaySettings } = desktop;
 
   // --- leitura: tudo local, sem rede ---
   handle(IPC.listSessions, () => guard(() => store.listSessions().map(toSessionDto)));
@@ -117,6 +119,40 @@ export function registerIpcHandlers(desktop: Desktop, handle: Invoker): void {
     guard(() => {
       const { knownCatalogId } = (payload ?? {}) as { knownCatalogId?: string | null };
       return toLiveSnapshotDto(live.snapshot(knownCatalogId ?? null));
+    }),
+  );
+
+  handle(IPC.getLiveTicks, (payload) =>
+    guard(() => {
+      const request = (payload ?? {}) as {
+        knownCatalogId?: string | null;
+        sinceTick?: number | null;
+        channels?: readonly string[];
+      };
+      return toLiveTicksDto(
+        live.ticks({
+          knownCatalogId: request.knownCatalogId ?? null,
+          sinceTick: request.sinceTick ?? null,
+          channels: Array.isArray(request.channels) ? request.channels.map(String) : [],
+        }),
+      );
+    }),
+  );
+
+  // --- overlay: o quadro de cada widget, e a configuração (ADR 0025) ---
+  handle(IPC.getOverlayFrame, (payload) =>
+    guard(() => {
+      const { widget } = (payload ?? {}) as { widget?: unknown };
+      if (!isWidgetId(widget)) throw new Error(`widget desconhecido: ${String(widget)}`);
+      return overlay.frame(widget);
+    }),
+  );
+  handle(IPC.getOverlaySettings, () => guard(() => overlaySettings.get()));
+  handle(IPC.updateOverlaySettings, (payload) =>
+    guard(() => {
+      const settings = overlaySettings.update((payload ?? {}) as OverlaySettingsPatch);
+      emit({ type: 'overlay-settings-changed' });
+      return settings;
     }),
   );
 

@@ -2,12 +2,19 @@ import type {
   ComparisonDto,
   LapDto,
   LiveSnapshotDto,
+  LiveTicksDto,
   ReferenceLapDto,
   SeriesDto,
   SessionDto,
   StintLapDto,
 } from '../../shared/dto.js';
 import type { DesktopEvent } from '../../shared/ipc.js';
+import type {
+  OverlayFrameDto,
+  OverlaySettings,
+  OverlaySettingsPatch,
+  WidgetId,
+} from '../../shared/overlay.js';
 
 /** Resultado de uma chamada pela ponte: sucesso ou falha, nunca exceção. */
 export type BridgeResult<T> =
@@ -36,6 +43,17 @@ export interface TelemetryBridge {
   ingestTelemetryFile(locator: string): Promise<BridgeResult<{ sessionId: string }>>;
   /** O frame mais recente do sim. O catálogo só vem quando difere de `knownCatalogId`. */
   getLiveSnapshot(knownCatalogId: string | null): Promise<BridgeResult<LiveSnapshotDto>>;
+  /** Todos os ticks desde `sinceTick`, só dos canais pedidos (ADR 0025). */
+  getLiveTicks(request: {
+    knownCatalogId: string | null;
+    sinceTick: number | null;
+    channels: readonly string[];
+  }): Promise<BridgeResult<LiveTicksDto>>;
+  getOverlayFrame(widget: WidgetId): Promise<BridgeResult<OverlayFrameDto>>;
+  getOverlaySettings(): Promise<BridgeResult<OverlaySettings>>;
+  updateOverlaySettings(patch: OverlaySettingsPatch): Promise<BridgeResult<OverlaySettings>>;
+  /** A janela do overlay diz o tamanho do que desenhou; o processo principal ajusta a janela. */
+  fitOverlay(width: number, height: number): void;
   /** Assina os avisos do processo principal. Devolve como cancelar. */
   onEvent(listener: (event: DesktopEvent) => void): () => void;
 }

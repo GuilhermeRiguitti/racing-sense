@@ -205,7 +205,25 @@ export interface LiveCatalogDto {
   readonly sessionType: string | null;
   /** Posição do carro do dono da máquina nos canais `CarIdx*`. */
   readonly playerCarIdx: number | null;
+  readonly trackLengthMeters: number | null;
+  readonly sectorStartPcts: readonly number[] | null;
+  readonly carLimits: CarLimitsDto;
 }
+
+/** Os ticks novos, com os canais pedidos na ordem do pedido. */
+export type LiveTicksDto =
+  | { readonly state: 'sim-closed' }
+  | { readonly state: 'disconnected' }
+  | {
+      readonly state: 'connected';
+      /** Só vem quando mudou desde o `knownCatalogId` enviado. */
+      readonly catalog: LiveCatalogDto | null;
+      readonly catalogId: string;
+      readonly ticks: readonly {
+        readonly tickCount: number;
+        readonly values: readonly (number | null)[];
+      }[];
+    };
 
 /** Valor de um canal num frame: escalar, ou um por carro nos canais `CarIdx*`. */
 export type LiveValueDto = number | readonly number[];

@@ -1,4 +1,4 @@
-import type { ChannelDto, SeriesDto, SessionDto } from '../../shared/dto.js';
+import type { CarLimitsDto, ChannelDto, SeriesDto, SessionDto } from '../../shared/dto.js';
 
 /**
  * Como cada canal aparece na tela.
@@ -117,8 +117,12 @@ const grausDeRadiano = (v: number) => (v * 180) / Math.PI;
 const milimetros = (v: number) => v * 1000;
 const emG = (v: number) => v / GRAVIDADE_PADRAO;
 
-function pilotagem(session: SessionDto): PanelView[] {
-  const { shiftRpm, redlineRpm } = session.carLimits;
+/**
+ * `comparison` é o nome da linha neutra por baixo: a referência, na volta
+ * gravada; a volta anterior, ao vivo.
+ */
+function pilotagem(carLimits: CarLimitsDto, comparison = 'Referência'): PanelView[] {
+  const { shiftRpm, redlineRpm } = carLimits;
   const reguasDeRotacao: PanelRule[] = [];
   if (shiftRpm !== null) reguasDeRotacao.push({ value: shiftRpm, label: 'troca' });
   if (redlineRpm !== null && redlineRpm !== shiftRpm) {
@@ -131,7 +135,7 @@ function pilotagem(session: SessionDto): PanelView[] {
       title: 'Velocidade',
       channels: [
         canal('Speed', 'Volta', 'km/h', velocidade, umaCasa, 1),
-        canal('Speed', 'Referência', 'km/h', velocidade, umaCasa, 'reference', 'reference'),
+        canal('Speed', comparison, 'km/h', velocidade, umaCasa, 'reference', 'reference'),
       ],
       domain: 'from-zero',
       height: 150,
@@ -297,11 +301,25 @@ export function formatoLivre(valor: number): string {
 
 export function tabsFor(session: SessionDto): TabView[] {
   return [
-    { id: 'driving', title: 'Pilotagem', panels: pilotagem(session) },
+    { id: 'driving', title: 'Pilotagem', panels: pilotagem(session.carLimits) },
     { id: 'tires', title: 'Pneus', panels: pneus },
     { id: 'suspension', title: 'Suspensão', panels: suspensao },
     { id: 'car', title: 'Carro', panels: carro(session) },
   ];
+}
+
+/**
+ * Os painéis da volta ao vivo: os de pilotagem, com a volta anterior no lugar da
+ * referência. Pneu e suspensão ficam para a volta gravada — ao vivo, o que o
+ * piloto olha é o que ele fez com os pedais.
+ */
+export function livePanels(carLimits: CarLimitsDto): PanelView[] {
+  return pilotagem(carLimits, 'Volta anterior');
+}
+
+/** Os canais que os painéis ao vivo desenham, sem repetição. */
+export function channelsOf(panels: readonly PanelView[]): string[] {
+  return [...new Set(panels.flatMap((panel) => panel.channels.map((view) => view.channel)))];
 }
 
 /** A série de um canal, se ela foi gravada. Carro sem o canal: sem linha. */

@@ -1227,3 +1227,121 @@ select:focus-visible,
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   font-size: 13px;
 }
+
+/* Duas entradas fixas no topo da barra (Ao vivo, Overlay): juntas, e o
+   respiro de 12 px só antes da lista de sessões. */
+.live__entry:has(+ .live__entry) {
+  margin-bottom: 4px;
+}
+
+/* --- configuração do overlay ------------------------------------------- */
+
+.overlay-settings {
+  display: grid;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.overlay-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.overlay-settings__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.button.is-primary {
+  background: var(--series-1);
+  border-color: var(--series-1);
+  color: #ffffff;
+}
+
+.button.is-primary:hover:not(:disabled) {
+  background: var(--series-1);
+  filter: brightness(1.08);
+}
+
+.overlay-settings__hint {
+  border-left: 3px solid var(--series-4);
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.overlay-settings__note {
+  font-size: 13px;
+}
+
+.overlay-settings__title {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.overlay-settings__widgets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 6px 16px;
+}
+
+.overlay-settings__widgets label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.overlay-settings__widgets label > span {
+  display: grid;
+}
+
+.overlay-settings__widgets .muted {
+  font-size: 12px;
+}
+
+.overlay-settings__field {
+  display: grid;
+  grid-template-columns: 160px auto auto;
+  justify-content: start;
+  align-items: center;
+  gap: 10px;
+}
+
+.overlay-settings__field input[type="number"] {
+  width: 72px;
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.overlay-settings__columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.overlay-settings__columns label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overlay-settings__footer {
+  margin-top: 8px;
+}

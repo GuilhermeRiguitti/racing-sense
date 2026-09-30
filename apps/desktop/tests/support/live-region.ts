@@ -34,7 +34,7 @@ export interface FakeLiveRegion {
 }
 
 const LE = true;
-const SESSION_INFO_SPACE = 1024;
+const DEFAULT_SESSION_INFO_SPACE = 1024;
 
 export function aLiveRegion(
   variables: readonly FakeVariable[] = [
@@ -43,6 +43,7 @@ export function aLiveRegion(
     { name: 'CarIdxLapDistPct', type: VarType.Float, count: 3 },
   ],
   numBuf = 3,
+  sessionInfoSpace = DEFAULT_SESSION_INFO_SPACE,
 ): FakeLiveRegion {
   const offsets = new Map<string, { offset: number; variable: FakeVariable }>();
   let bufLen = 0;
@@ -53,14 +54,14 @@ export function aLiveRegion(
 
   const varHeaderOffset = IBT_HEADER_SIZE;
   const sessionInfoOffset = varHeaderOffset + variables.length * VAR_HEADER_SIZE;
-  const firstBuf = sessionInfoOffset + SESSION_INFO_SPACE;
+  const firstBuf = sessionInfoOffset + sessionInfoSpace;
   const bytes = new Uint8Array(firstBuf + numBuf * bufLen);
   const view = new DataView(bytes.buffer);
 
   view.setInt32(HEADER_OFFSETS.version, 2, LE);
   view.setInt32(HEADER_OFFSETS.status, STATUS_CONNECTED, LE);
   view.setInt32(HEADER_OFFSETS.tickRate, 60, LE);
-  view.setInt32(HEADER_OFFSETS.sessionInfoLength, SESSION_INFO_SPACE, LE);
+  view.setInt32(HEADER_OFFSETS.sessionInfoLength, sessionInfoSpace, LE);
   view.setInt32(HEADER_OFFSETS.sessionInfoOffset, sessionInfoOffset, LE);
   view.setInt32(HEADER_OFFSETS.numVars, variables.length, LE);
   view.setInt32(HEADER_OFFSETS.varHeaderOffset, varHeaderOffset, LE);

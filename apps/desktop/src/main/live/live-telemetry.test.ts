@@ -95,6 +95,46 @@ describe('leitura ao vivo', () => {
     expect(second.catalog?.track.id).toBe('suzuka grandprix');
   });
 
+  it('ticks: todos os novos desde o último, só os canais pedidos', () => {
+    const region = aLiveRegion();
+    region.setSessionInfo(SESSION_INFO, 1);
+    region.writeFrame(0, 10, { Speed: 40, Gear: 3 });
+    const live = createLiveTelemetry(() => handleOver(region));
+
+    const first = live.ticks({ knownCatalogId: null, sinceTick: null, channels: ['Speed'] });
+    if (first.state !== 'connected') throw new Error(first.state);
+    expect(first.catalog).not.toBeNull();
+    expect(first.ticks).toEqual([{ tickCount: 10, values: [40] }]);
+
+    region.writeFrame(1, 11, { Speed: 41, Gear: 3 });
+    region.writeFrame(2, 12, { Speed: 42, Gear: 4 });
+    const next = live.ticks({
+      knownCatalogId: first.catalogId,
+      sinceTick: 10,
+      // Canal por carro e canal que não existe vêm nulos, sem erro.
+      channels: ['Gear', 'CarIdxLapDistPct', 'Inexistente'],
+    });
+    if (next.state !== 'connected') throw new Error(next.state);
+
+    expect(next.catalog).toBeNull();
+    expect(next.ticks).toEqual([
+      { tickCount: 11, values: [3, null, null] },
+      { tickCount: 12, values: [4, null, null] },
+    ]);
+  });
+
+  it('o catálogo ao vivo traz o grid e os tipos de sessão', () => {
+    const region = aLiveRegion();
+    region.setSessionInfo(SESSION_INFO, 1);
+    region.writeFrame(0, 10, {});
+    const live = createLiveTelemetry(() => handleOver(region));
+
+    const snapshot = connected(live.snapshot());
+
+    expect(snapshot.catalog?.drivers.map((d) => d.name)).toEqual(['Outro Piloto', 'André Teste']);
+    expect(snapshot.catalog?.drivers[1]?.car.make?.name).toBe('Ferrari');
+  });
+
   it('sim fora de sessão solta a memória e reabre no próximo pedido', () => {
     const region = aLiveRegion();
     region.setSessionInfo(SESSION_INFO, 1);

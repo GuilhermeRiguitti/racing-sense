@@ -4,7 +4,9 @@ import type {
   ComparisonDto,
   LapDto,
   LapFlagDto,
+  LiveCatalogDto,
   LiveSnapshotDto,
+  LiveTicksDto,
   ReferenceLapDto,
   SeriesDto,
   SessionDto,
@@ -18,7 +20,7 @@ import type { LapComparison } from '../domain/lap-comparison.js';
 import type { ChannelSummary } from '../domain/lap-summary.js';
 import type { ReferenceLap } from '../domain/reference-lap.js';
 import type { TelemetrySession } from '../domain/session.js';
-import type { LiveSnapshot } from '../live/live-telemetry.js';
+import type { LiveCatalog, LiveSnapshot, LiveTicks } from '../live/live-telemetry.js';
 
 /**
  * Marcação nova no domínio sem a tela acompanhar vira erro de compilação aqui,
@@ -133,23 +135,39 @@ export function toStintLapDto(stintLap: StintLap): StintLapDto {
   };
 }
 
+/**
+ * O catálogo ao vivo para a tela. O grid (nomes, iRating) **não** vai: a tela ao
+ * vivo não precisa, e o overlay recebe só as linhas prontas (ADR 0025).
+ */
+function toLiveCatalogDto(catalog: LiveCatalog): LiveCatalogDto {
+  return {
+    catalogId: catalog.catalogId,
+    tickRate: catalog.tickRate,
+    channels: catalog.channels.map((channel) => ({ ...channel })),
+    trackName: catalog.track.name,
+    carName: catalog.car.name,
+    driverName: catalog.driverName,
+    sessionType: catalog.sessionType,
+    playerCarIdx: catalog.playerCarIdx,
+    trackLengthMeters: catalog.track.lengthMeters,
+    sectorStartPcts: catalog.sectorStartPcts === null ? null : [...catalog.sectorStartPcts],
+    carLimits: { ...catalog.carLimits },
+  };
+}
+
 export function toLiveSnapshotDto(snapshot: LiveSnapshot): LiveSnapshotDto {
   if (snapshot.state !== 'connected') return snapshot;
   const { catalog } = snapshot;
+  return { ...snapshot, catalog: catalog === null ? null : toLiveCatalogDto(catalog) };
+}
+
+export function toLiveTicksDto(ticks: LiveTicks): LiveTicksDto {
+  if (ticks.state !== 'connected') return ticks;
+  const { catalog } = ticks;
   return {
-    ...snapshot,
-    catalog:
-      catalog === null
-        ? null
-        : {
-            catalogId: catalog.catalogId,
-            tickRate: catalog.tickRate,
-            channels: catalog.channels.map((channel) => ({ ...channel })),
-            trackName: catalog.track.name,
-            carName: catalog.car.name,
-            driverName: catalog.driverName,
-            sessionType: catalog.sessionType,
-            playerCarIdx: catalog.playerCarIdx,
-          },
+    state: 'connected',
+    catalogId: ticks.catalogId,
+    catalog: catalog === null ? null : toLiveCatalogDto(catalog),
+    ticks: ticks.ticks.map((tick) => ({ tickCount: tick.tickCount, values: [...tick.values] })),
   };
 }
