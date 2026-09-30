@@ -325,6 +325,7 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0023-leitura-ao-vivo-pela-memoria-compartilhada.md` | a leitura ao vivo: `koffi`, frame congelado, ao vivo não grava |
 | `docs/adr/0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md` | a transmissão do piloto para o engenheiro: salas, frame opaco, só o próprio carro |
 | `docs/adr/0025-overlay-em-janelas-proprias.md` | o overlay: janelas próprias sem foco, número do sim, dado do grid só na tela do piloto |
+| `docs/adr/0026-catalogo-da-data-api-pela-api.md` | a Data API do iRacing (serviço web, não o `.ibt`): só a api fala com ela; o desktop recebe o catálogo |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |

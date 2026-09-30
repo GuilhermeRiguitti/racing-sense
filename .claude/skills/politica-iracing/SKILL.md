@@ -75,8 +75,13 @@ telemetry system"* e cita Atlas e MoTeC como usuários dela.
 - Caminho do `.ibt` nunca sai da máquina (regra 12).
 
 **Data API do iRacing (site dos membros)**
-- Hoje não é usada. Se entrar: só pelo acesso documentado e autorizado pelo
-  iRacing, com a credencial do próprio piloto, nunca raspagem do site.
+- É o serviço web do site de membros — não confundir com o `.ibt` nem com o SDK.
+  Não entrega telemetria.
+- Decidida no ADR 0026, ainda sem credencial: **só a `apps/api` fala com ela**,
+  com Client ID concedido pelo iRacing (OAuth2) no `.env` da api. Catálogo de
+  carros e mapa de pista com a credencial do projeto; dado de um piloto só com o
+  token dele, autorizado por ele. Nunca raspagem do site, nunca credencial no
+  desktop ou na web.
 
 **Monetização**
 - App gratuito compartilhando a volta do próprio piloto está no terreno do
