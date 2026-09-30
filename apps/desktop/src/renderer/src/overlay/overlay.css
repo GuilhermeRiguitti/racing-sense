@@ -229,6 +229,14 @@ html.is-overlay body {
   color: var(--ov-text-2);
 }
 
+.ov-make-logo {
+  display: block;
+  width: 34px;
+  height: 16px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
 .ov-cell-name {
   max-width: 190px;
   overflow: hidden;
@@ -245,12 +253,6 @@ html.is-overlay body {
 
 .ov-cell-name.is-lap-behind .ov-name {
   color: var(--ov-lap-behind);
-}
-
-.ov-model {
-  margin-left: 6px;
-  color: var(--ov-muted);
-  font-size: 11px;
 }
 
 .ov-tag {

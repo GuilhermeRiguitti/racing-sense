@@ -46,4 +46,4 @@ antigo como `Superado por ADR XXXX`. O histórico é o valor.
 | [0023](0023-leitura-ao-vivo-pela-memoria-compartilhada.md) | A leitura ao vivo entra, pelo arquivo mapeado do SDK, via FFI e sem addon compilado | Aceito |
 | [0024](0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md) | A telemetria ao vivo do piloto chega ao engenheiro por WebSocket com salas, repassada pela api | Aceito |
 | [0025](0025-overlay-em-janelas-proprias.md) | O overlay é um conjunto de janelas próprias do Electron, transparentes e sem foco, montadas a partir do que o SDK entrega | Superado em parte por 0026 |
-| [0026](0026-catalogo-da-data-api-pela-api.md) | A Data API do iRacing entra só pela api; o desktop recebe dela o catálogo de carros e o mapa da pista | Aceito |
+| [0026](0026-catalogo-da-data-api-pela-api.md) | A logo do fabricante mora no repositório; a Data API do iRacing entra só pela api, para catálogo e mapa da pista | Aceito |

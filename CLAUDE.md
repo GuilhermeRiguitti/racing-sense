@@ -48,7 +48,7 @@ perda por setor contra a referência e a volta ideal. A **leitura ao vivo** come
 canal. O layout foi conferido contra o sim aberto em 2026-09-26
 (`ibt/live-real-sim.test.ts`); o que falta está no item 14 de `docs/pendencias.md`.
 O **overlay** existe (ADR 0025): janelas transparentes por cima do sim com
-relative, classificação (marca, modelo, carteira, SR, iRating, SOF), delta,
+relative, classificação (marca com logo, carteira, SR, iRating, SOF), delta,
 pedais, combustível, radar e bandeira — ainda não conferido contra o sim numa
 sessão (item 15). O que ainda é stub é o **narrador**. A api tem schema Prisma e
 rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
@@ -325,7 +325,7 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0023-leitura-ao-vivo-pela-memoria-compartilhada.md` | a leitura ao vivo: `koffi`, frame congelado, ao vivo não grava |
 | `docs/adr/0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md` | a transmissão do piloto para o engenheiro: salas, frame opaco, só o próprio carro |
 | `docs/adr/0025-overlay-em-janelas-proprias.md` | o overlay: janelas próprias sem foco, número do sim, dado do grid só na tela do piloto |
-| `docs/adr/0026-catalogo-da-data-api-pela-api.md` | a Data API do iRacing (serviço web, não o `.ibt`): só a api fala com ela; o desktop recebe o catálogo |
+| `docs/adr/0026-catalogo-da-data-api-pela-api.md` | logo do fabricante no repositório; a Data API do iRacing (serviço web, não o `.ibt`): só a api fala com ela |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |

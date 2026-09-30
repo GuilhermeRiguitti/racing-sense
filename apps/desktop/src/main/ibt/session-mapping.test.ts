@@ -180,7 +180,7 @@ describe('toGridDrivers', () => {
       carIdx: 1,
       name: 'André Guimarães',
       carNumber: '413',
-      car: { name: 'Ferrari 296 GT3', make: { name: 'Ferrari', short: 'FER' }, model: '296 GT3' },
+      car: { name: 'Ferrari 296 GT3', make: { id: 'ferrari', name: 'Ferrari', short: 'FER' } },
       classId: 4083,
       className: 'GT3 Class',
       classColor: '#ffda59',

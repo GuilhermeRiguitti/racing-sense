@@ -26,33 +26,27 @@ describe('carteira', () => {
 });
 
 describe('fabricante do carro', () => {
-  it('separa fabricante e modelo quando o nome começa pela marca', () => {
-    expect(toCarModel('Ferrari 296 GT3')).toMatchObject({
-      make: { name: 'Ferrari', short: 'FER' },
-      model: '296 GT3',
+  it('reconhece o fabricante que abre o nome', () => {
+    expect(toCarModel('Ferrari 296 GT3')).toEqual({
+      name: 'Ferrari 296 GT3',
+      make: { id: 'ferrari', name: 'Ferrari', short: 'FER' },
     });
   });
 
   it('o alias mais específico vence', () => {
-    expect(toCarModel('Mercedes-AMG GT3 2020')).toMatchObject({
-      make: { short: 'AMG' },
-      model: 'GT3 2020',
-    });
+    expect(toCarModel('Mercedes-AMG GT3 2020').make?.id).toBe('mercedes-amg');
   });
 
-  it('fabricante no meio do nome: a marca é reconhecida, o nome fica inteiro', () => {
-    expect(toCarModel('Global Mazda MX-5 Cup')).toMatchObject({
-      make: { name: 'Mazda' },
-      model: 'Global Mazda MX-5 Cup',
-    });
-    expect(toCarModel('Super Formula SF23 - Toyota').make?.name).toBe('Toyota');
+  it('fabricante no meio do nome também é reconhecido', () => {
+    expect(toCarModel('Global Mazda MX-5 Cup').make?.id).toBe('mazda');
+    expect(toCarModel('Super Formula SF23 - Toyota').make?.id).toBe('toyota');
   });
 
   it('só palavra inteira: sem fabricante, sem marca', () => {
     expect(toCarModel('Minivan Cup').make).toBeNull();
-    expect(toCarModel('Skip Barber Formula 2000')).toMatchObject({
+    expect(toCarModel('Skip Barber Formula 2000')).toEqual({
+      name: 'Skip Barber Formula 2000',
       make: null,
-      model: 'Skip Barber Formula 2000',
     });
   });
 });
