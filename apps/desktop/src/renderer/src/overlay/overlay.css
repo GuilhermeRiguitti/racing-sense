@@ -1,0 +1,605 @@
+/*
+ * O overlay por cima do sim (ADR 0025). Sempre escuro: fica sobre a imagem da
+ * pista, não sobre o tema do Windows. As cores são as do modo escuro da tela de
+ * análise (validadas pela skill `dataviz`): acelerador e freio com as mesmas
+ * cores do gráfico da volta, ganho e perda com as do delta.
+ *
+ * Tudo aqui vale só em `html.is-overlay`; a janela do app não é afetada.
+ */
+html.is-overlay {
+  --ov-alpha: 0.82;
+  --ov-surface: rgba(13, 13, 13, var(--ov-alpha));
+  --ov-head: rgba(26, 26, 25, var(--ov-alpha));
+  --ov-line: rgba(255, 255, 255, 0.08);
+  --ov-text: #ffffff;
+  --ov-text-2: #c3c2b7;
+  --ov-muted: #898781;
+  --ov-player: rgba(57, 135, 229, 0.28);
+  /* Relative na corrida: uma volta à frente (vem colocar volta) e atrás (vai tomar). */
+  --ov-lap-ahead: #e66767;
+  --ov-lap-behind: #3987e5;
+  --ov-gain: #3987e5;
+  --ov-loss: #e66767;
+  --ov-throttle: #3987e5;
+  --ov-brake: #d95926;
+  --ov-clutch: #898781;
+  /* Melhor volta da classe: o roxo que o sim usa para isso. */
+  --ov-best: #b07cf7;
+  --ov-alert: #eda100;
+  background: transparent;
+}
+
+html.is-overlay body,
+html.is-overlay #root {
+  background: transparent;
+  overflow: hidden;
+  height: auto;
+}
+
+html.is-overlay body {
+  font:
+    13px / 1.35 system-ui,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ov-text);
+  user-select: none;
+  cursor: default;
+}
+
+.ov {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- modo de mover -------------------------------------------------------- */
+
+.ov--editing {
+  -webkit-app-region: drag;
+  cursor: move;
+  outline: 2px dashed var(--ov-alert);
+  outline-offset: -2px;
+}
+
+.ov-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: var(--ov-alert);
+  color: #000;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.ov-edit__title {
+  flex: 1;
+}
+
+.ov-edit button {
+  -webkit-app-region: no-drag;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #000;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ov-edit__scale {
+  min-width: 34px;
+  text-align: center;
+}
+
+.ov-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--ov-text-2);
+}
+
+.ov-placeholder small {
+  font-weight: 400;
+  color: var(--ov-muted);
+}
+
+/* --- painel e cabeçalho ------------------------------------------------- */
+
+.ov-panel {
+  background: var(--ov-surface);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ov--editing .ov-panel {
+  border-radius: 0;
+}
+
+.ov-head {
+  display: flex;
+  gap: 12px;
+  padding: 4px 10px;
+  background: var(--ov-head);
+  color: var(--ov-text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ov-head__mid {
+  flex: 1;
+  text-align: center;
+  color: var(--ov-text);
+  font-weight: 600;
+}
+
+.ov-head__clock {
+  color: var(--ov-muted);
+}
+
+.ov-muted {
+  color: var(--ov-muted);
+  font-weight: 400;
+}
+
+.ov-note {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--ov-muted);
+  font-size: 12px;
+  max-width: 240px;
+}
+
+/* --- tabelas de piloto ------------------------------------------------------ */
+
+.ov-table {
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.ov-row td {
+  height: 23px;
+  padding: 0 6px;
+  border-top: 1px solid var(--ov-line);
+}
+
+.ov-row:first-child td {
+  border-top: 0;
+}
+
+.ov-row.is-player td {
+  background: var(--ov-player);
+}
+
+.ov-row.is-empty td {
+  color: transparent;
+}
+
+.ov-cell-pos {
+  width: 26px;
+  text-align: right;
+  color: var(--ov-text-2);
+  font-weight: 600;
+}
+
+.ov-cell-class {
+  width: 4px;
+  padding: 0 !important;
+}
+
+.ov-class-bar {
+  display: inline-block;
+  width: 4px;
+  height: 17px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.ov-cell-number {
+  width: 34px;
+  text-align: right;
+  color: var(--ov-text-2);
+}
+
+.ov-cell-number::before {
+  content: "#";
+  color: var(--ov-muted);
+}
+
+.ov-row.is-empty .ov-cell-number::before {
+  content: none;
+}
+
+.ov-cell-make {
+  width: 40px;
+}
+
+.ov-make {
+  display: inline-block;
+  min-width: 34px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--ov-text-2);
+}
+
+.ov-cell-name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-name {
+  font-weight: 500;
+}
+
+.ov-cell-name.is-lap-ahead .ov-name {
+  color: var(--ov-lap-ahead);
+}
+
+.ov-cell-name.is-lap-behind .ov-name {
+  color: var(--ov-lap-behind);
+}
+
+.ov-model {
+  margin-left: 6px;
+  color: var(--ov-muted);
+  font-size: 11px;
+}
+
+.ov-tag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ov-text-2);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ov-cell-license {
+  width: 52px;
+}
+
+.ov-license {
+  display: inline-block;
+  min-width: 46px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ov-cell-ir {
+  width: 40px;
+  text-align: right;
+  color: var(--ov-text-2);
+}
+
+.ov-cell-gap,
+.ov-cell-time {
+  width: 58px;
+  text-align: right;
+}
+
+.ov-cell-time {
+  width: 68px;
+  color: var(--ov-text-2);
+}
+
+.ov-cell-time.is-best {
+  color: var(--ov-best);
+  font-weight: 600;
+}
+
+.ov-class-head td {
+  padding: 3px 8px;
+  background: var(--ov-head);
+  font-size: 12px;
+}
+
+.ov-class-head td > * + * {
+  margin-left: 10px;
+}
+
+.ov-class-head .ov-class-bar {
+  height: 11px;
+}
+
+.ov-skip td {
+  padding: 0 8px;
+  height: 14px;
+  line-height: 10px;
+  color: var(--ov-muted);
+  text-align: center;
+  letter-spacing: 0.2em;
+}
+
+/* --- delta ---------------------------------------------------------------- */
+
+.ov-delta {
+  width: 340px;
+  padding: 6px 10px 5px;
+}
+
+.ov-delta__bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ov-delta__zero {
+  position: absolute;
+  left: calc(50% - 1px);
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: var(--ov-text-2);
+}
+
+.ov-delta__fill {
+  position: absolute;
+  top: 0;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.ov-delta__fill.is-gain {
+  background: var(--ov-gain);
+}
+
+.ov-delta__fill.is-loss {
+  background: var(--ov-loss);
+}
+
+.ov-delta__numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ov-delta__value {
+  min-width: 78px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.ov-delta__value.is-gain {
+  color: var(--ov-gain);
+}
+
+.ov-delta__value.is-loss {
+  color: var(--ov-loss);
+}
+
+.ov-delta__times {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: var(--ov-text-2);
+}
+
+.ov-delta__times em {
+  display: inline-block;
+  width: 44px;
+  font-style: normal;
+  color: var(--ov-muted);
+}
+
+.ov-delta__reference {
+  font-size: 10px;
+  color: var(--ov-muted);
+}
+
+/* --- pedais --------------------------------------------------------------- */
+
+.ov-inputs {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px;
+}
+
+.ov-inputs__trace {
+  width: 240px;
+  height: 72px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ov-inputs__bars {
+  display: flex;
+  gap: 4px;
+}
+
+.ov-inputs__bar {
+  position: relative;
+  width: 10px;
+  height: 72px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.ov-inputs__bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.is-throttle .ov-inputs__bar-fill {
+  background: var(--ov-throttle);
+}
+
+.is-brake .ov-inputs__bar-fill {
+  background: var(--ov-brake);
+}
+
+.is-clutch .ov-inputs__bar-fill {
+  background: var(--ov-clutch);
+}
+
+.ov-inputs__gear {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+}
+
+.ov-inputs__gear-value {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ov-inputs__speed {
+  font-size: 13px;
+  color: var(--ov-text-2);
+}
+
+.ov-inputs__speed small {
+  font-size: 10px;
+  color: var(--ov-muted);
+}
+
+/* --- combustível ------------------------------------------------------------ */
+
+.ov-fuel {
+  min-width: 240px;
+}
+
+.ov-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 6px 10px 8px;
+}
+
+.ov-stats dt {
+  color: var(--ov-muted);
+}
+
+.ov-stats dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.ov-stats dd.is-alert {
+  color: var(--ov-alert);
+}
+
+/* --- radar ------------------------------------------------------------------ */
+
+.ov-radar {
+  padding: 8px;
+}
+
+.ov-radar svg {
+  display: block;
+}
+
+.ov-radar__axis {
+  stroke: var(--ov-line);
+  stroke-width: 1;
+}
+
+.ov-radar__warn {
+  fill: rgba(237, 161, 0, 0.18);
+}
+
+.ov-radar__car {
+  fill: var(--ov-text-2);
+}
+
+.ov-radar__car.is-alongside {
+  fill: var(--ov-alert);
+}
+
+.ov-radar__player {
+  fill: var(--ov-gain);
+}
+
+/* --- bandeira -------------------------------------------------------------- */
+
+.ov-flag {
+  min-width: 240px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.ov-flag.is-placeholder {
+  background: var(--ov-surface);
+  color: var(--ov-muted);
+}
+
+.ov-flag.is-yellow {
+  background: #f5d20a;
+  color: #000;
+}
+
+.ov-flag.is-blue {
+  background: #2a78d6;
+  color: #fff;
+}
+
+.ov-flag.is-white {
+  background: #fff;
+  color: #000;
+}
+
+.ov-flag.is-green {
+  background: #0ca30c;
+  color: #fff;
+}
+
+.ov-flag.is-red,
+.ov-flag.is-disqualify {
+  background: #d03b3b;
+  color: #fff;
+}
+
+.ov-flag.is-black,
+.ov-flag.is-furled {
+  background: #000;
+  color: #fff;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.ov-flag.is-repair {
+  background: radial-gradient(circle at 18px 50%, #eb6834 9px, #000 10px);
+  color: #fff;
+  padding-left: 40px;
+}
+
+.ov-flag.is-debris {
+  background: repeating-linear-gradient(90deg, #f5d20a 0 14px, #d03b3b 14px 28px);
+  color: #000;
+  text-shadow: 0 0 3px #fff;
+}
+
+.ov-flag.is-checkered {
+  background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 0 0 / 16px 16px;
+  color: #fff;
+  text-shadow:
+    0 0 4px #000,
+    0 0 2px #000;
+}

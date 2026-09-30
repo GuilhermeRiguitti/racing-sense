@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { HEADER_OFFSETS, VAR_BUF_OFFSETS } from './format.js';
 import {
   freezeLatestFrame,
+  freshFrames,
   isConnected,
   latestVarBuf,
   type LiveMemory,
@@ -122,5 +123,45 @@ describe('leitura da memória compartilhada', () => {
     new DataView(region.bytes.buffer).setInt32(HEADER_OFFSETS.numBuf, 0, true);
 
     expect(() => latestVarBuf(readLiveHeader(region.memory))).toThrow(/numBuf/);
+  });
+
+  it('entrega todos os ticks mais novos que o último lido, do mais antigo ao mais novo', () => {
+    const region = aLiveRegion(undefined, 3);
+    region.writeFrame(0, 21, { Speed: 1 });
+    region.writeFrame(1, 22, { Speed: 2 });
+    region.writeFrame(2, 20, { Speed: 0 });
+    const speed = readLiveVariables(region.memory, readLiveHeader(region.memory))[0]!;
+
+    const frames = freshFrames(region.memory, 20);
+
+    expect(frames.map((frame) => frame.tickCount)).toEqual([21, 22]);
+    expect(frames.map((frame) => readLiveValue(frame, speed))).toEqual([1, 2]);
+  });
+
+  it('sem tick anterior, só o mais recente', () => {
+    const region = aLiveRegion(undefined, 3);
+    region.writeFrame(0, 21, {});
+    region.writeFrame(1, 22, {});
+
+    expect(freshFrames(region.memory, null).map((frame) => frame.tickCount)).toEqual([22]);
+  });
+
+  it('buffer reescrito no meio da cópia fica de fora: chega na próxima pergunta', () => {
+    const region = aLiveRegion(undefined, 2);
+    region.writeFrame(0, 30, {});
+    region.writeFrame(1, 31, {});
+    let rewrites = 1;
+    const memory: LiveMemory = {
+      read(offset, length) {
+        const bytes = region.memory.read(offset, length);
+        if (length > 4 && offset !== 0 && rewrites > 0) {
+          rewrites -= 1;
+          region.writeFrame(0, 32, {});
+        }
+        return bytes;
+      },
+    };
+
+    expect(freshFrames(memory, 29).map((frame) => frame.tickCount)).toEqual([31]);
   });
 });

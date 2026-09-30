@@ -44,9 +44,13 @@ real (`docs/pendencias.md`, item 12). A segmentação em trechos sai dos
 setores que o sim declara (`SplitTimeInfo`): tempo de setor por volta, ganho ou
 perda por setor contra a referência e a volta ideal. A **leitura ao vivo** começou
 (ADR 0023): a memória compartilhada do SDK é lida só leitura via `koffi`, e a tela
-"Ao vivo" mostra cada canal e se ele está mudando. O layout foi conferido contra o
-sim aberto em 2026-09-26 (`ibt/live-real-sim.test.ts`); o que falta está no item 14
-de `docs/pendencias.md`. O que ainda é stub é o **narrador**. A api tem schema Prisma e
+"Ao vivo" mostra a volta em curso se desenhando (com a anterior por baixo) e cada
+canal. O layout foi conferido contra o sim aberto em 2026-09-26
+(`ibt/live-real-sim.test.ts`); o que falta está no item 14 de `docs/pendencias.md`.
+O **overlay** existe (ADR 0025): janelas transparentes por cima do sim com
+relative, classificação (marca, modelo, carteira, SR, iRating, SOF), delta,
+pedais, combustível, radar e bandeira — ainda não conferido contra o sim numa
+sessão (item 15). O que ainda é stub é o **narrador**. A api tem schema Prisma e
 rotas, mas ainda não rodou contra um Postgres real. Ver `docs/pendencias.md` e
 `docs/roadmap.md`.
 
@@ -90,6 +94,7 @@ Mudou rota ou DTO na api: rode `pnpm api:types` e confira o typecheck das três.
 | Regra de corrida (volta, delta, compatibilidade) | `apps/desktop/src/main/domain/` — sem I/O |
 | Leitura de bytes do `.ibt` | `apps/desktop/src/main/ibt/` |
 | Leitura ao vivo do sim | bytes em `ibt/live.ts` (puro) e `ibt/live-memory.ts` (Windows); o serviço em `src/main/live/` |
+| Overlay | regra (relative, classificação, combustível) em `domain/`; o quadro em `live/overlay-feed.ts`; janelas em `main/overlay/`; widgets em `renderer/src/overlay/` |
 | Tabela ou consulta do banco local | `apps/desktop/src/main/db/local-store.ts` (+ `schema.ts`) |
 | Algo que o coach faz (ingerir, comparar, analisar) | `apps/desktop/src/main/{ingestion,analysis}/` — função que recebe o `LocalStore` |
 | Chamada à api a partir do desktop | `apps/desktop/src/main/cloud/` |
@@ -319,6 +324,7 @@ Escopos: `desktop`, `api`, `web`, `docs`, `adr`, `infra`.
 | `docs/adr/0022-o-app-so-le-do-iracing.md` | por que o app nunca manda comando para o sim, e o que o EULA diz |
 | `docs/adr/0023-leitura-ao-vivo-pela-memoria-compartilhada.md` | a leitura ao vivo: `koffi`, frame congelado, ao vivo não grava |
 | `docs/adr/0024-relay-ao-vivo-do-piloto-para-o-engenheiro.md` | a transmissão do piloto para o engenheiro: salas, frame opaco, só o próprio carro |
+| `docs/adr/0025-overlay-em-janelas-proprias.md` | o overlay: janelas próprias sem foco, número do sim, dado do grid só na tela do piloto |
 | `docs/formato-ibt.md` | o layout binário, campo a campo |
 | `docs/agente.md` | o que o agente faz e o que ele não faz |
 | `docs/roadmap.md` | etapas e critério de pronto |
@@ -336,8 +342,10 @@ e relatório do agente.
 só para visualizar — nada do ao vivo vai para o banco; a análise continua saindo
 do `.ibt`. A transmissão para o engenheiro em outra máquina está decidida no ADR
 0024 (WebSocket com salas na api, frame opaco, só o carro do piloto) e espera o
-login rodar contra Postgres. Overlay em tempo real **não** está decidido: ADR
-antes de código.
+login rodar contra Postgres. O overlay está decidido no ADR 0025: janelas
+próprias do Electron, transparentes, sem foco nem mouse quando travadas, com o
+que o SDK entrega — nada desenhado dentro do sim, nada do grid gravado ou
+publicado.
 
 **Fora do produto:** qualquer comando para o sim — broadcast, tecla simulada,
 ajuste automático (regra 25, ADR 0022).

@@ -31,6 +31,21 @@ export const IPC = {
    */
   getLiveSnapshot: 'live:snapshot',
   /**
+   * Todos os ticks novos desde o último que a tela tem, só dos canais pedidos
+   * (ADR 0025). É o que desenha o pedal e a volta ao vivo tick a tick.
+   */
+  getLiveTicks: 'live:ticks',
+  /** O quadro de um widget do overlay, montado uma vez por tick (ADR 0025). */
+  getOverlayFrame: 'overlay:frame',
+  getOverlaySettings: 'overlay:settings',
+  updateOverlaySettings: 'overlay:settings-update',
+  /**
+   * A janela do overlay dizendo o tamanho do que desenhou. É de mão única, da
+   * janela para o processo principal, e só vale para janela de overlay: quem
+   * responde é o gerenciador das janelas, não os handlers.
+   */
+  overlayFit: 'overlay:fit',
+  /**
    * Único canal de mão única: o processo principal empurrando fato novo para a
    * interface. Todos os outros são pergunta e resposta.
    */
@@ -39,9 +54,12 @@ export const IPC = {
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
 
-/** Canais que a interface chama e espera resposta. O de eventos não é um deles. */
+/** Canais de mão única, sem resposta: os eventos e o tamanho da janela do overlay. */
+const ONE_WAY_CHANNELS: readonly string[] = ['events', 'overlayFit'];
+
+/** Canais que a interface chama e espera resposta. */
 export const REQUEST_CHANNELS = Object.entries(IPC)
-  .filter(([name]) => name !== 'events')
+  .filter(([name]) => !ONE_WAY_CHANNELS.includes(name))
   .map(([, channel]) => channel);
 
 /** Erro atravessando o IPC. `Error` não sobrevive à serialização estruturada. */
@@ -73,6 +91,8 @@ export type DesktopEvent =
       readonly type: 'publication-progressed';
       readonly published: number;
       readonly failed: number;
-    };
+    }
+  /** O piloto mexeu no overlay: as janelas consultam a configuração de novo. */
+  | { readonly type: 'overlay-settings-changed' };
 
 export type DesktopEventType = DesktopEvent['type'];

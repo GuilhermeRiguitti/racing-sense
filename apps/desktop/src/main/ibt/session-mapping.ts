@@ -1,5 +1,6 @@
 import type { CarLimits, SetupNode } from '../domain/car-setup.js';
 import { type SessionConditions, UNKNOWN_CONDITIONS } from '../domain/conditions.js';
+import { type GridDriver, parseLicense, parseSimColor, toCarModel } from '../domain/driver.js';
 import { isValidSectorStarts, type SectorStarts } from '../domain/sectors.js';
 import type { CarRef, TrackRef } from '../domain/session.js';
 import {
@@ -58,6 +59,74 @@ export function toCarRef(doc: SessionInfoNode): CarRef {
 
 export function toDriverName(doc: SessionInfoNode): string | null {
   return readPath(findPlayerDriver(doc), 'UserName') ?? null;
+}
+
+/**
+ * Todos os carros da sessão, como o `DriverInfo.Drivers` declara.
+ *
+ * Existe para o overlay (ADR 0025), e só vive na memória: nome, iRating e
+ * carteira do grid não são gravados nem publicados (ADR 0022). Entrada sem
+ * `CarIdx` numérico é descartada — sem ele não há como achar o carro nos canais.
+ */
+export function toGridDrivers(doc: SessionInfoNode): GridDriver[] {
+  const driverInfo = doc.DriverInfo;
+  const drivers = asArray(
+    typeof driverInfo === 'object' && !Array.isArray(driverInfo) ? driverInfo?.Drivers : undefined,
+  );
+
+  return drivers.flatMap((driver): GridDriver[] => {
+    const carIdx = readNumber(readPath(driver, 'CarIdx'));
+    if (carIdx === null) return [];
+    const carName = readPath(driver, 'CarScreenName') ?? readPath(driver, 'CarPath') ?? '';
+    const iRating = readNumber(readPath(driver, 'IRating'));
+    const team = readPath(driver, 'TeamName');
+    return [
+      {
+        carIdx,
+        name: readPath(driver, 'UserName') ?? '',
+        carNumber: readPath(driver, 'CarNumber') ?? '',
+        car: toCarModel(carName),
+        classId: readNumber(readPath(driver, 'CarClassID')) ?? 0,
+        className:
+          nonEmpty(readPath(driver, 'CarClassShortName')) ??
+          nonEmpty(readPath(driver, 'CarScreenNameShort')) ??
+          carName,
+        classColor: parseSimColor(readPath(driver, 'CarClassColor')),
+        classEstLapTime: readNumber(readPath(driver, 'CarClassEstLapTime')),
+        iRating: iRating !== null && iRating > 0 ? iRating : null,
+        license: parseLicense(
+          readPath(driver, 'LicString'),
+          parseSimColor(readPath(driver, 'LicColor')),
+        ),
+        teamName: nonEmpty(team) ?? null,
+        isPaceCar: readPath(driver, 'CarIsPaceCar') === '1',
+        isSpectator: readPath(driver, 'IsSpectator') === '1',
+      },
+    ];
+  });
+}
+
+const nonEmpty = (text: string | undefined) =>
+  text === undefined || text.trim() === '' ? undefined : text.trim();
+
+/**
+ * O tipo de cada sessão do fim de semana, pelo número dela. Ao vivo, o número
+ * da sessão em curso vem do canal `SessionNum`, não da session info.
+ */
+export function toSessionTypes(doc: SessionInfoNode): Map<number, string> {
+  const sessionInfo = doc.SessionInfo;
+  const sessions = asArray(
+    typeof sessionInfo === 'object' && !Array.isArray(sessionInfo)
+      ? sessionInfo?.Sessions
+      : undefined,
+  );
+  const types = new Map<number, string>();
+  for (const session of sessions) {
+    const num = readNumber(readPath(session, 'SessionNum'));
+    const type = readPath(session, 'SessionType');
+    if (num !== null && type !== undefined) types.set(num, type);
+  }
+  return types;
 }
 
 /** O tipo da sessão que está gravada (treino, classificação, corrida). */

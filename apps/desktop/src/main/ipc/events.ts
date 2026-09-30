@@ -22,6 +22,8 @@ function toWire(event: DesktopEvent): DesktopEvent {
       };
     case 'publication-progressed':
       return { type: event.type, published: event.published, failed: event.failed };
+    case 'overlay-settings-changed':
+      return { type: event.type };
   }
 }
 

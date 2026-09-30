@@ -184,3 +184,29 @@ e o relógio da sessão contínuo entre as duas.
 
 Quem recorta voltas **descarta a amostra 0**, senão nasce uma volta 0 de duração
 zero e a detecção de linha de chegada vê um salto que não existiu.
+
+### Os deltas que o sim publica (`LapDeltaTo*`)
+
+Medido em 2026-09-29 contra os `.ibt` reais da pasta do iRacing, comparando o
+canal do sim com a conta por distância do domínio (`firstArrivals` +
+`arrivalAt`, a mesma do delta da análise):
+
+- **É por distância, acumulado na volta.** Em cada tick, o tempo desta volta até
+  a posição atual (`LapDistPct`) menos o tempo da referência até a mesma
+  posição. Com a mesma volta de referência, o canal do sim e a conta do domínio
+  batem em ±0,01 s ao longo da volta inteira (Imola, Porsche 992 Cup, 5 voltas;
+  Suzuka, Mercedes GT3, mediana 0,008 s). Não zera por setor: zera só na linha
+  de chegada, quando a volta recomeça.
+- **Parado, ele cresce um segundo por segundo.** 15,7 s parado na pista em
+  Suzuka levaram o delta de +5,30 para +20,99, com `_OK = 1` o tempo todo. Não
+  reseta.
+- **`_OK` vai a 0** no box, na volta de saída e antes da primeira volta
+  cronometrada. O overlay esconde o valor nesses trechos.
+- **`LapDeltaToBestLap` e `LapDeltaToOptimalLap` não são da sessão.** A
+  referência é a melhor volta (e a ideal) **de todos os tempos** com aquele carro
+  naquela pista, que o sim guarda em `Documentos\iRacing\lapfiles\<pista>\<custid>_<carro>.blap`
+  (e `.olap`). Numa sessão de 26/09 em Road Atlanta, a referência era uma volta de
+  ~79,4 s do `.blap` de 21/09, que não estava em arquivo nenhum da sessão. Quem
+  quer "contra a minha melhor de hoje" usa `LapDeltaToSessionBestLap`.
+- **`LapBestLapTime` atualiza com atraso** em relação à troca da referência do
+  `LapDeltaToSessionBestLap`: não use um para adivinhar a volta do outro.

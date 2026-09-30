@@ -37,6 +37,18 @@ const api = {
   signOut: () => ipcRenderer.invoke(IPC.signOut),
   getLiveSnapshot: (knownCatalogId: string | null) =>
     ipcRenderer.invoke(IPC.getLiveSnapshot, { knownCatalogId }),
+  getLiveTicks: (request: {
+    knownCatalogId: string | null;
+    sinceTick: number | null;
+    channels: readonly string[];
+  }) => ipcRenderer.invoke(IPC.getLiveTicks, request),
+  getOverlayFrame: (widget: string) => ipcRenderer.invoke(IPC.getOverlayFrame, { widget }),
+  getOverlaySettings: () => ipcRenderer.invoke(IPC.getOverlaySettings),
+  updateOverlaySettings: (patch: unknown) => ipcRenderer.invoke(IPC.updateOverlaySettings, patch),
+  /** Mão única: a janela do overlay diz o tamanho do que desenhou. */
+  fitOverlay: (width: number, height: number) => {
+    ipcRenderer.send(IPC.overlayFit, { width, height });
+  },
 
   /**
    * Assina os avisos do processo principal e devolve como cancelar.

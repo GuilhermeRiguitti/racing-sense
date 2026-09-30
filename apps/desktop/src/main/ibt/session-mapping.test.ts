@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseSessionInfo } from './session-info.js';
-import { toCarLimits, toCarSetup, toSectorStarts } from './session-mapping.js';
+import {
+  toCarLimits,
+  toCarSetup,
+  toGridDrivers,
+  toSectorStarts,
+  toSessionTypes,
+} from './session-mapping.js';
 
 /**
  * Recorte no formato do bloco `CarSetup` de um GT3. A ficha de verdade muda por
@@ -112,5 +118,96 @@ SplitTimeInfo:
    SectorStartPct: 0.100000
 `;
     expect(toSectorStarts(parseSessionInfo(semLinha))).toBeNull();
+  });
+});
+
+/** Recorte no formato do `DriverInfo` e do `SessionInfo` de um treino multiclasse. */
+const GRID = `---
+WeekendInfo:
+ TrackName: roadatlanta full
+SessionInfo:
+ Sessions:
+ - SessionNum: 0
+   SessionType: Practice
+ - SessionNum: 1
+   SessionType: Race
+DriverInfo:
+ DriverCarIdx: 1
+ Drivers:
+ - CarIdx: 0
+   UserName: Pace Car
+   CarNumber: "0"
+   CarScreenName: safety pcporsche911cup
+   CarIsPaceCar: 1
+   IsSpectator: 0
+   IRating: 0
+   LicString: R 0.01
+ - CarIdx: 1
+   UserName: André Guimarães
+   CarNumber: "413"
+   CarScreenName: Ferrari 296 GT3
+   CarScreenNameShort: Ferrari 296 GT3
+   CarClassID: 4083
+   CarClassShortName: GT3 Class
+   CarClassColor: 0xffda59
+   CarClassEstLapTime: 78.1234
+   IRating: 2345
+   LicString: A 3.45
+   LicColor: 0x0153db
+   TeamName: 3:16 Racing
+   CarIsPaceCar: 0
+   IsSpectator: 0
+ - CarIdx: 2
+   UserName: Outro Piloto
+   CarNumber: "7"
+   CarScreenName: Porsche 718 Cayman GT4 Clubsport MR
+   CarClassID: 4088
+   CarClassShortName:
+   CarScreenNameShort: Porsche 718 GT4
+   CarClassColor: 0x33ceff
+   IRating: 1500
+   LicString: C 2.10
+   LicColor: 0xfeec04
+   CarIsPaceCar: 0
+   IsSpectator: 1
+`;
+
+describe('toGridDrivers', () => {
+  const drivers = toGridDrivers(parseSessionInfo(GRID));
+
+  it('lê cada carro com carteira, iRating, classe e fabricante', () => {
+    expect(drivers[1]).toEqual({
+      carIdx: 1,
+      name: 'André Guimarães',
+      carNumber: '413',
+      car: { name: 'Ferrari 296 GT3', make: { name: 'Ferrari', short: 'FER' }, model: '296 GT3' },
+      classId: 4083,
+      className: 'GT3 Class',
+      classColor: '#ffda59',
+      classEstLapTime: 78.1234,
+      iRating: 2345,
+      license: { letter: 'A', safetyRating: 3.45, color: '#0153db' },
+      teamName: '3:16 Racing',
+      isPaceCar: false,
+      isSpectator: false,
+    });
+  });
+
+  it('marca pace car e espectador; iRating zero é desconhecido', () => {
+    expect(drivers[0]?.isPaceCar).toBe(true);
+    expect(drivers[0]?.iRating).toBeNull();
+    expect(drivers[2]?.isSpectator).toBe(true);
+  });
+
+  it('classe sem nome curto usa o nome curto do carro', () => {
+    expect(drivers[2]?.className).toBe('Porsche 718 GT4');
+  });
+});
+
+describe('toSessionTypes', () => {
+  it('acha a sessão pelo número que o canal SessionNum dá', () => {
+    const doc = parseSessionInfo(GRID);
+    expect(toSessionTypes(doc).get(1)).toBe('Race');
+    expect(toSessionTypes(doc).get(9)).toBeUndefined();
   });
 });

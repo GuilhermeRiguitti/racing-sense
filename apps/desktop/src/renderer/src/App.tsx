@@ -4,6 +4,7 @@ import { bridge } from './bridge.js';
 import { LapTable, lapStanding } from './LapTable.js';
 import { LapView } from './LapView.js';
 import { LiveView } from './LiveView.js';
+import { OverlaySettingsView } from './OverlaySettingsView.js';
 import { SessionHeader } from './SessionHeader.js';
 import { SessionList } from './SessionList.js';
 import { SetupSheet } from './SetupSheet.js';
@@ -33,8 +34,15 @@ export function App() {
   const [versaoReferencias, setVersaoReferencias] = useState(0);
   /** Out lap, in lap e slow down ficam escondidos até o piloto pedir (ADR 0021). */
   const [mostrarInvalidas, setMostrarInvalidas] = useState(false);
-  /** A tela ao vivo lê o sim enquanto está aberta; fechada, nada é lido. */
-  const [aoVivo, setAoVivo] = useState(false);
+  /**
+   * O que ocupa a área principal. A tela ao vivo lê o sim enquanto está aberta;
+   * fechada, nada é lido. O overlay tem as próprias janelas: esta é só a
+   * configuração dele.
+   */
+  const [tela, setTela] = useState<'sessions' | 'live' | 'overlay'>('sessions');
+  const aoVivo = tela === 'live';
+  const noOverlay = tela === 'overlay';
+  const naSessao = tela === 'sessions';
 
   // Sessão nova ingerida vira a escolhida: é a que o piloto acabou de rodar.
   useEffect(() => {
@@ -97,19 +105,28 @@ export function App() {
           type="button"
           className={`sessions__item live__entry${aoVivo ? ' is-selected' : ''}`}
           aria-current={aoVivo ? 'true' : undefined}
-          onClick={() => setAoVivo(true)}
+          onClick={() => setTela('live')}
         >
           <span className="sessions__track">Ao vivo</span>
-          <span className="sessions__meta">O que o sim está entregando agora</span>
+          <span className="sessions__meta">A volta se desenhando, e cada canal</span>
+        </button>
+        <button
+          type="button"
+          className={`sessions__item live__entry${noOverlay ? ' is-selected' : ''}`}
+          aria-current={noOverlay ? 'true' : undefined}
+          onClick={() => setTela('overlay')}
+        >
+          <span className="sessions__track">Overlay</span>
+          <span className="sessions__meta">Relative, classificação e mais, por cima do sim</span>
         </button>
         {loading ? (
           <p className="muted">Carregando sessões…</p>
         ) : (
           <SessionList
             sessions={sessions}
-            selected={aoVivo ? null : sessionId}
+            selected={naSessao ? sessionId : null}
             onSelect={(id) => {
-              setAoVivo(false);
+              setTela('sessions');
               setSessionId(id);
               setLapNumber(null);
             }}
@@ -119,14 +136,15 @@ export function App() {
 
       <main className="app__main">
         {aoVivo && <LiveView />}
+        {noOverlay && <OverlaySettingsView />}
 
-        {!aoVivo && error !== null && (
+        {naSessao && error !== null && (
           <p role="alert" className="alert">
             Não foi possível carregar as sessões: {error}
           </p>
         )}
 
-        {!aoVivo && !loading && sessions.length === 0 && (
+        {naSessao && !loading && sessions.length === 0 && (
           <div className="empty">
             <h1>Nenhuma sessão ainda</h1>
             <p>
@@ -136,7 +154,7 @@ export function App() {
           </div>
         )}
 
-        {!aoVivo && session !== null && (
+        {naSessao && session !== null && (
           <>
             <SessionHeader session={session} />
 

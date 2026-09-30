@@ -124,6 +124,42 @@ export function freezeLatestFrame(memory: LiveMemory): LiveFrame | null {
 }
 
 /**
+ * Todos os frames mais novos que `sinceTick`, do mais antigo ao mais novo.
+ *
+ * O sim guarda os últimos `numBuf` ticks (3, medido): quem pergunta a cada
+ * ~33 ms recebe todos, sem buraco, e o pedal desenhado é o que o piloto fez em
+ * cada tick — não uma amostra a cada tantos. Quem pergunta mais devagar perde os
+ * que o sim já reescreveu, e o `tickCount` mostra onde.
+ *
+ * Cada buffer é copiado e conferido como em `freezeLatestFrame`: se o sim o
+ * reescreveu no meio da cópia, ele fica de fora — o tick seguinte chega na
+ * próxima pergunta. Com `sinceTick` nulo, só o mais recente.
+ */
+export function freshFrames(memory: LiveMemory, sinceTick: number | null): LiveFrame[] {
+  if (sinceTick === null) {
+    const latest = freezeLatestFrame(memory);
+    return latest === null ? [] : [latest];
+  }
+
+  const header = readLiveHeader(memory);
+  const pending = header.varBufs
+    .slice(0, header.numBuf)
+    .map((buffer, index) => ({ ...buffer, index }))
+    .filter((buffer) => buffer.tickCount > sinceTick)
+    .sort((a, b) => a.tickCount - b.tickCount);
+
+  const frames: LiveFrame[] = [];
+  for (const { tickCount, bufOffset, index } of pending) {
+    const bytes = memory.read(bufOffset, header.bufLen);
+    const tickOffset = HEADER_OFFSETS.varBufs + index * VAR_BUF_SIZE + VAR_BUF_OFFSETS.tickCount;
+    const tick = memory.read(tickOffset, 4);
+    const after = new DataView(tick.buffer, tick.byteOffset, tick.byteLength).getInt32(0, true);
+    if (after === tickCount) frames.push({ tickCount, bytes });
+  }
+  return frames;
+}
+
+/**
  * O valor de um canal num frame.
  *
  * Canal com `count > 1` é indexado por carro (`CarIdxLapDistPct`): vem inteiro,

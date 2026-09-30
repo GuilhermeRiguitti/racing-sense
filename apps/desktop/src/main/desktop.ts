@@ -3,7 +3,13 @@ import type { DesktopEvent } from '../shared/ipc.js';
 import { type Narrate, narratorFromEnv } from './analysis/narrator.js';
 import { type ApiClient, createApiClient, type FetchLike } from './cloud/api-client.js';
 import { type LocalStore, openLocalStore } from './db/local-store.js';
+import { openLiveMemory } from './ibt/live-memory.js';
 import { createLiveTelemetry, type LiveTelemetry } from './live/live-telemetry.js';
+import { createOverlayFeed, type OverlayFeed } from './live/overlay-feed.js';
+import {
+  createOverlaySettingsStore,
+  type OverlaySettingsStore,
+} from './overlay/overlay-settings.js';
 import {
   createFileTelemetryWatcher,
   type TelemetryWatcher,
@@ -24,6 +30,9 @@ export interface Desktop {
   readonly narrate: Narrate;
   /** A leitura ao vivo do sim. Só lê; nunca manda nada para ele (ADR 0022). */
   readonly live: LiveTelemetry;
+  /** O quadro do overlay, montado sobre a mesma leitura ao vivo (ADR 0025). */
+  readonly overlay: OverlayFeed;
+  readonly overlaySettings: OverlaySettingsStore;
   readonly emit: (event: DesktopEvent) => void;
 }
 
@@ -54,6 +63,10 @@ export interface DesktopEnvironment {
 }
 
 export function buildDesktop(environment: DesktopEnvironment): Desktop {
+  // `TELEMETRY_LIVE_MEMORY_NAME` só existe para o sim falso do teste de tela
+  // (`tests/e2e/fake-sim.mjs`): sem ela, o arquivo mapeado oficial do iRacing.
+  const liveMemoryName = environment.env.TELEMETRY_LIVE_MEMORY_NAME;
+  const live = createLiveTelemetry(() => openLiveMemory(liveMemoryName || undefined));
   return {
     store: openLocalStore(join(environment.userDataDir, 'telemetry.db')),
     // Observa a pasta do sim. Só diz *quando* um arquivo pode ser lido.
@@ -64,7 +77,9 @@ export function buildDesktop(environment: DesktopEnvironment): Desktop {
     }),
     api: createApiClient({ baseUrl: environment.apiBaseUrl, fetch: environment.fetch }),
     narrate: narratorFromEnv(environment.env),
-    live: createLiveTelemetry(),
+    live,
+    overlay: createOverlayFeed(live),
+    overlaySettings: createOverlaySettingsStore(join(environment.userDataDir, 'overlay.json')),
     emit: environment.emit,
   };
 }

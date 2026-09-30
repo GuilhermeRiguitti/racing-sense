@@ -1,9 +1,13 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { IPC, type IpcResult, REQUEST_CHANNELS } from '../../shared/ipc.js';
 import { openLocalStore } from '../db/local-store.js';
 import type { Desktop } from '../desktop.js';
 import { aLap, aReferenceLap, aSeries, aSession } from '../../../tests/support/builders.js';
 import { createLiveTelemetry } from '../live/live-telemetry.js';
+import { createOverlayFeed } from '../live/overlay-feed.js';
+import { createOverlaySettingsStore } from '../overlay/overlay-settings.js';
 import { registerIpcHandlers } from './handlers.js';
 
 /** Simula o `ipcMain.handle` do Electron sem subir Electron nenhum. */
@@ -25,6 +29,7 @@ function ipcBus() {
 /** Desktop com banco em memória de verdade; só a nuvem e o modelo são falsos. */
 function desktop(overrides: Partial<Desktop> = {}): Desktop {
   const store = openLocalStore(':memory:');
+  const live = createLiveTelemetry(() => null);
   const session = aSession();
   store.saveRecording({
     session,
@@ -40,7 +45,12 @@ function desktop(overrides: Partial<Desktop> = {}): Desktop {
     narrate: vi.fn(async () => ({ summary: 'Resumo', findings: [], model: 'fake' })),
     emit: vi.fn(),
     watcher: {} as Desktop['watcher'],
-    live: createLiveTelemetry(() => null),
+    live,
+    overlay: createOverlayFeed(live),
+    // Só grava quando algum teste muda a configuração, e cada execução tem o seu arquivo.
+    overlaySettings: createOverlaySettingsStore(
+      join(tmpdir(), `overlay-handlers-${process.pid}-${Math.random()}.json`),
+    ),
     ...overrides,
   };
 }
@@ -121,6 +131,35 @@ describe('handlers de IPC', () => {
     expect(await bus.invoke(IPC.getLiveSnapshot, { knownCatalogId: null })).toEqual({
       value: { state: 'sim-closed' },
     });
+  });
+
+  it('overlay com o sim fechado: estado, não falha; widget inventado é recusado', async () => {
+    const bus = ipcBus();
+    registerIpcHandlers(desktop(), bus.register);
+
+    expect(await bus.invoke(IPC.getOverlayFrame, { widget: 'relative' })).toEqual({
+      value: { state: 'sim-closed' },
+    });
+    expect(await bus.invoke(IPC.getLiveTicks, { channels: ['Speed'] })).toEqual({
+      value: { state: 'sim-closed' },
+    });
+    expect(await bus.invoke(IPC.getOverlayFrame, { widget: 'inventado' })).toMatchObject({
+      failed: true,
+    });
+  });
+
+  it('mudar a configuração do overlay avisa as janelas', async () => {
+    const bus = ipcBus();
+    const emit = vi.fn();
+    registerIpcHandlers(desktop({ emit }), bus.register);
+
+    const resultado = await bus.invoke<{ relative: { carsAhead: number } }>(
+      IPC.updateOverlaySettings,
+      { relative: { carsAhead: 5 } },
+    );
+
+    expect(resultado).toMatchObject({ value: { relative: { carsAhead: 5 } } });
+    expect(emit).toHaveBeenCalledWith({ type: 'overlay-settings-changed' });
   });
 
   it('devolve as séries da referência, para desenhar por baixo da volta', async () => {
