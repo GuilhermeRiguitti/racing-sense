@@ -1257,15 +1257,72 @@ select:focus-visible,
   margin-right: 8px;
 }
 
-.button.is-primary {
-  background: var(--series-1);
-  border-color: var(--series-1);
-  color: #ffffff;
+/* --- cadeado do overlay ---------------------------------------------- */
+
+.overlay-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-height: 40px;
+  cursor: pointer;
 }
 
-.button.is-primary:hover:not(:disabled) {
-  background: var(--series-1);
-  filter: brightness(1.08);
+.overlay-lock:hover:not(:disabled) {
+  background: var(--selected);
+}
+
+.overlay-lock:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 1px;
+}
+
+.overlay-lock:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Aberto é o estado que pede atenção: o clique não atravessa as janelas. */
+.overlay-lock.is-unlocked {
+  border-color: var(--series-4);
+  box-shadow: inset 3px 0 0 var(--series-4);
+}
+
+.overlay-lock.is-unlocked .overlay-lock__icon {
+  color: var(--series-4);
+}
+
+.overlay-lock__icon {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.overlay-lock__text {
+  display: grid;
+}
+
+.overlay-lock__label {
+  font-weight: 600;
+}
+
+.overlay-lock__hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.overlay-lock.is-compact {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 10px;
+  margin: -8px 0 12px;
+  font-size: 13px;
 }
 
 .overlay-settings__hint {

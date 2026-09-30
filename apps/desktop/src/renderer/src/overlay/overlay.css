@@ -54,7 +54,6 @@ html.is-overlay body {
 /* --- modo de mover -------------------------------------------------------- */
 
 .ov--editing {
-  -webkit-app-region: drag;
   cursor: move;
   outline: 2px dashed var(--ov-alert);
   outline-offset: -2px;
@@ -76,7 +75,6 @@ html.is-overlay body {
 }
 
 .ov-edit button {
-  -webkit-app-region: no-drag;
   width: 20px;
   height: 20px;
   border: 0;

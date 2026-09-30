@@ -133,6 +133,27 @@ describe('quadro do overlay', () => {
     expect(frame.session.timeRemainingSeconds).toBe(1200);
   });
 
+  it('tempo da volta só com volta em andamento: nem na garagem, nem parado no box fora da corrida', () => {
+    const lapTimeIn = (sessionType: string, values: Record<string, number | number[]>) => {
+      const { region, write } = scenario(sessionType);
+      write(10, { LapCurrentLapTime: 1321.5, ...values });
+      const frame = createOverlayFeed(createLiveTelemetry(() => handleOver(region))).frame('delta');
+      if (frame.state !== 'connected') throw new Error(frame.state);
+      return frame.player?.currentLapTime;
+    };
+    const inStall = perCarValues(
+      { 1: TRACK_SURFACE.inPitStall, 2: TRACK_SURFACE.onTrack, 3: TRACK_SURFACE.onTrack },
+      TRACK_SURFACE.notInWorld,
+    );
+
+    expect(lapTimeIn('Practice', { IsOnTrack: 1 })).toBe(1321.5);
+    // Esc: o piloto está na garagem, e o sim continua contando a volta de antes.
+    expect(lapTimeIn('Practice', { IsOnTrack: 0 })).toBeNull();
+    expect(lapTimeIn('Practice', { IsOnTrack: 1, CarIdxTrackSurface: inStall })).toBeNull();
+    // Na corrida, a parada no box é parte da volta.
+    expect(lapTimeIn('Race', { IsOnTrack: 1, CarIdxTrackSurface: inStall })).toBe(1321.5);
+  });
+
   it('mede o combustível entre cruzamentos da linha', () => {
     const { region, write } = scenario();
     const feed = createOverlayFeed(createLiveTelemetry(() => handleOver(region)));

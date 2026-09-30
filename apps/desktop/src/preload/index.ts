@@ -49,6 +49,10 @@ const api = {
   fitOverlay: (width: number, height: number) => {
     ipcRenderer.send(IPC.overlayFit, { width, height });
   },
+  /** Mão única: o piloto apertou (`start`) ou soltou (`end`) o botão sobre a janela destravada. */
+  dragOverlay: (phase: 'start' | 'end') => {
+    ipcRenderer.send(IPC.overlayDrag, { phase });
+  },
 
   /**
    * Assina os avisos do processo principal e devolve como cancelar.

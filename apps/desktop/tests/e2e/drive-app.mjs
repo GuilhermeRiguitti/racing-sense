@@ -242,7 +242,7 @@ async function fotografarOverlay(navegador, principal) {
   console.log('print:', join(opcoes.out, '4-ao-vivo-volta.png'));
   await principal.click('.live__entry >> nth=1');
   await espera(800);
-  await principal.click('button:has-text("Destravar para mover")');
+  await principal.click('.overlay-settings .overlay-lock');
   await espera(1500);
   await principal.screenshot({ path: join(opcoes.out, '5-overlay-config.png'), fullPage: true });
   console.log('print:', join(opcoes.out, '5-overlay-config.png'));
@@ -253,5 +253,17 @@ async function fotografarOverlay(navegador, principal) {
   if (relative !== undefined) {
     await relative.screenshot({ path: join(opcoes.out, 'overlay-relative-mover.png') });
     console.log('print:', join(opcoes.out, 'overlay-relative-mover.png'));
+    // O arraste segue o cursor do Windows, que o protocolo de depuração não
+    // move; o que dá para conferir é o caminho: apertar e soltar na janela
+    // destravada grava a posição dela.
+    await relative.mouse.move(200, 60);
+    await relative.mouse.down();
+    await espera(200);
+    await relative.mouse.up();
+    await espera(800);
+    const gravado = JSON.parse(readFileSync(join(dados, 'overlay.json'), 'utf8')).widgets.relative;
+    console.log(`arraste do relative: posição gravada ${gravado.x}, ${gravado.y}`);
   }
+  await principal.screenshot({ path: join(opcoes.out, '6-cadeado-aberto.png') });
+  console.log('print:', join(opcoes.out, '6-cadeado-aberto.png'));
 }

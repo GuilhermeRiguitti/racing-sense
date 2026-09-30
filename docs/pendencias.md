@@ -89,10 +89,10 @@ sem Postgres não há login, e sem login não há sala fechada.
 O overlay (ADR 0025) foi desenhado sobre os nomes e o significado que a
 documentação do SDK dá, e conferido só contra um sim falso
 (`tests/support/fake-sim.ts`, `node apps/desktop/tests/e2e/drive-app.mjs --overlay`).
-Com o iRacing numa corrida, falta conferir:
+Os nomes de canal que o overlay lê foram conferidos contra o sim aberto em
+2026-09-29 (`ibt/live-real-sim.test.ts`): todos existem. Com o iRacing numa
+corrida, falta conferir:
 
-- os nomes de canal que o overlay lê — `ibt/live-real-sim.test.ts` diz na hora
-  qual não existe;
 - o gap do relative (`CarIdxEstTime`) e o da classificação (`CarIdxF2Time`)
   contra o relative e a classificação do próprio sim, inclusive multiclasse e na
   linha de chegada;

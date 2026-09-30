@@ -1,4 +1,7 @@
 import { BrowserWindow, type IpcMainEvent, ipcMain, type Rectangle, screen } from 'electron';
+
+/** Ritmo com que a janela segue o cursor durante o arraste: o de um monitor de 60 Hz. */
+const DRAG_FOLLOW_MS = 16;
 import { IPC } from '../../shared/ipc.js';
 import { type OverlaySettings, WIDGET_IDS, type WidgetId } from '../../shared/overlay.js';
 import type { OverlaySettingsStore } from './overlay-settings.js';
@@ -9,6 +12,12 @@ import type { OverlaySettingsStore } from './overlay-settings.js';
  * Travadas, elas não pegam foco nem mouse — o clique atravessa para o sim e o
  * volante nunca perde a entrada para o app. Destravadas (`editing`), aceitam
  * arrastar, e soltar grava a posição.
+ *
+ * Quem move a janela é este processo, seguindo o cursor do Windows entre o
+ * "apertou" e o "soltou" que a janela avisa. O `-webkit-app-region: drag` do
+ * Chromium parece o caminho natural, mas numa janela transparente do Windows
+ * ele para de responder depois que o clique passou a atravessar a janela
+ * (`setIgnoreMouseEvents`) — exatamente o ciclo travar/destravar.
  *
  * Nada aqui desenha dentro do sim nem fala com ele: são janelas comuns do
  * Windows, transparentes e sempre por cima (ADR 0022).
@@ -78,20 +87,46 @@ export function createOverlayWindows(options: OverlayWindowsOptions): OverlayWin
     // piloto quer overlay. Tela cheia exclusiva cobre tudo (ADR 0025).
     window.setAlwaysOnTop(true, 'screen-saver');
     window.setIgnoreMouseEvents(!current.editing);
+    window.setFocusable(current.editing);
     window.once('ready-to-show', () => window.showInactive());
     window.webContents.on('did-finish-load', () => {
       window.webContents.setZoomFactor(settings.get().widgets[id].scale);
-    });
-    window.on('moved', () => {
-      if (window.isDestroyed()) return;
-      const [movedX, movedY] = window.getPosition();
-      settings.update({ widgets: { [id]: { x: movedX, y: movedY } } });
     });
     options.load(window, { overlay: id });
     return { id, window, content: null };
   };
 
+  let drag: { readonly entry: Entry; readonly timer: ReturnType<typeof setInterval> } | null = null;
+
+  /** Termina o arraste e grava onde a janela ficou. */
+  const endDrag = () => {
+    if (drag === null) return;
+    const { entry, timer } = drag;
+    clearInterval(timer);
+    drag = null;
+    if (entry.window.isDestroyed()) return;
+    const [x = null, y = null] = entry.window.getPosition();
+    settings.update({ widgets: { [entry.id]: { x, y } } });
+  };
+
+  const startDrag = (entry: Entry) => {
+    endDrag();
+    const cursor = screen.getCursorScreenPoint();
+    const [x = 0, y = 0] = entry.window.getPosition();
+    const timer = setInterval(() => {
+      if (entry.window.isDestroyed()) {
+        endDrag();
+        return;
+      }
+      const now = screen.getCursorScreenPoint();
+      entry.window.setPosition(x + now.x - cursor.x, y + now.y - cursor.y);
+    }, DRAG_FOLLOW_MS);
+    drag = { entry, timer };
+  };
+
   const apply = (current: OverlaySettings) => {
+    // Travou no meio de um arraste: a janela fica onde está.
+    if (!current.editing) endDrag();
     for (const id of WIDGET_IDS) {
       const wanted = current.visible && current.widgets[id].enabled;
       const entry = entries.get(id);
@@ -119,10 +154,22 @@ export function createOverlayWindows(options: OverlayWindowsOptions): OverlayWin
     }
   };
 
-  const onFit = (event: IpcMainEvent, payload: unknown) => {
-    const entry = [...entries.values()].find(
+  const entryOf = (event: IpcMainEvent) =>
+    [...entries.values()].find(
       (candidate) => !candidate.window.isDestroyed() && candidate.window.webContents === event.sender,
     );
+
+  const onDrag = (event: IpcMainEvent, payload: unknown) => {
+    const entry = entryOf(event);
+    // Travado, nada se move — mesmo que a janela peça.
+    if (entry === undefined || !settings.get().editing) return;
+    const { phase } = (payload ?? {}) as { phase?: unknown };
+    if (phase === 'start') startDrag(entry);
+    if (phase === 'end' && drag?.entry === entry) endDrag();
+  };
+
+  const onFit = (event: IpcMainEvent, payload: unknown) => {
+    const entry = entryOf(event);
     // Só janela de overlay se redimensiona por aqui; a janela principal não.
     if (entry === undefined) return;
     const { width, height } = (payload ?? {}) as { width?: unknown; height?: unknown };
@@ -133,13 +180,17 @@ export function createOverlayWindows(options: OverlayWindowsOptions): OverlayWin
   };
 
   ipcMain.on(IPC.overlayFit, onFit);
+  ipcMain.on(IPC.overlayDrag, onDrag);
   const unsubscribe = settings.subscribe(apply);
   apply(settings.get());
 
   return {
     close() {
       unsubscribe();
+      if (drag !== null) clearInterval(drag.timer);
+      drag = null;
       ipcMain.removeListener(IPC.overlayFit, onFit);
+      ipcMain.removeListener(IPC.overlayDrag, onDrag);
       for (const { window } of entries.values()) {
         if (!window.isDestroyed()) window.destroy();
       }

@@ -46,6 +46,12 @@ export const IPC = {
    */
   overlayFit: 'overlay:fit',
   /**
+   * Destravada, a janela do overlay avisa quando o piloto aperta e solta o
+   * botão sobre ela; quem move a janela, seguindo o cursor, é o processo
+   * principal. Mão única, como `overlayFit`.
+   */
+  overlayDrag: 'overlay:drag',
+  /**
    * Único canal de mão única: o processo principal empurrando fato novo para a
    * interface. Todos os outros são pergunta e resposta.
    */
@@ -54,8 +60,8 @@ export const IPC = {
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
 
-/** Canais de mão única, sem resposta: os eventos e o tamanho da janela do overlay. */
-const ONE_WAY_CHANNELS: readonly string[] = ['events', 'overlayFit'];
+/** Canais de mão única, sem resposta: os eventos, o tamanho e o arraste da janela do overlay. */
+const ONE_WAY_CHANNELS: readonly string[] = ['events', 'overlayFit', 'overlayDrag'];
 
 /** Canais que a interface chama e espera resposta. */
 export const REQUEST_CHANNELS = Object.entries(IPC)

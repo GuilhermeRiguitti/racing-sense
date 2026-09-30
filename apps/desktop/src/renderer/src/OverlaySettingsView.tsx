@@ -8,6 +8,7 @@ import {
   type WidgetId,
 } from '../../shared/overlay.js';
 import { bridge } from './bridge.js';
+import { OverlayLock } from './OverlayLock.js';
 import { useOverlaySettings } from './overlay/hooks.js';
 import { WIDGET_TITLES } from './overlay/OverlayRoot.js';
 
@@ -68,22 +69,16 @@ export function OverlaySettingsView() {
           />
           Overlay ligado
         </label>
-        <button
-          type="button"
-          className={`button${settings.editing ? ' is-primary' : ''}`}
-          disabled={!settings.visible}
-          onClick={() => update({ editing: !settings.editing })}
-        >
-          {settings.editing ? 'Travar posições' : 'Destravar para mover'}
-        </button>
+        <OverlayLock settings={settings} />
         <button type="button" className="button" onClick={resetPositions}>
           Restaurar posições
         </button>
       </div>
       {settings.editing && (
         <p className="overlay-settings__hint">
-          Arraste cada janela para o lugar e use − e + para a escala. Trave quando terminar: travado,
-          o clique atravessa o overlay e vai para o sim.
+          Arraste cada janela para onde quiser — clique em qualquer ponto dela e arraste — e use −
+          e + para a escala. Feche o cadeado quando terminar: travado, nada se move, e o clique
+          atravessa o overlay e vai para o sim.
         </p>
       )}
       <p className="muted overlay-settings__note">

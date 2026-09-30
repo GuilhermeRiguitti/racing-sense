@@ -54,6 +54,8 @@ export interface TelemetryBridge {
   updateOverlaySettings(patch: OverlaySettingsPatch): Promise<BridgeResult<OverlaySettings>>;
   /** A janela do overlay diz o tamanho do que desenhou; o processo principal ajusta a janela. */
   fitOverlay(width: number, height: number): void;
+  /** Começa ou termina o arraste da janela do overlay; quem move é o processo principal. */
+  dragOverlay(phase: 'start' | 'end'): void;
   /** Assina os avisos do processo principal. Devolve como cancelar. */
   onEvent(listener: (event: DesktopEvent) => void): () => void;
 }

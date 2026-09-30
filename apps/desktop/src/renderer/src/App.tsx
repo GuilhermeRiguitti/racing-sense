@@ -4,6 +4,8 @@ import { bridge } from './bridge.js';
 import { LapTable, lapStanding } from './LapTable.js';
 import { LapView } from './LapView.js';
 import { LiveView } from './LiveView.js';
+import { OverlayLock } from './OverlayLock.js';
+import { useOverlaySettings } from './overlay/hooks.js';
 import { OverlaySettingsView } from './OverlaySettingsView.js';
 import { SessionHeader } from './SessionHeader.js';
 import { SessionList } from './SessionList.js';
@@ -43,6 +45,7 @@ export function App() {
   const aoVivo = tela === 'live';
   const noOverlay = tela === 'overlay';
   const naSessao = tela === 'sessions';
+  const overlaySettings = useOverlaySettings();
 
   // Sessão nova ingerida vira a escolhida: é a que o piloto acabou de rodar.
   useEffect(() => {
@@ -119,6 +122,10 @@ export function App() {
           <span className="sessions__track">Overlay</span>
           <span className="sessions__meta">Relative, classificação e mais, por cima do sim</span>
         </button>
+        {/* O cadeado fica à mão em qualquer tela: posicionar é coisa de antes de entrar no carro. */}
+        {overlaySettings !== null && overlaySettings.visible && (
+          <OverlayLock settings={overlaySettings} compact />
+        )}
         {loading ? (
           <p className="muted">Carregando sessões…</p>
         ) : (

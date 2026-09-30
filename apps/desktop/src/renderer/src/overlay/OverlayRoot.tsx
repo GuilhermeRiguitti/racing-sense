@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useRef } from 'react';
+import { type CSSProperties, type PointerEvent, type ReactNode, useRef } from 'react';
 import type { OverlaySettings, WidgetId } from '../../../shared/overlay.js';
 import { bridge } from '../bridge.js';
 import { DeltaBar } from './DeltaBar.js';
@@ -61,8 +61,28 @@ export function OverlayRoot({ widget }: { widget: WidgetId }) {
     '--ov-alpha': settings?.backgroundOpacity ?? 0.82,
   } as CSSProperties;
 
+  // Destravado, apertar em qualquer lugar da janela (fora dos botões) começa o
+  // arraste; quem move a janela é o processo principal, seguindo o cursor. A
+  // captura garante o "soltou" mesmo com o cursor fora da janela.
+  const startDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (!editing || event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('button') !== null) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    bridge().dragOverlay('start');
+  };
+  const endDrag = () => {
+    if (editing) bridge().dragOverlay('end');
+  };
+
   return (
-    <div ref={root} className={`ov${editing ? ' ov--editing' : ''}`} style={style}>
+    <div
+      ref={root}
+      className={`ov${editing ? ' ov--editing' : ''}`}
+      style={style}
+      onPointerDown={startDrag}
+      onPointerUp={endDrag}
+      onLostPointerCapture={endDrag}
+    >
       {editing && settings !== null && <EditBar widget={widget} settings={settings} />}
       {settings !== null &&
         (widget === 'inputs' ? (

@@ -305,9 +305,20 @@ function playerOf(
           }))
           .sort((a, b) => Math.abs(a.meters) - Math.abs(b.meters));
 
+  // O sim continua contando `LapCurrentLapTime` depois do Esc (garagem) e com o
+  // carro parado na vaga, e só zera quando ele sai do box. Aí não há volta em
+  // andamento: o tempo não aparece. Na corrida, a parada no box faz parte da
+  // volta, e o tempo continua.
+  const onTrack = channels.flag('IsOnTrack');
+  const lapInProgress =
+    onTrack !== false &&
+    player !== undefined &&
+    isInWorld(player) &&
+    (session.isRace || player.presence !== 'pit-stall');
+
   return {
     carIdx: playerCarIdx,
-    currentLapTime: channels.scalar('LapCurrentLapTime'),
+    currentLapTime: lapInProgress ? channels.scalar('LapCurrentLapTime') : null,
     lastLapTime: lapTime(channels.scalar('LapLastLapTime') ?? undefined),
     bestLapTime: lapTime(channels.scalar('LapBestLapTime') ?? undefined),
     delta,
@@ -320,7 +331,7 @@ function playerOf(
     nearby,
     speedMs: channels.scalar('Speed'),
     gear: channels.scalar('Gear'),
-    isOnTrack: channels.flag('IsOnTrack') ?? false,
+    isOnTrack: onTrack ?? false,
   };
 }
 
