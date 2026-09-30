@@ -107,17 +107,23 @@ bloqueia o desktop, e o desktop funciona inteiro sem nada disso.
 Começou (ADR 0023). A leitura da memória compartilhada está de pé via `koffi`,
 sem addon compilado: `ibt/live-memory.ts` abre o arquivo mapeado só leitura,
 `ibt/live.ts` congela o frame e decodifica com o mesmo catálogo em runtime do
-`.ibt`. A tela "Ao vivo" mostra cada canal que o sim entrega e se ele está
-mudando.
+`.ibt`. A tela "Ao vivo" mostra a volta em curso se desenhando por distância,
+com a volta anterior por baixo, e cada canal que o sim entrega.
+
+O overlay existe (ADR 0025): uma janela transparente por widget, por cima do sim,
+com relative, classificação por classe (marca, modelo, carteira, SR, iRating,
+SOF), delta do sim, pedais tick a tick, combustível medido na stint, radar e
+bandeira. Configurado pela tela "Overlay" do app.
 
 Próximos passos, nesta ordem:
 
 1. Conferir contra o sim aberto e anotar o que fica parado em cada posição
    (`docs/pendencias.md`, item 14).
-2. Gráfico ao vivo dos canais que o piloto olha (velocidade, pedais, marcha) sobre
-   a volta corrente, por distância.
-3. Decidir, em ADR, se e como a telemetria do piloto chega ao engenheiro em outra
-   máquina.
+2. ~~Gráfico ao vivo dos canais que o piloto olha sobre a volta corrente, por
+   distância.~~ Feito: aba "Volta" da tela ao vivo.
+3. ~~Decidir, em ADR, se e como a telemetria do piloto chega ao engenheiro.~~
+   Decidido no ADR 0024; espera o login rodar contra Postgres.
+4. Conferir o overlay contra o sim numa corrida (`docs/pendencias.md`, item 15).
 
 **Pronto quando:** com o sim numa sessão, o piloto (ou o engenheiro) vê a volta
 corrente se desenhar enquanto ela acontece, e os números batem com o `.ibt` da

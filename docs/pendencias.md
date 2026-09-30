@@ -83,3 +83,31 @@ atrasada sem perder tick.
 
 A transmissão para o engenheiro está decidida no ADR 0024 e depende do item 8:
 sem Postgres não há login, e sem login não há sala fechada.
+
+## 15. Overlay contra o sim numa sessão
+
+O overlay (ADR 0025) foi desenhado sobre os nomes e o significado que a
+documentação do SDK dá, e conferido só contra um sim falso
+(`tests/support/fake-sim.ts`, `node apps/desktop/tests/e2e/drive-app.mjs --overlay`).
+Com o iRacing numa corrida, falta conferir:
+
+- os nomes de canal que o overlay lê — `ibt/live-real-sim.test.ts` diz na hora
+  qual não existe;
+- o gap do relative (`CarIdxEstTime`) e o da classificação (`CarIdxF2Time`)
+  contra o relative e a classificação do próprio sim, inclusive multiclasse e na
+  linha de chegada;
+- se `CarIdxPosition` / `CarIdxClassPosition` vêm preenchidos no treino e na
+  classificação, ou só na corrida (hoje a ordem fora da corrida sai da melhor
+  volta de qualquer jeito);
+- o SOF calculado contra o do resultado oficial da mesma sessão;
+- o sentido do `Clutch` (o overlay mostra `1 − Clutch` como posição do pedal);
+- `SessionLapsRemainEx` numa corrida por tempo — se conta a volta em curso — e o
+  valor de `SessionTimeRemain` numa sessão sem limite de tempo (presumido 604800);
+- o consumo por volta medido contra o que o sim mostra na caixa de combustível;
+- numa sessão de Road Atlanta (26/09, 13-19-14), a volta de referência do
+  `LapDeltaToSessionBestLap` não foi identificada: não bate com nenhuma volta do
+  arquivo. Provavelmente é de um `.ibt` anterior da mesma sessão do sim, ou uma
+  volta que o sim invalidou; o método (por distância) já está conferido
+  (`docs/formato-ibt.md`);
+- se as janelas ficam por cima do sim em janela sem borda, e se alguma rouba
+  foco (não deveria: `focusable: false`).

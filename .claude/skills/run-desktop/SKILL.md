@@ -23,6 +23,11 @@ node apps/desktop/tests/e2e/drive-app.mjs --reference 14 --lap 10
 - `--lap <n>` — abre a volta `n`; com `--reference`, compara contra ela.
 - `--live` — abre a tela "Ao vivo" e tira `3-ao-vivo.png`. Com o sim fechado, o
   print mostra o estado "sim fechado"; com o sim numa sessão, a tabela de canais.
+- `--overlay` — sobe o sim falso (`tests/support/fake-sim.ts`) num arquivo mapeado
+  com nome de teste (nunca o do iRacing), abre o app apontado para ele com todos
+  os widgets ligados e tira `overlay-<widget>.png` de cada janela,
+  `4-ao-vivo-volta.png` e `5-overlay-config.png`. Imprime a medida de cada
+  janela contra o conteúdo — as duas têm de bater. O `.ibt` fica opcional.
 - `--out <pasta>` — onde ficam os prints (padrão: `%TEMP%/telemetry-shots`).
 
 Saída: `1-sessao.png` (cabeçalho, tabela de voltas, gráficos da sessão) e, com
