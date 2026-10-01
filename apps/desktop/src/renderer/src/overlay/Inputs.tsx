@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { OverlaySettings } from '../../../shared/overlay.js';
 import { bridge } from '../bridge.js';
 
-/** Cada ~33 ms: cabe na folga de 3 ticks que o sim guarda, e nenhum tick se perde. */
-const POLL_INTERVAL_MS = 33;
+/**
+ * Cada ~16 ms: dos 3 buffers do sim, só 2 se leem com segurança (o terceiro é o
+ * que ele está escrevendo, ver `freshFrames`) — ~33 ms de folga a 60 Hz.
+ * Perguntando na metade disso, nenhum tick se perde.
+ */
+const POLL_INTERVAL_MS = 16;
 const IDLE_INTERVAL_MS = 1000;
 const CHANNELS = ['Throttle', 'Brake', 'Clutch', 'Gear', 'Speed'] as const;
 const TRACE_WIDTH = 240;

@@ -110,7 +110,12 @@ corrida, falta conferir:
   volta que o sim invalidou; o método (por distância) já está conferido
   (`docs/formato-ibt.md`);
 - se as janelas ficam por cima do sim em janela sem borda, e se alguma rouba
-  foco (não deveria: `focusable: false`).
+  foco (não deveria: `focusable: false`);
+- os riscos do pedal até zero no gráfico de pedais (vistos em 2026-09-29, com o
+  freio no fundo e o carro parado). A leitura passou a pular o buffer que o sim
+  escreve a seguir (`freshFrames`); falta confirmar com o sim que os riscos
+  sumiram e medir a causa — ler todos os buffers a cada ~2 ms com o pedal
+  pressionado e comparar o mesmo tick lido em idades diferentes.
 
 ## 16. Credencial da Data API do iRacing
 

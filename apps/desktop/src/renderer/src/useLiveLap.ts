@@ -6,10 +6,11 @@ import { bridge } from './bridge.js';
 /**
  * Quanto esperar entre uma resposta e o próximo pedido de ticks.
  *
- * O sim guarda os últimos 3 ticks (~50 ms a 60 Hz, medido): perguntando a cada
- * ~33 ms, nenhum se perde e o traço tem todos os pontos da volta.
+ * O sim guarda os últimos 3 ticks, e só 2 se leem com segurança — o terceiro é o
+ * que ele está escrevendo (`freshFrames`): ~33 ms de folga a 60 Hz. Perguntando
+ * a cada ~16 ms, nenhum se perde e o traço tem todos os pontos da volta.
  */
-const POLL_INTERVAL_MS = 33;
+const POLL_INTERVAL_MS = 16;
 /** Sem sessão no sim, não há tick a perder: pergunta devagar. */
 const IDLE_INTERVAL_MS = 1000;
 /** Ritmo do desenho: dez quadros por segundo bastam para ver a linha crescer. */
