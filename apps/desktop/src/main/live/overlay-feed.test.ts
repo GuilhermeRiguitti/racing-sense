@@ -94,7 +94,7 @@ describe('quadro do overlay', () => {
     expect(player?.isPlayer).toBe(true);
     expect(ahead?.gapSeconds).toBeCloseTo(1.8);
     expect(ahead?.gapMeters).toBeCloseTo(0.02 * 4057, 0);
-    expect(ahead?.carMake).toBe('POR');
+    expect(ahead?.carMake?.id).toBe('porsche');
     expect(behind?.lapsAhead).toBe(1);
     expect(behind?.license).toEqual({ letter: 'A', safetyRating: 3.45, color: '#0153db' });
     expect(frame.standings).toBeNull();

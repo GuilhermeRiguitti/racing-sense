@@ -29,17 +29,22 @@ export interface LicenseDto {
   readonly color: string | null;
 }
 
+export interface CarMakeDto {
+  /** `ferrari`, `mercedes-amg`: o nome do arquivo da logo no renderer. */
+  readonly id: string;
+  readonly name: string;
+  /** "FER": o que aparece quando não há logo. */
+  readonly short: string;
+}
+
 /** Quem está no carro, como o sim declara. Base de toda linha de piloto. */
 export interface DriverRowDto {
   readonly carIdx: number;
   readonly name: string;
   readonly carNumber: string;
   readonly carName: string;
-  /** O modelo sem o fabricante: "296 GT3". */
-  readonly carModel: string;
-  /** Sigla do fabricante ("FER"), quando reconhecido no nome do carro. */
-  readonly carMake: string | null;
-  readonly carMakeName: string | null;
+  /** O fabricante reconhecido no nome do carro; `null` quando não há. */
+  readonly carMake: CarMakeDto | null;
   readonly className: string;
   readonly classColor: string | null;
   readonly iRating: number | null;
@@ -89,8 +94,6 @@ export interface OverlaySessionDto {
   readonly lapsRemaining: number | null;
   /** Mais de uma classe no grid: aí a cor da classe aparece. */
   readonly multiClass: boolean;
-  /** Mais de um carro no grid: aí o modelo aparece. */
-  readonly multiCar: boolean;
   /** Mais de um fabricante no grid: aí a marca aparece. */
   readonly multiMake: boolean;
   readonly airTempCelsius: number | null;
@@ -187,7 +190,6 @@ export interface WidgetSettings {
 export interface DriverColumns {
   readonly carNumber: boolean;
   readonly make: boolean;
-  readonly model: boolean;
   readonly license: boolean;
   readonly iRating: boolean;
 }
@@ -251,7 +253,7 @@ export const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
   relative: {
     carsAhead: 3,
     carsBehind: 3,
-    columns: { carNumber: true, make: true, model: false, license: true, iRating: true },
+    columns: { carNumber: true, make: true, license: true, iRating: true },
   },
   standings: {
     leaders: 3,
@@ -260,7 +262,6 @@ export const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
     columns: {
       carNumber: true,
       make: true,
-      model: true,
       license: true,
       iRating: true,
       lastLap: true,

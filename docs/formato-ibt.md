@@ -147,7 +147,7 @@ Medido:
 | `numVars` | 335 | 287 no `.ibt` da Mercedes: ao vivo vêm os `CarIdx*` |
 | `bufLen` | 8616 B | ~8× o do `.ibt` (1101 B) |
 | canais com `count > 1` | 45 | quase todos de 64 posições (`CarIdx*`), alguns de 6; somam 6768 B |
-| `numBuf` | 3 | ticks consecutivos: ~50 ms de folga para quem lê atrasado |
+| `numBuf` | 3 | ticks consecutivos; só 2 se leem com segurança (ver abaixo): ~33 ms de folga |
 | session info | 512 KB reservados | o texto termina no primeiro NUL |
 
 ⚠️ **Ao vivo, `Σ tamanho × count ≠ bufLen`.** A memória tem padding entre canais
@@ -167,6 +167,13 @@ A conta que vale ao vivo é: nenhum canal invade o anterior, e o último termina
   descarta a cópia se mudou (`freezeLatestFrame`).
 - O bit 1 do `status` diz se o sim está numa sessão escrevendo. Sem ele, o app
   solta o handle e reabre no próximo pedido, como o SDK oficial.
+- **O buffer mais antigo é o próximo que o sim escreve, e não se lê.** Quem quer
+  todos os ticks (`freshFrames`, para pedal e volta ao vivo) lê os outros
+  `numBuf − 1`. Lido, o mais antigo pode vir pela metade, e a releitura do
+  `tickCount` não pega se o sim só atualiza o contador ao terminar. Foi a
+  explicação adotada para riscos do pedal até zero no overlay (2026-09-30), ainda
+  não medida contra o sim (`docs/pendencias.md`, item 15). O SDK oficial lê só o
+  mais recente.
 - Ao vivo, `sessionInfoLength` é o espaço reservado, não o tamanho do texto: a
   string termina no primeiro NUL, e o que vem depois é sobra de uma versão
   anterior.

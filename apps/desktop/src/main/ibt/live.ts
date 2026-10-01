@@ -124,16 +124,27 @@ export function freezeLatestFrame(memory: LiveMemory): LiveFrame | null {
 }
 
 /**
- * Todos os frames mais novos que `sinceTick`, do mais antigo ao mais novo.
+ * Os frames mais novos que `sinceTick` que dá para ler inteiros, do mais
+ * antigo ao mais novo.
  *
- * O sim guarda os últimos `numBuf` ticks (3, medido): quem pergunta a cada
- * ~33 ms recebe todos, sem buraco, e o pedal desenhado é o que o piloto fez em
- * cada tick — não uma amostra a cada tantos. Quem pergunta mais devagar perde os
- * que o sim já reescreveu, e o `tickCount` mostra onde.
+ * O sim alterna a escrita entre `numBuf` buffers (3, medido) e escreve o tick
+ * seguinte **no mais antigo**. Esse nunca é lido: copiado enquanto o sim o
+ * preenche, ele pode trazer canais zerados ou de outro tick, e a conferência do
+ * `tickCount` depois da cópia não pega isso se o sim só atualiza o contador ao
+ * terminar. É a explicação mais provável dos riscos do pedal até zero, com o pé
+ * no fundo, que apareceram no overlay quando ele era lido — ainda não medida
+ * contra o sim (`docs/pendencias.md`, item 15). O SDK oficial
+ * (`irsdk_getNewData`) evita o risco lendo só o mais recente; aqui vão os
+ * outros, que o sim já terminou e não vai tocar no próximo tick.
  *
- * Cada buffer é copiado e conferido como em `freezeLatestFrame`: se o sim o
- * reescreveu no meio da cópia, ele fica de fora — o tick seguinte chega na
- * próxima pergunta. Com `sinceTick` nulo, só o mais recente.
+ * Com 3 buffers sobram 2 ticks (~33 ms a 60 Hz): quem pergunta a cada ~16 ms
+ * recebe todos, e o pedal desenhado é o que o piloto fez em cada tick. Quem
+ * pergunta mais devagar perde os que o sim já reescreveu, e o `tickCount` mostra
+ * onde.
+ *
+ * Cada buffer lido ainda é conferido como em `freezeLatestFrame`: se o sim o
+ * reescreveu no meio da cópia, ele fica de fora. Com `sinceTick` nulo, só o
+ * mais recente.
  */
 export function freshFrames(memory: LiveMemory, sinceTick: number | null): LiveFrame[] {
   if (sinceTick === null) {
@@ -142,11 +153,14 @@ export function freshFrames(memory: LiveMemory, sinceTick: number | null): LiveF
   }
 
   const header = readLiveHeader(memory);
-  const pending = header.varBufs
+  const inUse = header.varBufs
     .slice(0, header.numBuf)
     .map((buffer, index) => ({ ...buffer, index }))
-    .filter((buffer) => buffer.tickCount > sinceTick)
     .sort((a, b) => a.tickCount - b.tickCount);
+  // O mais antigo é o próximo a ser escrito. Com um buffer só (o `.ibt`), não
+  // há próximo: vale o único.
+  const readable = inUse.length > 1 ? inUse.slice(1) : inUse;
+  const pending = readable.filter((buffer) => buffer.tickCount > sinceTick);
 
   const frames: LiveFrame[] = [];
   for (const { tickCount, bufOffset, index } of pending) {

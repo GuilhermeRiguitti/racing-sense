@@ -110,4 +110,19 @@ corrida, falta conferir:
   volta que o sim invalidou; o método (por distância) já está conferido
   (`docs/formato-ibt.md`);
 - se as janelas ficam por cima do sim em janela sem borda, e se alguma rouba
-  foco (não deveria: `focusable: false`).
+  foco (não deveria: `focusable: false`);
+- os riscos do pedal até zero no gráfico de pedais (vistos em 2026-09-29, com o
+  freio no fundo e o carro parado). A leitura passou a pular o buffer que o sim
+  escreve a seguir (`freshFrames`); falta confirmar com o sim que os riscos
+  sumiram e medir a causa — ler todos os buffers a cada ~2 ms com o pedal
+  pressionado e comparar o mesmo tick lido em idades diferentes.
+
+## 16. Credencial da Data API do iRacing
+
+O ADR 0026 decide que a api busca catálogo de carros e mapa de pista na Data API
+do iRacing (o serviço web do site de membros — não o `.ibt` nem o SDK). O acesso
+é OAuth2, e o Client ID e o Client Secret são concedidos pelo iRacing por pedido.
+Falta: pedir a credencial (app gratuito, só leitura, dado do próprio piloto) e,
+com ela em mãos, conferir os nomes de campo de `/data/car/get`,
+`/data/car/assets` e `/data/track/assets` contra uma resposta real. Depende
+também do item 8: sem Postgres, a api não tem onde guardar o catálogo.

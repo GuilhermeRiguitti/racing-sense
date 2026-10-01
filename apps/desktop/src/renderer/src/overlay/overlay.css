@@ -213,7 +213,7 @@ html.is-overlay body {
 }
 
 .ov-cell-make {
-  width: 40px;
+  width: 44px;
 }
 
 .ov-make {
@@ -227,6 +227,14 @@ html.is-overlay body {
   letter-spacing: 0.04em;
   text-align: center;
   color: var(--ov-text-2);
+}
+
+.ov-make-logo {
+  display: block;
+  width: 40px;
+  height: 18px;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 .ov-cell-name {
@@ -245,12 +253,6 @@ html.is-overlay body {
 
 .ov-cell-name.is-lap-behind .ov-name {
   color: var(--ov-lap-behind);
-}
-
-.ov-model {
-  margin-left: 6px;
-  color: var(--ov-muted);
-  font-size: 11px;
 }
 
 .ov-tag {

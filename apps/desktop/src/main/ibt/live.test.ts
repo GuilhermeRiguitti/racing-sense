@@ -146,8 +146,20 @@ describe('leitura da memória compartilhada', () => {
     expect(freshFrames(region.memory, null).map((frame) => frame.tickCount)).toEqual([22]);
   });
 
+  it('nunca lê o buffer que o sim vai escrever a seguir, mesmo mais novo que o último lido', () => {
+    const region = aLiveRegion(undefined, 3);
+    region.writeFrame(0, 21, { Speed: 1 });
+    region.writeFrame(1, 22, { Speed: 2 });
+    region.writeFrame(2, 23, { Speed: 3 });
+
+    // O 21 é o mais antigo: é nele que o sim escreve o 24. Lido agora, poderia
+    // vir pela metade — e a conferência do tickCount não pegaria.
+    expect(freshFrames(region.memory, 19).map((frame) => frame.tickCount)).toEqual([22, 23]);
+  });
+
   it('buffer reescrito no meio da cópia fica de fora: chega na próxima pergunta', () => {
-    const region = aLiveRegion(undefined, 2);
+    const region = aLiveRegion(undefined, 3);
+    region.writeFrame(2, 29, {});
     region.writeFrame(0, 30, {});
     region.writeFrame(1, 31, {});
     let rewrites = 1;

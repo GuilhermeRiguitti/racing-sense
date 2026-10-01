@@ -141,7 +141,6 @@ export function OverlaySettingsView() {
         options={[
           ['carNumber', 'Número'],
           ['make', 'Marca'],
-          ['model', 'Modelo'],
           ['license', 'Carteira e SR'],
           ['iRating', 'iRating'],
         ]}
@@ -178,7 +177,6 @@ export function OverlaySettingsView() {
         options={[
           ['carNumber', 'Número'],
           ['make', 'Marca'],
-          ['model', 'Modelo'],
           ['license', 'Carteira e SR'],
           ['iRating', 'iRating'],
           ['lastLap', 'Última volta'],
@@ -188,7 +186,7 @@ export function OverlaySettingsView() {
         ]}
       />
       <p className="muted overlay-settings__note">
-        Marca, modelo e cor de classe só aparecem quando distinguem alguém: num grid de um carro só,
+        Marca e cor de classe só aparecem quando distinguem alguém: num grid de um fabricante só,
         a coluna some sozinha.
       </p>
 

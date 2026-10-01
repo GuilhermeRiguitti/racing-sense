@@ -19,8 +19,6 @@ export interface CarModel {
   readonly name: string;
   /** O fabricante reconhecido no nome, quando há um. */
   readonly make: CarMake | null;
-  /** O nome sem o fabricante: "296 GT3". Igual ao nome quando não há fabricante. */
-  readonly model: string;
 }
 
 export interface GridDriver {
@@ -77,9 +75,14 @@ export function parseSimColor(text: string | undefined): string | null {
 // --- fabricantes --------------------------------------------------------------
 
 export interface CarMake {
+  /**
+   * Identificador estável, em minúsculas e com hífen: `ferrari`, `mercedes-amg`.
+   * É o nome do arquivo da logo no renderer — trocar um quebra a logo dele.
+   */
+  readonly id: string;
   /** Como o fabricante é escrito. */
   readonly name: string;
-  /** Três ou quatro letras: o que cabe numa coluna estreita do overlay. */
+  /** Três ou quatro letras: o que o overlay mostra quando não há logo. */
   readonly short: string;
 }
 
@@ -93,56 +96,58 @@ export interface CarMake {
  * "Mercedes").
  */
 const MAKES: readonly { readonly make: CarMake; readonly aliases: readonly string[] }[] = [
-  { make: { name: 'Acura', short: 'ACU' }, aliases: ['Acura'] },
-  { make: { name: 'Alfa Romeo', short: 'ALF' }, aliases: ['Alfa Romeo'] },
-  { make: { name: 'Aston Martin', short: 'AST' }, aliases: ['Aston Martin'] },
-  { make: { name: 'Audi', short: 'AUD' }, aliases: ['Audi'] },
-  { make: { name: 'BMW', short: 'BMW' }, aliases: ['BMW'] },
-  { make: { name: 'Cadillac', short: 'CAD' }, aliases: ['Cadillac'] },
-  { make: { name: 'Chevrolet', short: 'CHV' }, aliases: ['Chevrolet', 'Chevy'] },
-  { make: { name: 'Dallara', short: 'DAL' }, aliases: ['Dallara'] },
-  { make: { name: 'Dodge', short: 'DOD' }, aliases: ['Dodge'] },
-  { make: { name: 'Ferrari', short: 'FER' }, aliases: ['Ferrari'] },
-  { make: { name: 'Ford', short: 'FRD' }, aliases: ['Ford'] },
-  { make: { name: 'Holden', short: 'HOL' }, aliases: ['Holden'] },
-  { make: { name: 'Honda', short: 'HON' }, aliases: ['Honda'] },
-  { make: { name: 'Hyundai', short: 'HYU' }, aliases: ['Hyundai'] },
-  { make: { name: 'Kia', short: 'KIA' }, aliases: ['Kia'] },
-  { make: { name: 'Lamborghini', short: 'LAM' }, aliases: ['Lamborghini'] },
-  { make: { name: 'Lexus', short: 'LEX' }, aliases: ['Lexus'] },
-  { make: { name: 'Ligier', short: 'LIG' }, aliases: ['Ligier'] },
-  { make: { name: 'Lotus', short: 'LOT' }, aliases: ['Lotus'] },
-  { make: { name: 'Mazda', short: 'MAZ' }, aliases: ['Mazda'] },
-  { make: { name: 'McLaren', short: 'MCL' }, aliases: ['McLaren'] },
-  { make: { name: 'Mercedes-AMG', short: 'AMG' }, aliases: ['Mercedes-AMG', 'Mercedes AMG'] },
-  { make: { name: 'Mercedes', short: 'MER' }, aliases: ['Mercedes'] },
-  { make: { name: 'Mini', short: 'MINI' }, aliases: ['Mini'] },
-  { make: { name: 'Nissan', short: 'NIS' }, aliases: ['Nissan'] },
-  { make: { name: 'Oreca', short: 'ORE' }, aliases: ['Oreca'] },
-  { make: { name: 'Pontiac', short: 'PON' }, aliases: ['Pontiac'] },
-  { make: { name: 'Porsche', short: 'POR' }, aliases: ['Porsche'] },
-  { make: { name: 'Radical', short: 'RAD' }, aliases: ['Radical'] },
-  { make: { name: 'Renault', short: 'REN' }, aliases: ['Renault'] },
-  { make: { name: 'Riley', short: 'RIL' }, aliases: ['Riley'] },
-  { make: { name: 'Ruf', short: 'RUF' }, aliases: ['Ruf'] },
-  { make: { name: 'Subaru', short: 'SUB' }, aliases: ['Subaru'] },
-  { make: { name: 'Toyota', short: 'TOY' }, aliases: ['Toyota'] },
-  { make: { name: 'Volkswagen', short: 'VW' }, aliases: ['Volkswagen', 'VW'] },
-  { make: { name: 'Williams', short: 'WIL' }, aliases: ['Williams'] },
+  { make: { id: 'acura', name: 'Acura', short: 'ACU' }, aliases: ['Acura'] },
+  { make: { id: 'alfa-romeo', name: 'Alfa Romeo', short: 'ALF' }, aliases: ['Alfa Romeo'] },
+  { make: { id: 'aston-martin', name: 'Aston Martin', short: 'AST' }, aliases: ['Aston Martin'] },
+  { make: { id: 'audi', name: 'Audi', short: 'AUD' }, aliases: ['Audi'] },
+  { make: { id: 'bmw', name: 'BMW', short: 'BMW' }, aliases: ['BMW'] },
+  { make: { id: 'cadillac', name: 'Cadillac', short: 'CAD' }, aliases: ['Cadillac'] },
+  { make: { id: 'chevrolet', name: 'Chevrolet', short: 'CHV' }, aliases: ['Chevrolet', 'Chevy'] },
+  { make: { id: 'dallara', name: 'Dallara', short: 'DAL' }, aliases: ['Dallara'] },
+  { make: { id: 'dodge', name: 'Dodge', short: 'DOD' }, aliases: ['Dodge'] },
+  { make: { id: 'ferrari', name: 'Ferrari', short: 'FER' }, aliases: ['Ferrari'] },
+  { make: { id: 'ford', name: 'Ford', short: 'FRD' }, aliases: ['Ford'] },
+  { make: { id: 'holden', name: 'Holden', short: 'HOL' }, aliases: ['Holden'] },
+  { make: { id: 'honda', name: 'Honda', short: 'HON' }, aliases: ['Honda'] },
+  { make: { id: 'hyundai', name: 'Hyundai', short: 'HYU' }, aliases: ['Hyundai'] },
+  { make: { id: 'kia', name: 'Kia', short: 'KIA' }, aliases: ['Kia'] },
+  { make: { id: 'lamborghini', name: 'Lamborghini', short: 'LAM' }, aliases: ['Lamborghini'] },
+  { make: { id: 'lexus', name: 'Lexus', short: 'LEX' }, aliases: ['Lexus'] },
+  { make: { id: 'ligier', name: 'Ligier', short: 'LIG' }, aliases: ['Ligier'] },
+  { make: { id: 'lotus', name: 'Lotus', short: 'LOT' }, aliases: ['Lotus'] },
+  { make: { id: 'mazda', name: 'Mazda', short: 'MAZ' }, aliases: ['Mazda'] },
+  { make: { id: 'mclaren', name: 'McLaren', short: 'MCL' }, aliases: ['McLaren'] },
+  { make: { id: 'mercedes-amg', name: 'Mercedes-AMG', short: 'AMG' }, aliases: ['Mercedes-AMG', 'Mercedes AMG'] },
+  { make: { id: 'mercedes', name: 'Mercedes', short: 'MER' }, aliases: ['Mercedes'] },
+  { make: { id: 'mini', name: 'Mini', short: 'MINI' }, aliases: ['Mini'] },
+  { make: { id: 'nissan', name: 'Nissan', short: 'NIS' }, aliases: ['Nissan'] },
+  { make: { id: 'oreca', name: 'Oreca', short: 'ORE' }, aliases: ['Oreca'] },
+  { make: { id: 'pontiac', name: 'Pontiac', short: 'PON' }, aliases: ['Pontiac'] },
+  { make: { id: 'porsche', name: 'Porsche', short: 'POR' }, aliases: ['Porsche'] },
+  { make: { id: 'radical', name: 'Radical', short: 'RAD' }, aliases: ['Radical'] },
+  { make: { id: 'renault', name: 'Renault', short: 'REN' }, aliases: ['Renault'] },
+  { make: { id: 'riley', name: 'Riley', short: 'RIL' }, aliases: ['Riley'] },
+  { make: { id: 'ruf', name: 'Ruf', short: 'RUF' }, aliases: ['Ruf'] },
+  { make: { id: 'subaru', name: 'Subaru', short: 'SUB' }, aliases: ['Subaru'] },
+  { make: { id: 'toyota', name: 'Toyota', short: 'TOY' }, aliases: ['Toyota'] },
+  { make: { id: 'volkswagen', name: 'Volkswagen', short: 'VW' }, aliases: ['Volkswagen', 'VW'] },
+  { make: { id: 'williams', name: 'Williams', short: 'WIL' }, aliases: ['Williams'] },
 ];
+
+/** Os ids de todos os fabricantes reconhecidos: os nomes de arquivo de logo válidos. */
+export const CAR_MAKE_IDS: readonly string[] = MAKES.map(({ make }) => make.id);
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * O carro com o fabricante separado do modelo.
+ * O carro com o fabricante reconhecido no nome.
  *
  * O fabricante é o que aparece **primeiro** no nome ("Super Formula SF23 -
  * Toyota" → Toyota; "Global Mazda MX-5 Cup" → Mazda), sempre como palavra
- * inteira ("Mini" não casa em "Minivan"). O modelo perde o fabricante só quando
- * ele abre o nome.
+ * inteira ("Mini" não casa em "Minivan").
  */
 export function toCarModel(name: string): CarModel {
-  let best: { make: CarMake; index: number; alias: string } | null = null;
+  let best: { make: CarMake; index: number } | null = null;
   for (const { make, aliases } of MAKES) {
     for (const alias of aliases) {
       const match = new RegExp(`(^|[^\\p{L}\\p{N}])${escape(alias)}(?![\\p{L}\\p{N}])`, 'iu').exec(
@@ -150,12 +155,8 @@ export function toCarModel(name: string): CarModel {
       );
       if (match === null) continue;
       const index = match.index + (match[1] as string).length;
-      if (best === null || index < best.index) best = { make, index, alias };
+      if (best === null || index < best.index) best = { make, index };
     }
   }
-  if (best === null) return { name, make: null, model: name };
-
-  const model =
-    best.index === 0 ? name.slice(best.alias.length).replace(/^[\s\-–]+/, '').trim() : name;
-  return { name, make: best.make, model: model === '' ? name : model };
+  return { name, make: best?.make ?? null };
 }

@@ -1,6 +1,6 @@
 # ADR 0025 — O overlay é um conjunto de janelas próprias do Electron, transparentes e sem foco, montadas a partir do que o SDK entrega
 
-**Status:** Aceito · 2026-09-29
+**Status:** Aceito · 2026-09-29 · item 6 (logotipo e modelo) superado por ADR 0026
 
 ## Contexto
 
