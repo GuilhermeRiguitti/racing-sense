@@ -1,11 +1,17 @@
 # Logos dos fabricantes
 
-Um SVG por fabricante, com o nome igual ao `id` da lista `MAKES` em
-`apps/desktop/src/main/domain/driver.ts`: `ferrari.svg`, `mercedes-amg.svg`,
-`alfa-romeo.svg`. Fabricante sem arquivo aparece no overlay com a sigla.
+Um arquivo por fabricante, com o nome igual ao `id` da lista `MAKES` em
+`apps/desktop/src/main/domain/driver.ts`: `ferrari.png`, `mercedes-amg.png`,
+`alfa-romeo.png`. Fabricante sem arquivo aparece no overlay com a sigla.
 
-- Prefira SVG com licença clara (Simple Icons, CC0) ou o da página de imprensa do
-  fabricante. Não copie do site do iRacing: são assets dele (ADR 0026).
-- O overlay desenha a logo em 34 × 16 px sobre fundo escuro: logo preta some.
-  Use a versão clara ou monocromática branca.
-- Arquivo que não bate com um `id` é ignorado em silêncio — confira o nome.
+- PNG ou SVG. PNG com no máximo 192 × 96 px, recortado sem margem transparente:
+  o overlay desenha a logo em 40 × 18 px, e arquivo grande só pesa no instalador.
+  SVG exportado do Figma com imagem embutida é PNG disfarçado — extraia o PNG.
+- A logo vai num chip claro (`.ov-make-logo` em `overlay.css`), então a versão
+  colorida original serve; não precisa da versão branca.
+- Só fabricante que existe no iRacing. Logo sem `id` na lista quebra o teste
+  `make-logo.test.ts` — o arquivo seria ignorado em silêncio.
+- Não copie do site do iRacing: são assets dele (ADR 0026).
+
+Faltam: `dallara`, `oreca`, `riley`, `williams`. A de `radical` é da revenda
+"Radical Northwest", não da fábrica — trocar quando houver a oficial.

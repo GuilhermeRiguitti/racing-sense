@@ -213,7 +213,7 @@ html.is-overlay body {
 }
 
 .ov-cell-make {
-  width: 40px;
+  width: 44px;
 }
 
 .ov-make {
@@ -231,9 +231,14 @@ html.is-overlay body {
 
 .ov-make-logo {
   display: block;
-  width: 34px;
-  height: 16px;
+  box-sizing: border-box;
+  width: 40px;
+  height: 18px;
   margin: 0 auto;
+  padding: 2px 3px;
+  border-radius: 3px;
+  /* Fundo claro: logo escura (McLaren, AMG, Nissan) some no fundo do overlay. */
+  background: #e9eaee;
   object-fit: contain;
 }
 

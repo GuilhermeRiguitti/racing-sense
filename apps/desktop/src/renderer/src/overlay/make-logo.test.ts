@@ -8,6 +8,10 @@ describe('logos dos fabricantes', () => {
     expect(LOGO_IDS.filter((id) => !CAR_MAKE_IDS.includes(id))).toEqual([]);
   });
 
+  it('fabricante com arquivo tem logo', () => {
+    expect(makeLogo('ferrari')).not.toBeNull();
+  });
+
   it('fabricante sem arquivo não tem logo: o overlay mostra a sigla', () => {
     expect(makeLogo('fabricante-que-nao-existe')).toBeNull();
   });

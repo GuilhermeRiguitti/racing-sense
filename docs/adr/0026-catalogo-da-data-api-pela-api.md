@@ -51,8 +51,9 @@ conferidos contra uma resposta real.
 
 ### A logo
 
-1. **A logo de cada fabricante é um SVG no repositório**, em
-   `apps/desktop/src/renderer/src/overlay/logos/<id>.svg`. O domínio reconhece o
+1. **A logo de cada fabricante é um arquivo no repositório** (PNG pequeno ou
+   SVG), em `apps/desktop/src/renderer/src/overlay/logos/<id>.png`, desenhada
+   num chip claro para a logo escura não sumir no fundo do overlay. O domínio reconhece o
    fabricante e devolve um `id` estável (`ferrari`, `mercedes-amg`); o renderer
    troca o `id` pela logo (`overlay/make-logo.ts`). O domínio não sabe de
    arquivo.
@@ -105,7 +106,7 @@ conferidos contra uma resposta real.
 ## Por quê
 
 - **Logo no repositório não depende de ninguém.** São umas 35 marcas, uma por
-  fabricante e não por carro; SVG pesa pouco. Esperar a Data API só pela logo
+  fabricante e não por carro; as 32 de hoje somam ~0,5 MB. Esperar a Data API só pela logo
   amarraria o overlay a uma credencial que pode nunca chegar.
 - **A credencial não cabe no desktop.** Client Secret dentro de instalador é
   segredo publicado. Na api ele fica num `.env` de servidor, como qualquer outro.
