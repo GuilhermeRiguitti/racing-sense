@@ -7,8 +7,11 @@ Um arquivo por fabricante, com o nome igual ao `id` da lista `MAKES` em
 - PNG ou SVG. PNG com no máximo 192 × 96 px, recortado sem margem transparente:
   o overlay desenha a logo em 40 × 18 px, e arquivo grande só pesa no instalador.
   SVG exportado do Figma com imagem embutida é PNG disfarçado — extraia o PNG.
-- A logo vai num chip claro (`.ov-make-logo` em `overlay.css`), então a versão
-  colorida original serve; não precisa da versão branca.
+- Fundo transparente, desenhada direto sobre o fundo quase preto do overlay
+  (`--ov-surface`). Parte preta ou cinza-escura some ali: clareie antes de
+  entrar (preto vira branco, cor escura sobe de luminosidade, até contraste de
+  3:1). Exceção: preto que é preenchimento dentro de contorno claro (BMW, Mini,
+  Lamborghini) já se lê e fica como está.
 - Só fabricante que existe no iRacing. Logo sem `id` na lista quebra o teste
   `make-logo.test.ts` — o arquivo seria ignorado em silêncio.
 - Não copie do site do iRacing: são assets dele (ADR 0026).

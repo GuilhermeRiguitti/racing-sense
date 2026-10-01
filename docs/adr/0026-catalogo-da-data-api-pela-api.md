@@ -52,8 +52,8 @@ conferidos contra uma resposta real.
 ### A logo
 
 1. **A logo de cada fabricante é um arquivo no repositório** (PNG pequeno ou
-   SVG), em `apps/desktop/src/renderer/src/overlay/logos/<id>.png`, desenhada
-   num chip claro para a logo escura não sumir no fundo do overlay. O domínio reconhece o
+   SVG), em `apps/desktop/src/renderer/src/overlay/logos/<id>.png`, com fundo
+   transparente e a parte escura clareada para se ler no fundo do overlay. O domínio reconhece o
    fabricante e devolve um `id` estável (`ferrari`, `mercedes-amg`); o renderer
    troca o `id` pela logo (`overlay/make-logo.ts`). O domínio não sabe de
    arquivo.
